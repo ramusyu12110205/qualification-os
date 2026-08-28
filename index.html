@@ -22,7 +22,12 @@ h1{font-size:30px;margin:0 0 4px} h2{margin:0} h3{margin:0 0 10px} .muted{color:
 .quest-title{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#aab5d5;font-weight:900} .quest-main{font-size:23px;font-weight:950;margin:4px 0}
 .countdown{font-size:34px;font-weight:950} .sectiontitle{display:flex;justify-content:space-between;align-items:center;gap:10px}
 .item{border:1px solid var(--line);border-radius:14px;padding:14px;margin:9px 0;background:#0f1627}
-.clickable{cursor:pointer} .clickable:hover{border-color:#53638f;box-shadow:0 8px 24px rgba(0,0,0,.2)}
+.clickable{cursor:pointer}
+.action-card{transition:.15s}
+.action-card.active{border-color:#6f52c8;box-shadow:0 0 0 1px rgba(139,92,246,.22),0 10px 24px rgba(0,0,0,.16)}
+.inline-panel{margin:10px 0 0;padding:16px;border:1px solid #33405f;border-radius:16px;background:linear-gradient(145deg,#10182a,#0c1220)}
+.inline-panel h3{margin-top:0}
+ .clickable:hover{border-color:#53638f;box-shadow:0 8px 24px rgba(0,0,0,.2)}
 .badge{display:inline-block;background:#261b50;color:#d7ceff;border:1px solid #45337c;border-radius:999px;padding:4px 9px;font-size:12px;font-weight:800}
 .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 button{border:0;border-radius:11px;padding:10px 15px;font-weight:850;cursor:pointer;min-height:42px}
@@ -161,11 +166,13 @@ textarea{min-height:120px} label{display:block;font-weight:800;margin:11px 0 6px
   <section id="tab-settings" style="display:none">
     <div class="card">
       <h2>⚙ 設定</h2>
-      <div class="item clickable" onclick="showQualificationMaster()"><b>資格設定マスタ</b><br><span class="muted small">資格名・試験日・科目を登録</span></div>
-      <div class="item clickable" onclick="showRecordManager()"><b>勉強記録を管理</b><br><span class="muted small">過去の勉強記録を確認・編集・削除</span></div>
-      <div class="item clickable" onclick="importLocalData()"><b>旧端末データを取り込む</b><br><span class="muted small">以前のlocalStorage版の記録をクラウドへ移行</span></div>
+      <div id="action-qualification" class="item action-card clickable" onclick="toggleInlinePanel('qualification')"><b>資格設定マスタ</b><br><span class="muted small">資格名・試験日・科目を登録</span></div>
+      <div id="panel-qualification" class="inline-panel" style="display:none"></div>
+      <div id="action-record" class="item action-card clickable" onclick="toggleInlinePanel('record')"><b>勉強記録を管理</b><br><span class="muted small">過去の勉強記録を確認・編集・削除</span></div>
+      <div id="panel-record" class="inline-panel" style="display:none"></div>
+      <div id="action-import" class="item action-card clickable" onclick="toggleInlinePanel('import')"><b>旧端末データを取り込む</b><br><span class="muted small">以前のlocalStorage版の記録をクラウドへ移行</span></div>
+      <div id="panel-import" class="inline-panel" style="display:none"></div>
       <div class="item"><b>アカウント</b><br><span class="muted small" id="settingsUser"></span></div>
-      <div id="settingsContent"></div>
     </div>
   </section>
 </div>
@@ -401,41 +408,76 @@ function showStats(type){
   box.innerHTML='<h3>📅 月別勉強時間</h3><p class="muted small">月をクリックすると日付別に開きます。</p>'+Object.entries(months).sort((a,b)=>b[0].localeCompare(a[0])).map(([mo,v])=>`<details class="item"><summary style="cursor:pointer"><div class="row" style="justify-content:space-between"><b>${esc(mo.replace('-','年')+'月')}</b><strong>${minutesText(v.total)}</strong></div></summary><div style="padding-top:8px">${Object.entries(v.days).sort((a,b)=>b[0].localeCompare(a[0])).map(([d,m])=>`<div class="item" style="margin:6px 0"><div class="row" style="justify-content:space-between"><span>${fmt(d)} <span class="muted small">${d}</span></span><strong>${minutesText(m)}</strong></div></div>`).join('')}</div></details>`).join('');
 }
 
-function showQualificationMaster(){
-  const box=document.getElementById('settingsContent');
-  box.innerHTML=`<h3 style="margin-top:12px">資格設定マスタ</h3><div class="item"><label>資格名</label><input id="newQName" placeholder="簿記1級"><label>試験日</label><input id="newQDate" type="date"><label>科目（1行1科目）</label><textarea id="newQSubjects" placeholder="商業簿記\n工業簿記\n原価計算"></textarea><button class="primary" onclick="addQualification()">資格を追加</button></div>`+
-  (qualifications.map(q=>`<details class="item"><summary style="cursor:pointer"><b>${esc(q.name)}</b> <span class="badge">${q.exam_date?fmt(q.exam_date):'試験日未設定'}</span></summary><div style="padding-top:10px"><label>資格名</label><input id="qn-${q.id}" value="${esc(q.name)}"><label>試験日</label><input id="qd-${q.id}" type="date" value="${q.exam_date||''}"><label>科目</label><textarea id="qs-${q.id}">${subjects.filter(s=>s.qualification_id===q.id).map(s=>s.name).join('\n')}</textarea><div class="row"><button class="primary" onclick="updateQualification('${q.id}')">保存</button><button class="danger" onclick="archiveQualification('${q.id}')">資格を削除</button></div></div></details>`).join('')||'<div class="item">まだ資格がありません。</div>');
+function hideInlinePanels(except){
+  ['qualification','record','import'].forEach(x=>{
+    if(x===except)return;
+    const p=document.getElementById('panel-'+x),a=document.getElementById('action-'+x);
+    if(p)p.style.display='none';
+    if(a)a.classList.remove('active');
+  });
 }
-async function addQualification(){
-  const name=document.getElementById('newQName').value.trim(),exam_date=document.getElementById('newQDate').value||null,raw=document.getElementById('newQSubjects').value;
-  if(!name){alert('資格名を入力してください');return}
-  const {data:q,error}=await sb.from('qualifications').insert({user_id:currentUser.id,name,exam_date}).select().single();if(error){alert(error.message);return}
-  const names=[...new Set(raw.split(/\n|,|、/).map(x=>x.trim()).filter(Boolean))];
-  if(names.length){const rows=names.map((n,i)=>({user_id:currentUser.id,qualification_id:q.id,name:n,sort_order:i}));const {error:e}=await sb.from('subjects').insert(rows);if(e){alert(e.message);return}}
-  await loadAll();showQualificationMaster();toast('資格を登録しました');
+function toggleInlinePanel(type){
+  const panel=document.getElementById('panel-'+type),action=document.getElementById('action-'+type);
+  if(!panel||!action)return;
+  const open=panel.style.display!=='none';
+  hideInlinePanels(open?null:type);
+  if(open){
+    panel.style.display='none'; action.classList.remove('active'); return;
+  }
+  panel.style.display='block'; action.classList.add('active');
+  if(type==='qualification') renderQualificationMasterInline();
+  if(type==='record') renderRecordManagerInline();
+  if(type==='import') renderImportInline();
+  setTimeout(()=>panel.scrollIntoView({behavior:'smooth',block:'nearest'}),0);
 }
-async function updateQualification(id){
-  const name=document.getElementById('qn-'+id).value.trim(),exam_date=document.getElementById('qd-'+id).value||null,raw=document.getElementById('qs-'+id).value;
-  if(!name){alert('資格名を入力してください');return}
-  const {error}=await sb.from('qualifications').update({name,exam_date}).eq('id',id).eq('user_id',currentUser.id);if(error){alert(error.message);return}
-  const old=subjects.filter(s=>s.qualification_id===id);const names=[...new Set(raw.split(/\n|,|、/).map(x=>x.trim()).filter(Boolean))];
-  const existing=old.map(s=>s.name);const add=names.filter(n=>!existing.includes(n));
-  if(add.length){const {error:e}=await sb.from('subjects').insert(add.map((n,i)=>({user_id:currentUser.id,qualification_id:id,name:n,sort_order:old.length+i})));if(e){alert(e.message);return}}
-  const remove=old.filter(s=>!names.includes(s.name));if(remove.length){const {error:e}=await sb.from('subjects').update({archived:true}).in('id',remove.map(s=>s.id)).eq('user_id',currentUser.id);if(e){alert(e.message);return}}
-  await loadAll();showQualificationMaster();toast('保存しました');
-}
-async function archiveQualification(id){if(!confirm('資格を削除しますか？\n勉強記録は保持します。'))return;const {error}=await sb.from('qualifications').update({archived:true}).eq('id',id).eq('user_id',currentUser.id);if(error){alert(error.message);return}await loadAll();showQualificationMaster();}
 
-function showRecordManager(){
-  const box=document.getElementById('settingsContent');
-  const html=sessions.length?sessions.map(s=>{
-    const q=qualifications.find(q=>q.id===s.qualification_id),sub=subjects.find(x=>x.id===s.subject_id);
-    const type={new_problems:'新規問題',review:'復習',textbook:'テキスト',lecture:'講義',mock:'模試',other:'その他'}[s.activity_type]||s.activity_type;
-    return `<div class="item"><div class="record-grid"><div><b>${esc(q?.name||'資格')}${sub?' / '+esc(sub.name):''}</b><div class="muted small">${fmt(s.study_date)} ・ ${type}</div></div><strong>${minutesText(s.minutes)}</strong></div><div class="record-meta"><span>📅 ${s.study_date}</span>${s.memo?`<span>💬 ${esc(s.memo)}</span>`:''}</div><div class="row" style="justify-content:flex-end;margin-top:10px"><button class="danger" onclick="deleteStudySession('${s.id}')">削除</button></div></div>`;
-  }).join(''):'<div class="item">勉強記録はありません。</div>';
-  box.innerHTML=`<div class="sectiontitle"><div><h3>勉強記録を管理</h3><div class="muted small">${sessions.length}件</div></div></div>`+html;
+function renderQualificationMasterInline(){
+  const box=document.getElementById('panel-qualification'); if(!box)return;
+  box.innerHTML=`<h3>資格設定マスタ</h3>
+  <div class="item">
+    <label>資格名</label><input id="newQName" placeholder="簿記1級">
+    <label>試験日</label><input id="newQDate" type="date">
+    <label>科目（1行1科目）</label><textarea id="newQSubjects" placeholder="商業簿記\\n工業簿記\\n原価計算"></textarea>
+    <button class="primary" onclick="addQualification()">資格を追加</button>
+  </div>`+
+  (qualifications.length
+    ? qualifications.map(q=>`<details class="item"><summary style="cursor:pointer"><b>${esc(q.name)}</b> <span class="badge">${q.exam_date?fmt(q.exam_date):'試験日未設定'}</span></summary>
+      <div style="padding-top:10px">
+        <label>資格名</label><input id="qn-${q.id}" value="${esc(q.name)}">
+        <label>試験日</label><input id="qd-${q.id}" type="date" value="${q.exam_date||''}">
+        <label>科目</label><textarea id="qs-${q.id}">${subjects.filter(s=>s.qualification_id===q.id).map(s=>s.name).join('\n')}</textarea>
+        <div class="row">
+          <button class="primary" onclick="updateQualification('${q.id}')">保存</button>
+          <button class="danger" onclick="archiveQualification('${q.id}')">資格を削除</button>
+        </div>
+      </div>
+    </details>`).join('')
+    : '<div class="item">まだ資格がありません。</div>');
 }
-async function deleteStudySession(id){if(!confirm('この勉強記録を削除しますか？'))return;const {error}=await sb.from('study_sessions').delete().eq('id',id).eq('user_id',currentUser.id);if(error){alert(error.message);return}await loadAll();showRecordManager();toast('削除しました');}
+function showQualificationMaster(){ openTab('settings'); toggleInlinePanel('qualification'); }
+
+function renderRecordManagerInline(){
+  const box=document.getElementById('panel-record'); if(!box)return;
+  const labels={new_problems:'新規問題',review:'復習',textbook:'テキスト',lecture:'講義',mock:'模試',other:'その他'};
+  const cards=sessions.length?sessions.map(s=>{
+    const q=qualifications.find(q=>q.id===s.qualification_id),sub=subjects.find(x=>x.id===s.subject_id);
+    const type=labels[s.activity_type]||s.activity_type;
+    return `<div class="item">
+      <div class="record-grid"><div><b>${esc(q?.name||'資格')}${sub?' / '+esc(sub.name):''}</b><div class="muted small">${fmt(s.study_date)} ・ ${type}</div></div><strong>${minutesText(s.minutes)}</strong></div>
+      <div class="record-meta"><span>📅 ${s.study_date}</span>${s.memo?`<span>💬 ${esc(s.memo)}</span>`:''}</div>
+      <div class="row" style="justify-content:flex-end;margin-top:10px"><button class="danger" onclick="deleteStudySession('${s.id}')">削除</button></div>
+    </div>`;
+  }).join(''):'<div class="item">勉強記録はありません。</div>';
+  box.innerHTML=`<h3>勉強記録を管理</h3><p class="muted small">${sessions.length}件。削除するとクラウド上の記録も削除されます。</p>${cards}`;
+}
+function showRecordManager(){ openTab('settings'); toggleInlinePanel('record'); }
+
+function renderImportInline(){
+  const box=document.getElementById('panel-import'); if(!box)return;
+  box.innerHTML=`<h3>旧端末データを取り込む</h3>
+  <p class="muted small">以前のlocalStorage版に保存されている勉強データを、このGoogleアカウントのクラウドへ移行します。</p>
+  <button class="primary" onclick="importLocalData()">旧端末データを取り込む</button>`;
+}
 
 async function importLocalData(){
   const raw=localStorage.getItem('qualification_study_os')||localStorage.getItem('qualification_study_os_v14')||localStorage.getItem('qualification_study_os_v13')||localStorage.getItem('qualification_study_os_v12')||localStorage.getItem('qualification_study_os_v6');
@@ -465,7 +507,7 @@ async function importLocalData(){
       await sb.from('study_session_problems').upsert({user_id:currentUser.id,session_id:sess.id,problem_id:pr.id,role:'new',result:null},{onConflict:'session_id,problem_id,role'});
     }
   }
-  await loadAll();showQualificationMaster();toast('旧データを取り込みました');
+  await loadAll();renderImportInline();toast('旧データを取り込みました');
 }
 
 window.addEventListener('error',e=>{console.error(e.error||e.message)});
