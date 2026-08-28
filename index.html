@@ -437,6 +437,7 @@ function toggleInlinePanel(type){
 function renderQualificationMasterInline(){
   const box=document.getElementById('panel-qualification'); if(!box)return;
   box.innerHTML=`<h3>資格設定マスタ</h3>
+  <p class="muted small">Googleログイン中：資格・科目はクラウドに保存されます。</p>
   <div class="item">
     <label>資格名</label><input id="newQName" placeholder="簿記1級">
     <label>試験日</label><input id="newQDate" type="date">
@@ -465,16 +466,82 @@ async function addQualification(){
   const exam_date=document.getElementById('newQDate')?.value||null;
   const raw=document.getElementById('newQSubjects')?.value||'';
   if(!name){alert('資格名を入力してください');return}
-  const {data:q,error}=await sb.from('qualifications')
-    .insert({user_id:currentUser.id,name,exam_date})
-    .select().single();
-  if(error){alert('資格の登録に失敗しました: '+error.message);return}
-  const names=[...new Set(raw.split(/\r?\n|,|、/).map(x=>x.trim()).filter(Boolean))];
-  if(names.length){
-    const rows=names.map((n,i)=>({user_id:currentUser.id,qualification_id:q.id,name:n,sort_order:i}));
-    const {error:e}=await sb.from('subjects').insert(rows);
-    if(e){alert('科目の登録に失敗しました: '+e.message);return}
+  if(!currentUser?.id){alert('ログイン状態を確認してください。');return}
+
+  let q=null;
+
+  // 既存（アーカイブ済みを含む）があれば再利用・復元。
+  const {data:existing,error:findError}=await sb.from('qualifications')
+    .select('*')
+    .eq('user_id',currentUser.id)
+    .eq('name',name)
+    .maybeSingle();
+
+  if(findError){
+    alert('資格の確認に失敗しました: '+findError.message);
+    return;
   }
+
+  if(existing){
+    const {data:updated,error:updateError}=await sb.from('qualifications')
+      .update({exam_date,archived:false})
+      .eq('id',existing.id)
+      .eq('user_id',currentUser.id)
+      .select().single();
+    if(updateError){
+      alert('資格の更新に失敗しました: '+updateError.message);
+      return;
+    }
+    q=updated;
+  }else{
+    const {data:created,error:createError}=await sb.from('qualifications')
+      .insert({user_id:currentUser.id,name,exam_date})
+      .select().single();
+    if(createError){
+      alert('資格の登録に失敗しました: '+createError.message);
+      return;
+    }
+    q=created;
+  }
+
+  const names=[...new Set(raw.split(/\r?\n|,|、/).map(x=>x.trim()).filter(Boolean))];
+
+  if(names.length){
+    // 同名科目が既にあっても再利用できるように1件ずつ処理。
+    for(let i=0;i<names.length;i++){
+      const subjectName=names[i];
+      const {data:oldSubject,error:subjectFindError}=await sb.from('subjects')
+        .select('*')
+        .eq('user_id',currentUser.id)
+        .eq('qualification_id',q.id)
+        .eq('name',subjectName)
+        .maybeSingle();
+
+      if(subjectFindError){
+        alert('科目の確認に失敗しました: '+subjectFindError.message);
+        return;
+      }
+
+      if(oldSubject){
+        const {error:subjectUpdateError}=await sb.from('subjects')
+          .update({archived:false,sort_order:i})
+          .eq('id',oldSubject.id)
+          .eq('user_id',currentUser.id);
+        if(subjectUpdateError){
+          alert('科目の更新に失敗しました: '+subjectUpdateError.message);
+          return;
+        }
+      }else{
+        const {error:subjectInsertError}=await sb.from('subjects')
+          .insert({user_id:currentUser.id,qualification_id:q.id,name:subjectName,sort_order:i});
+        if(subjectInsertError){
+          alert('科目の登録に失敗しました: '+subjectInsertError.message);
+          return;
+        }
+      }
+    }
+  }
+
   await loadAll();
   renderQualificationMasterInline();
   toast('資格を登録しました');
