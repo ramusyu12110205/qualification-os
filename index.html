@@ -459,6 +459,86 @@ function renderQualificationMasterInline(){
 }
 function showQualificationMaster(){ openTab('settings'); toggleInlinePanel('qualification'); }
 
+
+async function addQualification(){
+  const name=document.getElementById('newQName')?.value.trim();
+  const exam_date=document.getElementById('newQDate')?.value||null;
+  const raw=document.getElementById('newQSubjects')?.value||'';
+  if(!name){alert('資格名を入力してください');return}
+  const {data:q,error}=await sb.from('qualifications')
+    .insert({user_id:currentUser.id,name,exam_date})
+    .select().single();
+  if(error){alert('資格の登録に失敗しました: '+error.message);return}
+  const names=[...new Set(raw.split(/\r?\n|,|、/).map(x=>x.trim()).filter(Boolean))];
+  if(names.length){
+    const rows=names.map((n,i)=>({user_id:currentUser.id,qualification_id:q.id,name:n,sort_order:i}));
+    const {error:e}=await sb.from('subjects').insert(rows);
+    if(e){alert('科目の登録に失敗しました: '+e.message);return}
+  }
+  await loadAll();
+  renderQualificationMasterInline();
+  toast('資格を登録しました');
+}
+
+async function updateQualification(id){
+  const name=document.getElementById('qn-'+id)?.value.trim();
+  const exam_date=document.getElementById('qd-'+id)?.value||null;
+  const raw=document.getElementById('qs-'+id)?.value||'';
+  if(!name){alert('資格名を入力してください');return}
+
+  const {error}=await sb.from('qualifications')
+    .update({name,exam_date})
+    .eq('id',id).eq('user_id',currentUser.id);
+  if(error){alert('資格の更新に失敗しました: '+error.message);return}
+
+  const old=subjects.filter(s=>s.qualification_id===id);
+  const names=[...new Set(raw.split(/\r?\n|,|、/).map(x=>x.trim()).filter(Boolean))];
+  const existingNames=old.map(s=>s.name);
+
+  const add=names.filter(n=>!existingNames.includes(n));
+  if(add.length){
+    const {error:e}=await sb.from('subjects').insert(
+      add.map((n,i)=>({user_id:currentUser.id,qualification_id:id,name:n,sort_order:old.length+i}))
+    );
+    if(e){alert('科目の追加に失敗しました: '+e.message);return}
+  }
+
+  const remove=old.filter(s=>!names.includes(s.name));
+  if(remove.length){
+    const {error:e}=await sb.from('subjects')
+      .update({archived:true})
+      .in('id',remove.map(s=>s.id))
+      .eq('user_id',currentUser.id);
+    if(e){alert('科目の更新に失敗しました: '+e.message);return}
+  }
+
+  await loadAll();
+  renderQualificationMasterInline();
+  toast('保存しました');
+}
+
+async function archiveQualification(id){
+  if(!confirm('この資格を削除しますか？\n関連する科目・問題も参照できなくなります。'))return;
+  const {error}=await sb.from('qualifications')
+    .update({archived:true})
+    .eq('id',id).eq('user_id',currentUser.id);
+  if(error){alert('資格の削除に失敗しました: '+error.message);return}
+  await loadAll();
+  renderQualificationMasterInline();
+  toast('資格を削除しました');
+}
+
+async function deleteStudySession(id){
+  if(!confirm('この勉強記録を削除しますか？'))return;
+  const {error}=await sb.from('study_sessions')
+    .delete()
+    .eq('id',id).eq('user_id',currentUser.id);
+  if(error){alert('勉強記録の削除に失敗しました: '+error.message);return}
+  await loadAll();
+  renderRecordManagerInline();
+  toast('削除しました');
+}
+
 function renderRecordManagerInline(){
   const box=document.getElementById('panel-record'); if(!box)return;
   const labels={new_problems:'新規問題',review:'復習',textbook:'テキスト',lecture:'講義',mock:'模試',other:'その他'};
