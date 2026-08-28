@@ -1,0 +1,475 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>資格勉強OS</title>
+<style>
+:root{--bg:#080c17;--card:#12182a;--card2:#0e1422;--text:#f5f7ff;--muted:#98a3bf;--accent:#8b5cf6;--cyan:#22d3ee;--good:#34d399;--bad:#fb7185;--gold:#fbbf24;--line:#26314d}
+*{box-sizing:border-box}
+body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;max-width:1120px;margin:auto;padding:18px 18px 90px;background:radial-gradient(circle at top left,#1a1640 0,#090e1a 42%,#050812 100%);color:var(--text)}
+h1{font-size:30px;margin:0 0 4px} h2{margin:0} h3{margin:0 0 10px} .muted{color:var(--muted)} .small{font-size:13px}
+.card{background:linear-gradient(145deg,rgba(18,24,42,.96),rgba(10,15,28,.98));border:1px solid var(--line);border-radius:22px;padding:20px;margin:14px 0;box-shadow:0 15px 45px rgba(0,0,0,.22)}
+.hero{background:linear-gradient(135deg,#1b1242,#4c1d95 50%,#0e7490);border-color:#463676;overflow:hidden}
+.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+.statgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.mini{background:rgba(5,9,20,.38);border:1px solid rgba(255,255,255,.09);border-radius:15px;padding:13px}
+.mini b{display:block;font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:#b4bdd5} .mini strong{font-size:22px}
+.big{font-size:42px;font-weight:950;letter-spacing:-1px} .kicker{font-size:11px;letter-spacing:.13em;text-transform:uppercase;color:#b6c0dd;font-weight:900}
+.levelrow{display:flex;gap:12px;align-items:center} .level{font-size:35px;font-weight:950} .xpbar{flex:1}
+.bar{height:10px;background:#252e47;border-radius:99px;overflow:hidden} .bar>div{height:100%;background:linear-gradient(90deg,var(--accent),var(--cyan));border-radius:99px}
+.quest{background:linear-gradient(135deg,#171c35,#11182b);border:1px solid #39466b;border-radius:17px;padding:16px;margin-top:12px}
+.quest-title{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#aab5d5;font-weight:900} .quest-main{font-size:23px;font-weight:950;margin:4px 0}
+.countdown{font-size:34px;font-weight:950} .sectiontitle{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.item{border:1px solid var(--line);border-radius:14px;padding:14px;margin:9px 0;background:#0f1627}
+.clickable{cursor:pointer} .clickable:hover{border-color:#53638f;box-shadow:0 8px 24px rgba(0,0,0,.2)}
+.badge{display:inline-block;background:#261b50;color:#d7ceff;border:1px solid #45337c;border-radius:999px;padding:4px 9px;font-size:12px;font-weight:800}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+button{border:0;border-radius:11px;padding:10px 15px;font-weight:850;cursor:pointer;min-height:42px}
+.primary{background:var(--accent);color:#fff} .light{background:#222b43;color:#e8ecff;border:1px solid #33405f} .danger{background:#3d1725;color:#ffc1cf;border:1px solid #6b2941}
+input,textarea,select{width:100%;padding:11px;border:1px solid #394563;border-radius:11px;background:#0c1322;color:#f4f6ff;font-size:16px;min-height:44px}
+textarea{min-height:120px} label{display:block;font-weight:800;margin:11px 0 6px}
+.tabnav{display:grid;grid-template-columns:repeat(4,1fr);gap:8px} .tabnav button{background:#202840;color:#dde4fb;border:1px solid #33405e} .tabnav button.active{background:var(--accent);color:#fff}
+.bottom-nav{display:none}
+.modal{position:fixed;inset:0;background:rgba(3,6,13,.72);display:none;align-items:center;justify-content:center;padding:14px;z-index:100}
+.modal.open{display:flex} .modal-box{width:min(680px,100%);max-height:90vh;overflow:auto;background:#10172a;border:1px solid #33405e;border-radius:20px;padding:18px}
+.toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:#101827;border:1px solid #354361;color:#fff;padding:11px 15px;border-radius:12px;z-index:200;display:none}
+.auth{min-height:55vh;display:flex;align-items:center;justify-content:center} .authbox{max-width:480px;text-align:center}
+.record-grid{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center} .record-meta{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px} .record-meta span{background:#1b2339;border:1px solid #2e3956;border-radius:999px;padding:4px 9px;font-size:12px;color:#c9d2e9}
+@media(max-width:700px){
+  body{padding:12px 12px 86px} .grid{grid-template-columns:1fr} .statgrid{grid-template-columns:1fr}
+  .tabnav{display:none}
+  .bottom-nav{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;position:fixed;left:9px;right:9px;bottom:9px;z-index:90;background:rgba(13,19,35,.97);border:1px solid #303a59;border-radius:18px;padding:7px;box-shadow:0 15px 40px rgba(0,0,0,.45)}
+  .bottom-nav button{background:transparent;color:#9fa9c7;border:0;padding:8px 4px;font-size:12px}
+  .bottom-nav button.active{background:#6d43d9;color:#fff} .hero .big{font-size:35px} .record-grid{grid-template-columns:1fr}
+}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+<div id="authScreen" class="auth">
+  <div class="card authbox">
+    <div style="font-size:48px">📚</div>
+    <div class="kicker">QUALIFICATION OS</div>
+    <h1 style="margin-top:4px">資格勉強OS</h1>
+    <p class="muted">PCでもスマホでも、同じ勉強データを使えます。</p>
+    <button class="primary" style="width:100%;margin-top:12px" onclick="loginWithGoogle()">Googleでログイン</button>
+    <p id="authError" class="small" style="color:#ff9aad;margin-top:12px"></p>
+  </div>
+</div>
+
+<div id="app" style="display:none">
+  <div class="sectiontitle">
+    <div><h1>📚 資格勉強OS</h1><div class="muted small" id="userLabel"></div></div>
+    <button class="light" onclick="logout()">ログアウト</button>
+  </div>
+
+  <div class="card hero">
+    <div class="grid" style="grid-template-columns:1.2fr .8fr;align-items:stretch">
+      <div>
+        <div class="kicker">TOTAL STUDY</div>
+        <div class="big" id="heroTotal">0時間0分</div>
+        <div class="muted">これまでの総勉強時間</div>
+        <div class="quest">
+          <div class="quest-title">Today's Mission</div>
+          <div class="quest-main" id="heroMission">今日の学習を始めよう</div>
+          <div class="muted small" id="heroMissionSub">今日の復習を確認</div>
+        </div>
+      </div>
+      <div class="mini" style="display:flex;flex-direction:column;justify-content:center">
+        <div class="kicker">LEVEL</div>
+        <div class="levelrow"><div class="level" id="heroLevel">1</div><div class="xpbar"><div class="bar"><div id="heroXpBar" style="width:0%"></div></div><div class="muted small" id="heroXpText">0 XP</div></div></div>
+        <div style="margin-top:18px"><div class="countdown" id="heroCountdown">—</div><div class="kicker">NEXT EXAM</div><div class="muted small" id="heroExamName">試験日を設定してください</div></div>
+      </div>
+    </div>
+    <div class="statgrid" style="margin-top:12px">
+      <div class="mini"><b>今日の復習</b><strong id="heroDue">0問</strong></div>
+      <div class="mini"><b>連続学習</b><strong id="heroStreak">0日 🔥</strong></div>
+      <div class="mini"><b>資格</b><strong id="heroQualifications">0</strong></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="tabnav">
+      <button id="tabbtn-review" onclick="openTab('review')">今日の復習</button>
+      <button id="tabbtn-record" onclick="openTab('record')">＋ 記録</button>
+      <button id="tabbtn-status" onclick="openTab('status')">📊 状況</button>
+      <button id="tabbtn-settings" onclick="openTab('settings')">⚙ 設定</button>
+    </div>
+  </div>
+
+  <div class="bottom-nav">
+    <button id="bottom-review" onclick="openTab('review')">🏠<br>今日</button>
+    <button id="bottom-record" onclick="openTab('record')">＋<br>記録</button>
+    <button id="bottom-status" onclick="openTab('status')">📊<br>状況</button>
+    <button id="bottom-settings" onclick="openTab('settings')">⚙<br>設定</button>
+  </div>
+
+  <section id="tab-review">
+    <div class="card">
+      <div class="sectiontitle"><h2>今日の復習</h2><span class="badge" id="reviewCount">0問</span></div>
+      <p class="muted small">今日が復習日になっている問題だけ表示します。</p>
+      <div class="row" style="margin:12px 0">
+        <button class="light" onclick="selectAllDue(true)">すべて選択</button>
+        <button class="light" onclick="selectAllDue(false)">すべて解除</button>
+        <button class="primary" onclick="startReview()">選択した問題を復習</button>
+      </div>
+      <div id="reviewList"></div>
+    </div>
+  </section>
+
+  <section id="tab-record" style="display:none">
+    <div class="card">
+      <h2>今日の勉強を記録</h2>
+      <p class="muted small">新規問題だけでなく、復習・テキスト・講義なども勉強時間として残せます。</p>
+      <div class="grid">
+        <div><label>資格</label><select id="recordQualification"></select></div>
+        <div><label>科目</label><select id="recordSubject"></select></div>
+      </div>
+      <label>内容</label>
+      <select id="activityType">
+        <option value="new_problems">新規問題</option>
+        <option value="review">復習</option>
+        <option value="textbook">テキスト</option>
+        <option value="lecture">講義</option>
+        <option value="mock">模試</option>
+        <option value="other">その他</option>
+      </select>
+      <label>問題（新規問題の場合のみ・1行1問）</label>
+      <textarea id="recordProblems" placeholder="例題1&#10;例題2&#10;例題3"></textarea>
+      <div class="grid">
+        <div><label>勉強日</label><input id="recordDate" type="date"></div>
+        <div><label>勉強時間（分）</label><input id="recordMinutes" type="number" min="1" placeholder="60"></div>
+      </div>
+      <label>メモ</label><input id="recordMemo" placeholder="連結が怪しい、など">
+      <button class="primary" onclick="saveStudyRecord()">勉強を記録</button>
+    </div>
+  </section>
+
+  <section id="tab-status" style="display:none">
+    <div class="card">
+      <h2>📊 学習状況</h2>
+      <div class="row" style="margin:12px 0">
+        <button class="primary" onclick="showDashboard()">資格一覧</button>
+        <button class="light" onclick="showStats('all')">全体の累積</button>
+        <button class="light" onclick="showStats('month')">月別</button>
+      </div>
+      <div id="dashboard"></div>
+    </div>
+  </section>
+
+  <section id="tab-settings" style="display:none">
+    <div class="card">
+      <h2>⚙ 設定</h2>
+      <div class="item clickable" onclick="showQualificationMaster()"><b>資格設定マスタ</b><br><span class="muted small">資格名・試験日・科目を登録</span></div>
+      <div class="item clickable" onclick="showRecordManager()"><b>勉強記録を管理</b><br><span class="muted small">過去の勉強記録を確認・編集・削除</span></div>
+      <div class="item clickable" onclick="importLocalData()"><b>旧端末データを取り込む</b><br><span class="muted small">以前のlocalStorage版の記録をクラウドへ移行</span></div>
+      <div class="item"><b>アカウント</b><br><span class="muted small" id="settingsUser"></span></div>
+      <div id="settingsContent"></div>
+    </div>
+  </section>
+</div>
+
+<div id="reviewModal" class="modal">
+  <div class="modal-box">
+    <div class="sectiontitle"><div><h2>復習</h2><div class="muted small" id="reviewProgress"></div></div><button class="light" onclick="closeReview()">閉じる</button></div>
+    <div id="reviewQuestion" style="margin-top:14px"></div>
+  </div>
+</div>
+<div id="timeModal" class="modal">
+  <div class="modal-box">
+    <h2>今回の復習時間</h2>
+    <p class="muted small">今回選択した問題の復習に使った時間を入力してください。</p>
+    <input id="reviewMinutes" type="number" min="1" placeholder="例：25">
+    <label>メモ（任意）</label><input id="reviewMemo" placeholder="消費税の復習">
+    <div class="row" style="margin-top:12px"><button class="primary" onclick="finishReviewSession()">復習を保存</button><button class="light" onclick="cancelReviewTime()">キャンセル</button></div>
+  </div>
+</div>
+<div id="toast" class="toast"></div>
+
+<script>
+const SUPABASE_URL = 'https://txprypfzdsfaupguhybl.supabase.co';
+const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_qiCaP0cBNhms5-usSDzKlQ_nywzlU36';
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+  auth: { persistSession:true, autoRefreshToken:true, detectSessionInUrl:true }
+});
+
+let currentUser=null;
+let qualifications=[];
+let subjects=[];
+let problems=[];
+let sessions=[];
+let reviewQueue=[];
+let reviewIndex=0;
+let reviewAnswers=[];
+let selectedReviewSubject=null;
+
+function localDate(d=new Date()){
+  const y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,'0'), day=String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${day}`;
+}
+function today(){return localDate()}
+function parseDate(s){return new Date(s+'T00:00:00')}
+function addDays(s,n){const d=parseDate(s);d.setDate(d.getDate()+n);return localDate(d)}
+function fmt(s){if(!s)return '—';const d=parseDate(s);return `${d.getMonth()+1}/${d.getDate()}`}
+function minutesText(m){m=Number(m)||0;return `${Math.floor(m/60)}時間${m%60}分`}
+function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))}
+function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.style.display='block';setTimeout(()=>t.style.display='none',1800)}
+
+async function init(){
+  document.getElementById('recordDate').value=today();
+  const {data:{session}}=await sb.auth.getSession();
+  if(session) await boot(session.user);
+  else showAuth();
+  sb.auth.onAuthStateChange(async (event,session)=>{
+    if(event==='SIGNED_IN' && session) await boot(session.user);
+    if(event==='SIGNED_OUT') showAuth();
+  });
+}
+
+function showAuth(){
+  document.getElementById('authScreen').style.display='flex';
+  document.getElementById('app').style.display='none';
+}
+async function loginWithGoogle(){
+  document.getElementById('authError').textContent='';
+  const redirectTo=window.location.origin+window.location.pathname;
+  const {error}=await sb.auth.signInWithOAuth({provider:'google',options:{redirectTo}});
+  if(error) document.getElementById('authError').textContent=error.message;
+}
+async function logout(){await sb.auth.signOut()}
+async function boot(user){
+  currentUser=user;
+  document.getElementById('authScreen').style.display='none';
+  document.getElementById('app').style.display='block';
+  document.getElementById('userLabel').textContent=user.email||'';
+  document.getElementById('settingsUser').textContent=user.email||'';
+  await loadAll();
+  openTab('review');
+}
+
+async function loadAll(){
+  const uid=currentUser.id;
+  const [q,s,p,st]=await Promise.all([
+    sb.from('qualifications').select('*').eq('user_id',uid).eq('archived',false).order('sort_order').order('name'),
+    sb.from('subjects').select('*').eq('user_id',uid).eq('archived',false).order('sort_order').order('name'),
+    sb.from('problems').select('*').eq('user_id',uid).order('name'),
+    sb.from('study_sessions').select('*').eq('user_id',uid).order('study_date',{ascending:false}).order('created_at',{ascending:false})
+  ]);
+  for(const r of [q,s,p,st]) if(r.error) throw r.error;
+  qualifications=q.data||[]; subjects=s.data||[]; problems=p.data||[]; sessions=st.data||[];
+  refreshRecordSelects();
+  renderAll();
+}
+function renderAll(){updateHero();renderReview();}
+function openTab(name){
+  ['review','record','status','settings'].forEach(x=>{
+    const el=document.getElementById('tab-'+x); if(el) el.style.display=x===name?'block':'none';
+    const a=document.getElementById('tabbtn-'+x),b=document.getElementById('bottom-'+x);
+    if(a)a.classList.toggle('active',x===name); if(b)b.classList.toggle('active',x===name);
+  });
+  if(name==='review') renderReview();
+  if(name==='status') showDashboard();
+  if(name==='record') refreshRecordSelects();
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+function refreshRecordSelects(){
+  const q=document.getElementById('recordQualification'),s=document.getElementById('recordSubject');
+  if(!q||!s)return;
+  q.innerHTML=qualifications.length?qualifications.map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join(''):'<option value="">資格を設定してください</option>';
+  refreshSubjectSelect();
+}
+function refreshSubjectSelect(){
+  const qid=document.getElementById('recordQualification')?.value,s=document.getElementById('recordSubject'); if(!s)return;
+  const arr=subjects.filter(x=>x.qualification_id===qid);
+  s.innerHTML=arr.length?arr.map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join(''):'<option value="">科目を設定してください</option>';
+}
+document.addEventListener('change',e=>{if(e.target.id==='recordQualification')refreshSubjectSelect();});
+
+function dueItems(){
+  const t=today();
+  return problems.filter(p=>p.status==='pending' && p.next_review_date===t);
+}
+function renderReview(){
+  const due=dueItems();
+  document.getElementById('reviewCount').textContent=due.length+'問';
+  if(!due.length){document.getElementById('reviewList').innerHTML='<div class="item">🎉 今日の復習はありません。</div>';return}
+  const groups={};
+  due.forEach(p=>{if(!groups[p.subject_id])groups[p.subject_id]=[];groups[p.subject_id].push(p)});
+  document.getElementById('reviewList').innerHTML=Object.entries(groups).map(([sid,arr])=>{
+    const sub=subjects.find(s=>s.id===sid),q=qualifications.find(q=>q.id===sub?.qualification_id);
+    return `<details open style="margin:10px 0"><summary style="cursor:pointer;font-weight:900">${esc(q?.name||'資格')} / ${esc(sub?.name||'科目')} <span class="badge">${arr.length}問</span></summary>
+      <div style="padding-top:7px">${arr.map(p=>`<label class="item" style="display:flex;gap:10px;align-items:center;cursor:pointer"><input class="dueCheck" type="checkbox" data-id="${p.id}" style="width:auto"><span><b>${esc(p.name)}</b><br><span class="muted small">実施 ${p.attempts}回 ・ ${p.last_result==='wrong'?'再復習':p.stage===0?'初回翌日':`${[1,3,7,14,30][p.stage]??'?'}日後`}</span></span></label>`).join('')}</div></details>`;
+  }).join('');
+}
+function selectAllDue(v){document.querySelectorAll('.dueCheck').forEach(x=>x.checked=v)}
+function startReview(){
+  reviewQueue=[...document.querySelectorAll('.dueCheck:checked')].map(x=>problems.find(p=>p.id===x.dataset.id)).filter(Boolean);
+  if(!reviewQueue.length){alert('復習する問題を選択してください');return}
+  reviewIndex=0;reviewAnswers=[];document.getElementById('reviewModal').classList.add('open');showReviewQuestion();
+}
+function showReviewQuestion(){
+  if(reviewIndex>=reviewQueue.length){document.getElementById('reviewModal').classList.remove('open');document.getElementById('timeModal').classList.add('open');return}
+  const p=reviewQueue[reviewIndex],sub=subjects.find(s=>s.id===p.subject_id),q=qualifications.find(q=>q.id===sub?.qualification_id);
+  document.getElementById('reviewProgress').textContent=`${reviewIndex+1} / ${reviewQueue.length}`;
+  document.getElementById('reviewQuestion').innerHTML=`<div class="item"><span class="badge">${esc(q?.name||'')} / ${esc(sub?.name||'')}</span><h2 style="margin:12px 0 6px">${esc(p.name)}</h2><div class="muted small">これまで ${p.attempts}回実施</div><div class="row" style="margin-top:18px"><button class="primary" onclick="answerReview('correct')">✓ 合ってた</button><button class="light" onclick="answerReview('wrong')">✕ 間違えた</button></div></div>`;
+}
+function answerReview(result){reviewAnswers.push({problemId:reviewQueue[reviewIndex].id,result});reviewIndex++;showReviewQuestion()}
+function closeReview(){document.getElementById('reviewModal').classList.remove('open');reviewQueue=[];reviewAnswers=[]}
+function cancelReviewTime(){document.getElementById('timeModal').classList.remove('open');reviewQueue=[];reviewAnswers=[]}
+async function finishReviewSession(){
+  const minutes=Number(document.getElementById('reviewMinutes').value||0),memo=document.getElementById('reviewMemo').value.trim();
+  if(!minutes){alert('復習時間を入力してください');return}
+  const first=reviewQueue[0],sub=subjects.find(s=>s.id===first.subject_id),qid=sub?.qualification_id;
+  if(!qid){alert('科目情報が見つかりません');return}
+  const {data:sessionId,error}=await sb.rpc('record_review_session',{
+    p_qualification_id:qid,p_subject_id:first.subject_id,p_minutes:minutes,p_memo:memo,
+    p_items:reviewAnswers.map(x=>({problem_id:x.problemId,result:x.result}))
+  });
+  if(error){alert('復習の保存に失敗しました: '+error.message);return}
+  document.getElementById('reviewMinutes').value='';document.getElementById('reviewMemo').value='';
+  document.getElementById('timeModal').classList.remove('open');reviewQueue=[];reviewAnswers=[];
+  await loadAll();toast('復習を記録しました');
+}
+
+async function saveStudyRecord(){
+  const qid=document.getElementById('recordQualification').value,sid=document.getElementById('recordSubject').value;
+  const type=document.getElementById('activityType').value,date=document.getElementById('recordDate').value;
+  const minutes=Number(document.getElementById('recordMinutes').value||0),memo=document.getElementById('recordMemo').value.trim();
+  const raw=document.getElementById('recordProblems').value.trim();
+  if(!qid||!date||!minutes){alert('資格・日付・勉強時間は必須です');return}
+  if(['new_problems','review'].includes(type)&&!sid){alert('科目を設定してください');return}
+  if(type==='new_problems'&&!raw){alert('新規問題の場合は問題を入力してください');return}
+  const {data:session,error:se}=await sb.from('study_sessions').insert({
+    user_id:currentUser.id,qualification_id:qid,subject_id:sid||null,study_date:date,activity_type:type,minutes,memo:memo||null
+  }).select().single();
+  if(se){alert('勉強記録の保存に失敗しました: '+se.message);return}
+  if(type==='new_problems'){
+    const names=raw.split(/\n|,|、/).map(x=>x.trim()).filter(Boolean);
+    const rows=names.map(name=>({
+      user_id:currentUser.id,subject_id:sid,name,stage:0,next_review_date:addDays(date,1),status:'pending',attempts:0,last_result:null
+    }));
+    const {data:ps,error:pe}=await sb.from('problems').upsert(rows,{onConflict:'user_id,subject_id,name'}).select('id,name');
+    if(pe){alert('問題保存に失敗しました: '+pe.message);return}
+    const links=(ps||[]).map(p=>({user_id:currentUser.id,session_id:session.id,problem_id:p.id,role:'new',result:null}));
+    if(links.length){const {error:le}=await sb.from('study_session_problems').insert(links);if(le){alert('問題リンクの保存に失敗しました: '+le.message);return}}
+  }
+  ['recordProblems','recordMinutes','recordMemo'].forEach(id=>document.getElementById(id).value='');
+  await loadAll();toast('勉強を記録しました');openTab('review');
+}
+
+function calcStreak(){
+  const days=[...new Set(sessions.map(s=>s.study_date))].sort().reverse(); if(!days.length||days[0]!==today())return 0;
+  let n=0;for(let i=0;i<days.length;i++){if(days[i]===addDays(today(),-i))n++;else break}return n;
+}
+function updateHero(){
+  const total=sessions.reduce((a,s)=>a+Number(s.minutes||0),0),due=dueItems();
+  const xp=Math.floor(total)+problems.reduce((a,p)=>a+Number(p.attempts||0),0)*10,level=Math.max(1,Math.floor(xp/300)+1),base=(level-1)*300;
+  document.getElementById('heroTotal').textContent=minutesText(total);document.getElementById('heroDue').textContent=due.length+'問';
+  document.getElementById('heroQualifications').textContent=qualifications.length;document.getElementById('heroStreak').textContent=calcStreak()+'日 🔥';
+  document.getElementById('heroLevel').textContent=level;document.getElementById('heroXpText').textContent=xp+' XP';
+  document.getElementById('heroXpBar').style.width=Math.min(100,Math.round((xp-base)/300*100))+'%';
+  document.getElementById('heroMission').textContent=due.length?`復習 ${due.length}問を攻略`:'今日の復習はクリア！';
+  document.getElementById('heroMissionSub').textContent=due.length?'選択して復習を開始':'新しい学習を記録しましょう';
+  const next=qualifications.filter(q=>q.exam_date).sort((a,b)=>a.exam_date.localeCompare(b.exam_date))[0];
+  if(next){const diff=Math.ceil((parseDate(next.exam_date)-parseDate(today()))/86400000);document.getElementById('heroCountdown').textContent=diff>=0?`あと ${diff}日`:'試験済み';document.getElementById('heroExamName').textContent=`${next.name} / ${fmt(next.exam_date)}`}
+  else{document.getElementById('heroCountdown').textContent='—';document.getElementById('heroExamName').textContent='資格マスタで設定';}
+}
+
+function showDashboard(){
+  const box=document.getElementById('dashboard'),map={};sessions.forEach(s=>{map[s.qualification_id]=(map[s.qualification_id]||0)+Number(s.minutes||0)});
+  const rows=Object.entries(map).map(([id,m])=>[qualifications.find(q=>q.id===id)?.name||'資格',m,id]).sort((a,b)=>b[1]-a[1]);
+  box.innerHTML=rows.length?rows.map(([name,m,id])=>`<div class="item clickable" onclick="showQualification('${id}')"><div class="row" style="justify-content:space-between"><b>${esc(name)}</b><strong>${minutesText(m)}</strong></div><div class="bar" style="margin:8px 0"><div style="width:${rows[0]?.[1]?m/rows[0][1]*100:0}%"></div></div><span class="muted small">資格の攻略状況を見る</span></div>`).join(''):'<div class="item">まだ勉強記録がありません。</div>';
+}
+function showQualification(id){
+  const q=qualifications.find(x=>x.id===id);if(!q)return;const box=document.getElementById('dashboard'),ss=subjects.filter(s=>s.qualification_id===id);
+  const total=sessions.filter(s=>s.qualification_id===id).reduce((a,s)=>a+Number(s.minutes||0),0);
+  box.innerHTML=`<button class="light" onclick="showDashboard()">← 資格一覧</button><div class="quest"><div class="kicker">Qualification</div><h2>${esc(q.name)}</h2><div class="countdown" style="font-size:28px">${q.exam_date?`試験 ${fmt(q.exam_date)}`:'試験日未設定'}</div></div><div class="stat" style="margin:12px 0">${minutesText(total)}</div>`+
+  ss.map(s=>{const ps=problems.filter(p=>p.subject_id===s.id),master=ps.filter(p=>p.status==='mastered').length;return `<div class="item clickable" onclick="showUnit('${s.id}')"><div class="row" style="justify-content:space-between"><b>${esc(s.name)}</b><strong>${master} / ${ps.length} MASTER</strong></div><div class="bar" style="margin-top:8px"><div style="width:${ps.length?master/ps.length*100:0}%"></div></div></div>`}).join('')||'<div class="item">科目がありません。</div>';
+}
+function showUnit(id){
+  const s=subjects.find(x=>x.id===id),q=qualifications.find(x=>x.id===s?.qualification_id),box=document.getElementById('dashboard');
+  const ps=problems.filter(p=>p.subject_id===id),ss=sessions.filter(x=>x.subject_id===id);
+  box.innerHTML=`<button class="light" onclick="showQualification('${q?.id}')">← ${esc(q?.name||'資格')}</button><h2 style="margin-top:12px">${esc(s?.name||'科目')}</h2><div class="stat">${minutesText(ss.reduce((a,x)=>a+Number(x.minutes||0),0))}</div>`+
+  `<h3>問題の状態</h3>`+ps.map(p=>`<div class="item"><b>${esc(p.name)}</b> <span class="badge">${p.status==='mastered'?'MASTER':p.last_result==='wrong'?'再復習':p.next_review_date?'次回 '+fmt(p.next_review_date):'—'}</span><br><span class="muted small">実施 ${p.attempts}回</span></div>`).join('')||'<div class="item">問題がありません。</div>';
+}
+function showStats(type){
+  const box=document.getElementById('dashboard');
+  if(type==='all'){box.innerHTML=`<h3>⏱ 全体の累積</h3><div class="stat">${minutesText(sessions.reduce((a,s)=>a+Number(s.minutes||0),0))}</div><p class="muted">${sessions.length}件の勉強記録</p>`;return}
+  const map={};sessions.forEach(s=>{map[s.study_date]=(map[s.study_date]||0)+Number(s.minutes||0)});
+  const months={};Object.entries(map).forEach(([d,m])=>{const mo=d.slice(0,7);if(!months[mo])months[mo]={total:0,days:{}};months[mo].total+=m;months[mo].days[d]=m;});
+  box.innerHTML='<h3>📅 月別勉強時間</h3><p class="muted small">月をクリックすると日付別に開きます。</p>'+Object.entries(months).sort((a,b)=>b[0].localeCompare(a[0])).map(([mo,v])=>`<details class="item"><summary style="cursor:pointer"><div class="row" style="justify-content:space-between"><b>${esc(mo.replace('-','年')+'月')}</b><strong>${minutesText(v.total)}</strong></div></summary><div style="padding-top:8px">${Object.entries(v.days).sort((a,b)=>b[0].localeCompare(a[0])).map(([d,m])=>`<div class="item" style="margin:6px 0"><div class="row" style="justify-content:space-between"><span>${fmt(d)} <span class="muted small">${d}</span></span><strong>${minutesText(m)}</strong></div></div>`).join('')}</div></details>`).join('');
+}
+
+function showQualificationMaster(){
+  const box=document.getElementById('settingsContent');
+  box.innerHTML=`<h3 style="margin-top:12px">資格設定マスタ</h3><div class="item"><label>資格名</label><input id="newQName" placeholder="簿記1級"><label>試験日</label><input id="newQDate" type="date"><label>科目（1行1科目）</label><textarea id="newQSubjects" placeholder="商業簿記\n工業簿記\n原価計算"></textarea><button class="primary" onclick="addQualification()">資格を追加</button></div>`+
+  (qualifications.map(q=>`<details class="item"><summary style="cursor:pointer"><b>${esc(q.name)}</b> <span class="badge">${q.exam_date?fmt(q.exam_date):'試験日未設定'}</span></summary><div style="padding-top:10px"><label>資格名</label><input id="qn-${q.id}" value="${esc(q.name)}"><label>試験日</label><input id="qd-${q.id}" type="date" value="${q.exam_date||''}"><label>科目</label><textarea id="qs-${q.id}">${subjects.filter(s=>s.qualification_id===q.id).map(s=>s.name).join('\n')}</textarea><div class="row"><button class="primary" onclick="updateQualification('${q.id}')">保存</button><button class="danger" onclick="archiveQualification('${q.id}')">資格を削除</button></div></div></details>`).join('')||'<div class="item">まだ資格がありません。</div>');
+}
+async function addQualification(){
+  const name=document.getElementById('newQName').value.trim(),exam_date=document.getElementById('newQDate').value||null,raw=document.getElementById('newQSubjects').value;
+  if(!name){alert('資格名を入力してください');return}
+  const {data:q,error}=await sb.from('qualifications').insert({user_id:currentUser.id,name,exam_date}).select().single();if(error){alert(error.message);return}
+  const names=[...new Set(raw.split(/\n|,|、/).map(x=>x.trim()).filter(Boolean))];
+  if(names.length){const rows=names.map((n,i)=>({user_id:currentUser.id,qualification_id:q.id,name:n,sort_order:i}));const {error:e}=await sb.from('subjects').insert(rows);if(e){alert(e.message);return}}
+  await loadAll();showQualificationMaster();toast('資格を登録しました');
+}
+async function updateQualification(id){
+  const name=document.getElementById('qn-'+id).value.trim(),exam_date=document.getElementById('qd-'+id).value||null,raw=document.getElementById('qs-'+id).value;
+  if(!name){alert('資格名を入力してください');return}
+  const {error}=await sb.from('qualifications').update({name,exam_date}).eq('id',id).eq('user_id',currentUser.id);if(error){alert(error.message);return}
+  const old=subjects.filter(s=>s.qualification_id===id);const names=[...new Set(raw.split(/\n|,|、/).map(x=>x.trim()).filter(Boolean))];
+  const existing=old.map(s=>s.name);const add=names.filter(n=>!existing.includes(n));
+  if(add.length){const {error:e}=await sb.from('subjects').insert(add.map((n,i)=>({user_id:currentUser.id,qualification_id:id,name:n,sort_order:old.length+i})));if(e){alert(e.message);return}}
+  const remove=old.filter(s=>!names.includes(s.name));if(remove.length){const {error:e}=await sb.from('subjects').update({archived:true}).in('id',remove.map(s=>s.id)).eq('user_id',currentUser.id);if(e){alert(e.message);return}}
+  await loadAll();showQualificationMaster();toast('保存しました');
+}
+async function archiveQualification(id){if(!confirm('資格を削除しますか？\n勉強記録は保持します。'))return;const {error}=await sb.from('qualifications').update({archived:true}).eq('id',id).eq('user_id',currentUser.id);if(error){alert(error.message);return}await loadAll();showQualificationMaster();}
+
+function showRecordManager(){
+  const box=document.getElementById('settingsContent');
+  const html=sessions.length?sessions.map(s=>{
+    const q=qualifications.find(q=>q.id===s.qualification_id),sub=subjects.find(x=>x.id===s.subject_id);
+    const type={new_problems:'新規問題',review:'復習',textbook:'テキスト',lecture:'講義',mock:'模試',other:'その他'}[s.activity_type]||s.activity_type;
+    return `<div class="item"><div class="record-grid"><div><b>${esc(q?.name||'資格')}${sub?' / '+esc(sub.name):''}</b><div class="muted small">${fmt(s.study_date)} ・ ${type}</div></div><strong>${minutesText(s.minutes)}</strong></div><div class="record-meta"><span>📅 ${s.study_date}</span>${s.memo?`<span>💬 ${esc(s.memo)}</span>`:''}</div><div class="row" style="justify-content:flex-end;margin-top:10px"><button class="danger" onclick="deleteStudySession('${s.id}')">削除</button></div></div>`;
+  }).join(''):'<div class="item">勉強記録はありません。</div>';
+  box.innerHTML=`<div class="sectiontitle"><div><h3>勉強記録を管理</h3><div class="muted small">${sessions.length}件</div></div></div>`+html;
+}
+async function deleteStudySession(id){if(!confirm('この勉強記録を削除しますか？'))return;const {error}=await sb.from('study_sessions').delete().eq('id',id).eq('user_id',currentUser.id);if(error){alert(error.message);return}await loadAll();showRecordManager();toast('削除しました');}
+
+async function importLocalData(){
+  const raw=localStorage.getItem('qualification_study_os')||localStorage.getItem('qualification_study_os_v14')||localStorage.getItem('qualification_study_os_v13')||localStorage.getItem('qualification_study_os_v12')||localStorage.getItem('qualification_study_os_v6');
+  if(!raw){alert('旧端末データが見つかりません。');return}
+  let old;try{old=JSON.parse(raw)}catch{alert('旧データを読み込めませんでした。');return}
+  if(!Array.isArray(old)||!old.length){alert('取り込めるデータがありません。');return}
+  if(!confirm(`${old.length}件の旧勉強記録をクラウドへ取り込みます。続行しますか？`))return;
+  const qmap={},smap={},pmap={};
+  for(const r of old){
+    if(!qmap[r.qualification]){
+      const {data:q,error}=await sb.from('qualifications').upsert({user_id:currentUser.id,name:r.qualification},{
+        onConflict:'user_id,name'
+      }).select().single();if(error){alert(error.message);return}qmap[r.qualification]=q;
+    }
+    if(!smap[r.qualification+'||'+r.unit]){
+      const key=r.qualification+'||'+r.unit;const q=qmap[r.qualification];
+      const {data:s,error}=await sb.from('subjects').upsert({user_id:currentUser.id,qualification_id:q.id,name:r.unit},{
+        onConflict:'user_id,qualification_id,name'
+      }).select().single();if(error){alert(error.message);return}smap[key]=s;
+    }
+    const sub=smap[r.qualification+'||'+r.unit];
+    const {data:sess,error:se}=await sb.from('study_sessions').insert({user_id:currentUser.id,qualification_id:qmap[r.qualification].id,subject_id:sub.id,study_date:r.date,activity_type:'new_problems',minutes:r.minutes||1,memo:r.memo||null}).select().single();
+    if(se){alert(se.message);return}
+    for(const p of (r.problems||[])){
+      const {data:pr,error:pe}=await sb.from('problems').upsert({user_id:currentUser.id,subject_id:sub.id,name:p.name,stage:p.stage||0,next_review_date:p.nextDate||addDays(r.date,1),status:p.status||'pending',attempts:p.attempts||0,last_result:p.lastResult||null},{onConflict:'user_id,subject_id,name'}).select().single();
+      if(pe){alert(pe.message);return}pmap[p.id]=pr;
+      await sb.from('study_session_problems').upsert({user_id:currentUser.id,session_id:sess.id,problem_id:pr.id,role:'new',result:null},{onConflict:'session_id,problem_id,role'});
+    }
+  }
+  await loadAll();showQualificationMaster();toast('旧データを取り込みました');
+}
+
+window.addEventListener('error',e=>{console.error(e.error||e.message)});
+init().catch(e=>{console.error(e);document.getElementById('authError').textContent='初期化に失敗しました: '+(e.message||e)})
+</script>
+</body>
+</html>
