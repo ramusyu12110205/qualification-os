@@ -1,0 +1,180 @@
+>
+      <div class="record-meta"><span>📅 ${s.study_date}</span>${s.memo?`<span>💬 ${esc(s.memo)}</span>`:''}</div>
+      <div class="row" style="justify-content:flex-end;margin-top:10px"><button class="danger" onclick="deleteStudySession('${s.id}')">削除</button></div>
+    </div>`;
+  }).join(''):'<div class="item">勉強記録はありません。</div>';
+  box.innerHTML=`<h3>勉強記録を管理</h3><p class="muted small">${sessions.length}件。削除するとクラウド上の記録も削除されます。</p>${cards}`;
+}
+function showRecordManager(){ openTab('settings'); toggleInlinePanel('record'); }
+
+
+function renderPastStudyInline(){
+  const box=document.getElementById('panel-past'); if(!box)return;
+  box.innerHTML=`<h3>過去の勉強をまとめて記録</h3>
+  <p class="muted small">過去に実際に勉強した時間だけを追加します。<b>復習ステージ・次回復習日は変更しません。</b></p>
+  <div class="item">
+    <div class="grid">
+      <div>
+        <label>資格</label>
+        <select id="pastQualification"></select>
+      </div>
+      <div>
+        <label>科目</label>
+        <select id="pastSubject"></select>
+      </div>
+    </div>
+    <label>複数行入力</label>
+    <textarea id="pastRows" style="min-height:220px" placeholder="2026-08-01｜消費税｜講義｜45｜テキスト確認
+2026-08-01｜消費税｜新規問題｜30｜例題1〜5
+2026-08-02｜所得税｜テキスト｜60｜
+2026-08-03｜消費税｜復習｜25｜"></textarea>
+    <p class="muted small">形式：<b>日付｜科目｜内容｜分｜メモ</b>　※科目は資格マスタに登録済みのものから選びます。<br>日付は YYYY-MM-DD。内容は「新規問題 / 復習 / テキスト / 講義 / 模試 / その他」。</p>
+    <div class="row">
+      <button class="primary" onclick="previewPastStudy()">入力内容を確認</button>
+      <button class="light" onclick="clearPastStudyForm()">クリア</button>
+    </div>
+  </div>
+  <div id="pastPreview"></div>`;
+  refreshPastSelects();
+}
+function refreshPastSelects(){
+  const q=document.getElementById('pastQualification'),s=document.getElementById('pastSubject');
+  if(!q||!s)return;
+  q.innerHTML=qualifications.length?qualifications.map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join(''):'<option value="">資格を設定してください</option>';
+  refreshPastSubjectSelect();
+}
+function refreshPastSubjectSelect(){
+  const qid=document.getElementById('pastQualification')?.value,s=document.getElementById('pastSubject');
+  if(!s)return;
+  const arr=subjects.filter(x=>x.qualification_id===qid);
+  s.innerHTML=arr.length?arr.map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join(''):'<option value="">科目を選択</option>';
+}
+function parsePastRows(){
+  const text=document.getElementById('pastRows')?.value||'';
+  const qid=document.getElementById('pastQualification')?.value;
+  const rows=[];
+  const errors=[];
+  const allowed={new_problems:'新規問題',review:'復習',textbook:'テキスト',lecture:'講義',mock:'模試',other:'その他'};
+  const reverse=Object.fromEntries(Object.entries(allowed).map(([k,v])=>[v,k]));
+  text.split(/\r?\n/).map(x=>x.trim()).filter(Boolean).forEach((line,i)=>{
+    const parts=line.split('|').map(x=>x.trim());
+    if(parts.length<4){
+      errors.push(`${i+1}行目：「日付｜科目｜内容｜分｜メモ」の5列で入力してください`);
+      return;
+    }
+    const [date,subjectName,activityText,minutesText,memo='']=parts;
+    const activityType=reverse[activityText]||activityText;
+    const minutes=Number(minutesText);
+    const subject=subjects.find(s=>s.qualification_id===qid && s.name===subjectName);
+    if(!/^\\d{4}-\\d{2}-\\d{2}$/.test(date) || Number.isNaN(parseDate(date).getTime())){
+      errors.push(`${i+1}行目：日付が不正です`);
+      return;
+    }
+    if(!subject){
+      errors.push(`${i+1}行目：科目「${subjectName}」が資格マスタにありません`);
+      return;
+    }
+    if(!Object.keys(allowed).includes(activityType)){
+      errors.push(`${i+1}行目：内容「${activityText}」は使えません`);
+      return;
+    }
+    if(!Number.isInteger(minutes)||minutes<=0){
+      errors.push(`${i+1}行目：勉強時間は1分以上の整数で入力してください`);
+      return;
+    }
+    rows.push({study_date:date,subject_id:subject.id,subject_name:subject.name,activity_type:activityType,activity_label:allowed[activityType],minutes,memo:memo||null});
+  });
+  return {rows,errors};
+}
+function previewPastStudy(){
+  const preview=document.getElementById('pastPreview'); if(!preview)return;
+  const {rows,errors}=parsePastRows();
+  let out='';
+  if(errors.length){
+    out+=`<div class="item" style="border-color:#6b2941"><b style="color:#ffb4c3">入力エラー</b><ul style="margin:8px 0">${errors.map(e=>`<li>${esc(e)}</li>`).join('')}</ul></div>`;
+  }
+  if(rows.length){
+    const total=rows.reduce((a,r)=>a+r.minutes,0);
+    out+=`<div class="item"><div class="sectiontitle"><b>登録プレビュー</b><span class="badge">${rows.length}件 / ${minutesText(total)}</span></div>
+      ${rows.map(r=>`<div class="record-meta" style="margin:8px 0"><span>📅 ${r.study_date}</span><span>${esc(r.subject_name)}</span><span>${esc(r.activity_label)}</span><span>${r.minutes}分</span>${r.memo?`<span>💬 ${esc(r.memo)}</span>`:''}</div>`).join('')}
+      <div class="row" style="margin-top:12px"><button class="primary" onclick="savePastStudy()">この内容で登録</button><button class="light" onclick="document.getElementById('pastPreview').innerHTML=''">閉じる</button></div>
+    </div>`;
+  }
+  if(!rows.length && !errors.length) out='<div class="item">入力がありません。</div>';
+  preview.innerHTML=out;
+}
+async function savePastStudy(){
+  const {rows,errors}=parsePastRows();
+  if(errors.length){previewPastStudy();return}
+  if(!rows.length){alert('登録する行がありません。');return}
+  const qid=document.getElementById('pastQualification')?.value;
+  if(!qid){alert('資格を選択してください。');return}
+  if(!confirm(`${rows.length}件・合計${minutesText(rows.reduce((a,r)=>a+r.minutes,0))}を過去の勉強記録として登録します。\\n\\n復習ステージと次回復習日は変更しません。`))return;
+
+  const payload=rows.map(r=>({
+    user_id:currentUser.id,
+    qualification_id:qid,
+    subject_id:r.subject_id,
+    study_date:r.study_date,
+    activity_type:r.activity_type,
+    minutes:r.minutes,
+    memo:r.memo
+  }));
+
+  const {error}=await sb.from('study_sessions').insert(payload);
+  if(error){alert('保存に失敗しました: '+error.message);return}
+
+  document.getElementById('pastRows').value='';
+  document.getElementById('pastPreview').innerHTML='';
+  await loadAll();
+  renderPastStudyInline();
+  toast(`${rows.length}件の過去記録を登録しました`);
+}
+function clearPastStudyForm(){
+  const r=document.getElementById('pastRows'),p=document.getElementById('pastPreview');
+  if(r)r.value=''; if(p)p.innerHTML='';
+}
+
+function renderImportInline(){
+  const box=document.getElementById('panel-import'); if(!box)return;
+  box.innerHTML=`<h3>旧端末データを取り込む</h3>
+  <p class="muted small">以前のlocalStorage版に保存されている勉強データを、このGoogleアカウントのクラウドへ移行します。</p>
+  <button class="primary" onclick="importLocalData()">旧端末データを取り込む</button>`;
+}
+
+async function importLocalData(){
+  const raw=localStorage.getItem('qualification_study_os')||localStorage.getItem('qualification_study_os_v14')||localStorage.getItem('qualification_study_os_v13')||localStorage.getItem('qualification_study_os_v12')||localStorage.getItem('qualification_study_os_v6');
+  if(!raw){alert('旧端末データが見つかりません。');return}
+  let old;try{old=JSON.parse(raw)}catch{alert('旧データを読み込めませんでした。');return}
+  if(!Array.isArray(old)||!old.length){alert('取り込めるデータがありません。');return}
+  if(!confirm(`${old.length}件の旧勉強記録をクラウドへ取り込みます。続行しますか？`))return;
+  const qmap={},smap={},pmap={};
+  for(const r of old){
+    if(!qmap[r.qualification]){
+      const {data:q,error}=await sb.from('qualifications').upsert({user_id:currentUser.id,name:r.qualification},{
+        onConflict:'user_id,name'
+      }).select().single();if(error){alert(error.message);return}qmap[r.qualification]=q;
+    }
+    if(!smap[r.qualification+'||'+r.unit]){
+      const key=r.qualification+'||'+r.unit;const q=qmap[r.qualification];
+      const {data:s,error}=await sb.from('subjects').upsert({user_id:currentUser.id,qualification_id:q.id,name:r.unit},{
+        onConflict:'user_id,qualification_id,name'
+      }).select().single();if(error){alert(error.message);return}smap[key]=s;
+    }
+    const sub=smap[r.qualification+'||'+r.unit];
+    const {data:sess,error:se}=await sb.from('study_sessions').insert({user_id:currentUser.id,qualification_id:qmap[r.qualification].id,subject_id:sub.id,study_date:r.date,activity_type:'new_problems',minutes:r.minutes||1,memo:r.memo||null}).select().single();
+    if(se){alert(se.message);return}
+    for(const p of (r.problems||[])){
+      const {data:pr,error:pe}=await sb.from('problems').upsert({user_id:currentUser.id,subject_id:sub.id,name:p.name,stage:p.stage||0,next_review_date:p.nextDate||addDays(r.date,1),status:p.status||'pending',attempts:p.attempts||0,last_result:p.lastResult||null},{onConflict:'user_id,subject_id,name'}).select().single();
+      if(pe){alert(pe.message);return}pmap[p.id]=pr;
+      await sb.from('study_session_problems').upsert({user_id:currentUser.id,session_id:sess.id,problem_id:pr.id,role:'new',result:null},{onConflict:'session_id,problem_id,role'});
+    }
+  }
+  await loadAll();renderImportInline();toast('旧データを取り込みました');
+}
+
+window.addEventListener('error',e=>{console.error(e.error||e.message)});
+init().catch(e=>{console.error(e);document.getElementById('authError').textContent='初期化に失敗しました: '+(e.message||e)})
+</script>
+</body>
+</html>
