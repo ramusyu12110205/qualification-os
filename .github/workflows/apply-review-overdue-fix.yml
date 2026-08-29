@@ -1,0 +1,44 @@
+name: Apply overdue review fix
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.event.head_commit.message != 'fix: overdue reviews'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch overdue review handling
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('index.html')
+          text = p.read_text(encoding='utf-8')
+          old = """function dueItems(){\n  const t=today();\n  return problems.filter(p=>p.status==='pending' && p.next_review_date===t);\n}"""
+          new = """function dueItems(){\n  const t=today();\n  // 期限を過ぎた復習も未消化として今日の復習対象に含める。\n  // これにより、過去の日付で新規学習を後から登録しても復習が消えない。\n  return problems.filter(p=>p.status==='pending' && p.next_review_date && p.next_review_date<=t);\n}"""
+          if old not in text:
+              raise SystemExit('dueItems target not found')
+          text = text.replace(old, new, 1)
+
+          old = '<p class="muted small">今日が復習日になっている問題だけ表示します。</p>'
+          new = '<p class="muted small">今日までに復習する予定だった問題を表示します。期限を過ぎた復習も未消化として残ります。</p>'
+          if old not in text:
+              raise SystemExit('review description target not found')
+          text = text.replace(old, new, 1)
+
+          p.write_text(text, encoding='utf-8')
+          PY
+      - name: Clean temporary inspection files and commit
+        run: |
+          rm -rf debug-source .github/workflows/inspect-source.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html debug-source .github/workflows/inspect-source.yml
+          git diff --cached --quiet && exit 0
+          git commit -m 'fix: overdue reviews'
+          git push
