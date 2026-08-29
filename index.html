@@ -113,7 +113,7 @@ textarea{min-height:120px} label{display:block;font-weight:800;margin:11px 0 6px
   <section id="tab-review">
     <div class="card">
       <div class="sectiontitle"><h2>今日の復習</h2><span class="badge" id="reviewCount">0問</span></div>
-      <p class="muted small">今日が復習日になっている問題だけ表示します。</p>
+      <p class="muted small">今日までに復習する予定だった問題を表示します。期限を過ぎた復習も未消化として残ります。</p>
       <div class="row" style="margin:12px 0">
         <button class="light" onclick="selectAllDue(true)">すべて選択</button>
         <button class="light" onclick="selectAllDue(false)">すべて解除</button>
@@ -297,7 +297,8 @@ document.addEventListener('change',e=>{if(e.target.id==='recordQualification')re
 
 function dueItems(){
   const t=today();
-  return problems.filter(p=>p.status==='pending' && p.next_review_date===t);
+  // 期限を過ぎた復習も未消化として今日の復習対象に含める。
+  return problems.filter(p=>p.status==='pending' && p.next_review_date && p.next_review_date<=t);
 }
 function renderReview(){
   const due=dueItems();
