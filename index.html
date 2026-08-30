@@ -348,22 +348,28 @@ async function finishReviewSession(){
   await loadAll();toast('復習を記録しました');
 }
 
+function getRetroProblemNames(){
+  const raw=document.getElementById('recordProblems')?.value.trim()||'';
+  return [...new Set(raw.split(/\n|,|、/).map(x=>x.trim()).filter(Boolean))];
+}
+
 function addRetroReviewRow(defaultDate=''){
   const studyDate=document.getElementById('recordDate')?.value;
   const maxDate=today();
-  if(!studyDate)return;
+  const names=getRetroProblemNames();
+  if(!studyDate||!names.length)return;
   let date=defaultDate;
   if(!date){
     const last=retroReviewRows[retroReviewRows.length-1];
     if(last){
-      const nextStage=last.result==='correct' ? Math.min(last.stage+1,5) : last.stage;
-      const gap=nextStage===0?1:[1,3,7,14][Math.min(nextStage-1,3)]||1;
+      const nextStage=Math.max(...names.map(n=>last.results?.[n]==='wrong'?last.stage:last.stage+1));
+      const gap=nextStage<=1?1:nextStage===2?3:nextStage===3?7:nextStage===4?14:1;
       date=addDays(last.date,gap);
     }else date=addDays(studyDate,1);
   }
   if(date>maxDate)date=maxDate;
   if(date<=studyDate)date=addDays(studyDate,1);
-  retroReviewRows.push({stage:retroReviewRows.length+1,date,result:'correct'});
+  retroReviewRows.push({stage:retroReviewRows.length+1,date,results:Object.fromEntries(names.map(n=>[n,'correct']))});
   renderRetroReviewPanel();
 }
 
@@ -378,43 +384,61 @@ function updateRetroReviewRow(index,key,value){
   retroReviewRows[index][key]=value;
 }
 
+function updateRetroReviewResult(rowIndex,problemName,result){
+  if(!retroReviewRows[rowIndex])return;
+  retroReviewRows[rowIndex].results ||= {};
+  retroReviewRows[rowIndex].results[problemName]=result;
+}
+
 function renderRetroReviewPanel(){
   const panel=document.getElementById('retroReviewPanel');
   const type=document.getElementById('activityType')?.value;
   const date=document.getElementById('recordDate')?.value;
-  const raw=document.getElementById('recordProblems')?.value.trim();
+  const names=getRetroProblemNames();
   if(!panel)return;
-  if(type!=='new_problems'||!date||!raw||date>=today()){
+  if(type!=='new_problems'||!date||!names.length||date>=today()){
     panel.style.display='none';panel.innerHTML='';return;
   }
+  // 問題欄を編集した場合も、既存の復習結果は同名問題について維持する
+  retroReviewRows.forEach(r=>{
+    const old=r.results||{};
+    r.results=Object.fromEntries(names.map(n=>[n,old[n]||'correct']));
+  });
   panel.style.display='block';
   if(!retroReviewRows.length){
     panel.innerHTML=`<h3>過去に実施した復習</h3>
-      <p class="muted small">この新規学習を後から登録する場合、すでに実施した復習だけここに追加できます。復習の実施日は実際の日付として保存され、その日を基準に次回復習日を再計算します。</p>
+      <p class="muted small">後から登録する学習について、すでに実施した復習を記録できます。復習結果は問題ごとに分けて登録し、実施日を基準に次回復習日を再計算します。</p>
       <button class="light" type="button" onclick="addRetroReviewRow()">＋ 過去の復習を追加</button>`;
     return;
   }
   panel.innerHTML=`<h3>過去に実施した復習</h3>
-    <p class="muted small">登録する全問題に同じ復習実績を適用します。間違えた場合はその回のステージを維持し、翌日再復習になります。</p>
+    <p class="muted small">同じ復習回でも、問題ごとに正解／不正解を分けて記録できます。</p>
     ${retroReviewRows.map((r,i)=>`<div class="item">
       <div class="row" style="justify-content:space-between"><b>復習${i+1}</b><button class="danger" type="button" onclick="removeRetroReviewRow(${i})">削除</button></div>
-      <div class="grid">
-        <div><label>実施日</label><input type="date" value="${r.date}" max="${today()}" min="${addDays(date,1)}" onchange="updateRetroReviewRow(${i},'date',this.value)"></div>
-        <div><label>結果</label><select onchange="updateRetroReviewRow(${i},'result',this.value)">
-          <option value="correct" ${r.result==='correct'?'selected':''}>正解</option>
-          <option value="wrong" ${r.result==='wrong'?'selected':''}>不正解</option>
-        </select></div>
+      <label>実施日</label><input type="date" value="${r.date}" max="${today()}" min="${addDays(date,1)}" onchange="updateRetroReviewRow(${i},'date',this.value)">
+      <div style="margin-top:10px">
+        ${names.map(n=>`<div class="row" style="margin:8px 0;align-items:center">
+          <div style="flex:1;min-width:180px"><b>${n}</b></div>
+          <div style="flex:0 1 180px"><select onchange="updateRetroReviewResult(${i},${JSON.stringify(n)},this.value)">
+            <option value="correct" ${r.results?.[n]==='correct'?'selected':''}>正解</option>
+            <option value="wrong" ${r.results?.[n]==='wrong'?'selected':''}>不正解</option>
+          </select></div>
+        </div>`).join('')}
       </div>
     </div>`).join('')}
     <button class="light" type="button" onclick="addRetroReviewRow()">＋ もう1回追加</button>`;
 }
 
-async function saveRetroReviewHistory(problemIds){
+async function saveRetroReviewHistory(problemMap){
   if(!retroReviewRows.length)return;
   const items=[];
   for(const row of retroReviewRows){
     if(!row.date||row.date>today())throw new Error('過去の復習の日付が不正です');
-    for(const problemId of problemIds)items.push({problem_id:problemId,review_date:row.date,result:row.result});
+    for(const [problemName,problemId] of Object.entries(problemMap)){
+      const result=row.results?.[problemName];
+      if(!result)throw new Error(`復習${row.stage}の「${problemName}」の結果が未設定です`);
+      items.push({problem_id:problemId,review_date:row.date,result});
+    }
   }
   const {error}=await sb.rpc('backfill_review_history',{p_items:items});
   if(error)throw error;
@@ -449,7 +473,7 @@ async function saveStudyRecord(){
     }
     if(retroReviewRows.length){
       try{
-        await saveRetroReviewHistory((ps||[]).map(p=>p.id));
+        await saveRetroReviewHistory(Object.fromEntries((ps||[]).map(p=>[p.name,p.id])));
       }catch(e){
         alert('過去の復習履歴の保存に失敗しました: '+(e.message||e));
         return;
