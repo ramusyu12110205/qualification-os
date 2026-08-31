@@ -349,12 +349,17 @@ async function finishReviewSession(){
 }
 
 function syncRetroReviewStateFromDOM(){
-  document.querySelectorAll('#retroReviewPanel select[data-retro-row][data-retro-problem]').forEach(el=>{
+  document.querySelectorAll('#retroReviewPanel [data-retro-row]').forEach(el=>{
     const rowIndex=Number(el.dataset.retroRow);
-    const problemName=el.dataset.retroProblem;
-    if(!Number.isInteger(rowIndex)||!problemName||!retroReviewRows[rowIndex])return;
-    retroReviewRows[rowIndex].results ||= {};
-    retroReviewRows[rowIndex].results[problemName]=el.value;
+    if(!Number.isInteger(rowIndex)||!retroReviewRows[rowIndex])return;
+    retroReviewRows[rowIndex].selected ||= {};
+    const name=el.dataset.retroProblem;
+    if(el.type==='checkbox'){
+      retroReviewRows[rowIndex].selected[name]=el.checked;
+    }else if(el.tagName==='SELECT'){
+      retroReviewRows[rowIndex].results ||= {};
+      retroReviewRows[rowIndex].results[name]=el.value;
+    }
   });
 }
 
@@ -369,36 +374,28 @@ function addRetroReviewRow(defaultDate=''){
   const maxDate=today();
   const allNames=getRetroProblemNames();
   if(!studyDate||!allNames.length)return;
-
-  let problemNames=allNames;
-  if(retroReviewRows.length){
-    const previous=retroReviewRows[retroReviewRows.length-1];
-    problemNames=previous.problemNames.filter(name=>previous.results?.[name]==='wrong');
-    if(!problemNames.length){
-      alert('前回の復習で不正解だった問題がないため、もう1回追加する必要はありません。');
-      return;
-    }
-  }
-
   let date=defaultDate;
   if(!date){
     const last=retroReviewRows[retroReviewRows.length-1];
     if(last){
-      const maxStage=Math.max(...problemNames.map(n=>last.results?.[n]==='wrong'?last.stage:last.stage+1));
-      const gap=maxStage<=1?1:maxStage===2?3:maxStage===3?7:maxStage===4?14:1;
+      const selected=last.problemNames||[];
+      const wrong=selected.filter(n=>last.results?.[n]==='wrong');
+      const nextStage=wrong.length ? last.stage : last.stage+1;
+      const gap=nextStage<=1?1:nextStage===2?3:nextStage===3?7:nextStage===4?14:30;
       date=addDays(last.date,gap);
-    }else{
-      date=addDays(studyDate,1);
-    }
+    }else date=addDays(studyDate,1);
   }
   if(date>maxDate)date=maxDate;
   if(date<=studyDate)date=addDays(studyDate,1);
-
+  const selectedNames=retroReviewRows.length
+    ? (retroReviewRows[retroReviewRows.length-1].problemNames||[]).filter(n=>retroReviewRows[retroReviewRows.length-1].results?.[n]==='wrong')
+    : allNames;
   retroReviewRows.push({
     stage:retroReviewRows.length+1,
     date,
-    problemNames:[...problemNames],
-    results:Object.fromEntries(problemNames.map(n=>[n,'correct']))
+    problemNames:[...selectedNames],
+    selected:Object.fromEntries(allNames.map(n=>[n,selectedNames.includes(n)])),
+    results:Object.fromEntries(selectedNames.map(n=>[n,'correct']))
   });
   renderRetroReviewPanel();
 }
@@ -415,11 +412,22 @@ function updateRetroReviewRow(index,key,value){
   retroReviewRows[index][key]=value;
 }
 
+function updateRetroReviewSelection(rowIndex,problemName,checked){
+  if(!retroReviewRows[rowIndex])return;
+  retroReviewRows[rowIndex].selected ||= {};
+  retroReviewRows[rowIndex].selected[problemName]=checked;
+  const row=retroReviewRows[rowIndex];
+  row.problemNames=Object.keys(row.selected).filter(n=>row.selected[n]);
+  row.results ||= {};
+  if(checked && !row.results[problemName])row.results[problemName]='correct';
+  renderRetroReviewPanel();
+}
+
 function updateRetroReviewResult(rowIndex,problemName,result){
   if(!retroReviewRows[rowIndex])return;
   retroReviewRows[rowIndex].results ||= {};
   retroReviewRows[rowIndex].results[problemName]=result;
-  requestAnimationFrame(() => renderRetroReviewPanel());
+  requestAnimationFrame(()=>renderRetroReviewPanel());
 }
 
 function renderRetroReviewPanel(){
@@ -431,42 +439,37 @@ function renderRetroReviewPanel(){
   if(type!=='new_problems'||!date||!names.length||date>=today()){
     panel.style.display='none';panel.innerHTML='';return;
   }
-
-  // 問題欄を編集した場合も、各復習回にすでに含まれている問題の結果は維持する。
   retroReviewRows.forEach(r=>{
-    r.problemNames=r.problemNames.filter(n=>names.includes(n));
-    const old=r.results||{};
-    r.results=Object.fromEntries(r.problemNames.map(n=>[n,old[n]||'correct']));
+    r.selected ||= {};
+    const oldResults=r.results||{};
+    const oldSelected=r.selected||{};
+    r.selected=Object.fromEntries(names.map(n=>[n,oldSelected[n] ?? (r.problemNames||[]).includes(n)]));
+    r.problemNames=names.filter(n=>r.selected[n]);
+    r.results=Object.fromEntries(r.problemNames.map(n=>[n,oldResults[n]||'correct']));
   });
-
   panel.style.display='block';
   if(!retroReviewRows.length){
     panel.innerHTML=`<h3>過去に実施した復習</h3>
-      <p class="muted small">後から登録する学習について、すでに実施した復習を記録できます。<b>次の復習回には前回不正解だった問題だけが引き継がれます。</b></p>
+      <p class="muted small">過去に実施した復習を任意で追加できます。追加した復習では、実施した問題だけを選択し、正解／不正解を記録します。</p>
       <button class="light" type="button" onclick="addRetroReviewRow()">＋ 過去の復習を追加</button>`;
     return;
   }
-
-  const latest=retroReviewRows[retroReviewRows.length-1];
-  const latestWrong=(latest.problemNames||[]).filter(n=>latest.results?.[n]==='wrong');
   panel.innerHTML=`<h3>過去に実施した復習</h3>
-    <p class="muted small">復習回ごとに、<b>前回不正解だった問題だけ</b>が次の回へ引き継がれます。</p>
+    <p class="muted small">復習回は任意で追加できます。次の回には前回不正解だった問題が自動で選択されますが、他の問題も自由に追加できます。</p>
     ${retroReviewRows.map((r,i)=>`<div class="item">
       <div class="row" style="justify-content:space-between"><b>復習${i+1}</b><button class="danger" type="button" onclick="removeRetroReviewRow(${i})">削除</button></div>
       <label>実施日</label><input type="date" value="${r.date}" max="${today()}" min="${addDays(date,1)}" onchange="updateRetroReviewRow(${i},'date',this.value)">
       <div style="margin-top:10px">
-        ${(r.problemNames||[]).map(n=>`<div class="row" style="margin:8px 0;align-items:center">
-          <div style="flex:1;min-width:180px"><b>${n}</b></div>
-          <div style="flex:0 1 180px"><select data-retro-row="${i}" data-retro-problem="${n.replace(/\"/g,'&quot;')}" onchange="updateRetroReviewResult(${i},${JSON.stringify(n)},this.value)">
+        ${names.map(n=>`<div class="row" style="margin:8px 0;align-items:center">
+          <label style="flex:1;min-width:180px;margin:0;display:flex;gap:8px;align-items:center;font-weight:700"><input type="checkbox" data-retro-row="${i}" data-retro-problem="${n.replace(/\"/g,'&quot;')}" ${r.selected?.[n]?'checked':''} onchange="updateRetroReviewSelection(${i},${JSON.stringify(n)},this.checked)" style="width:auto">${esc(n)}</label>
+          ${r.selected?.[n] ? `<div style="flex:0 1 180px"><select data-retro-row="${i}" data-retro-problem="${n.replace(/\"/g,'&quot;')}" onchange="updateRetroReviewResult(${i},${JSON.stringify(n)},this.value)">
             <option value="correct" ${r.results?.[n]==='correct'?'selected':''}>正解</option>
             <option value="wrong" ${r.results?.[n]==='wrong'?'selected':''}>不正解</option>
-          </select></div>
+          </select></div>` : ''}
         </div>`).join('')}
       </div>
     </div>`).join('')}
-    ${latestWrong.length
-      ? `<button class="light" type="button" onclick="addRetroReviewRow()">＋ もう1回追加（不正解 ${latestWrong.length}問）</button>`
-      : `<div class="item"><b>復習完了</b><br><span class="muted small">前回の復習で不正解だった問題がないため、追加の復習回はありません。</span></div>`}`;
+    <button class="light" type="button" onclick="addRetroReviewRow()">＋ もう1回追加</button>`;
 }
 
 async function saveRetroReviewHistory(problemMap){
