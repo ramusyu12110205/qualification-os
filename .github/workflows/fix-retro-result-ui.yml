@@ -1,0 +1,37 @@
+name: Fix retro result UI
+on:
+  push:
+    branches: [main]
+permissions:
+  contents: write
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch result selector rendering
+        shell: python
+        run: |
+          from pathlib import Path
+          p=Path('index.html')
+          s=p.read_text(encoding='utf-8')
+          old='''          ${r.selected?.[n] ? `<div style="flex:0 1 180px"><select data-retro-row="${i}" data-retro-problem="${n.replace(/\\\"/g,'&quot;')}" onchange="updateRetroReviewResult(${i},${JSON.stringify(n)},this.value)">
+            <option value="correct" ${r.results?.[n]==='correct'?'selected':''}>正解</option>
+            <option value="wrong" ${r.results?.[n]==='wrong'?'selected':''}>不正解</option>
+          </select></div>` : ''}'''
+          new='''          <div style="flex:0 1 180px"><select data-retro-row="${i}" data-retro-problem="${n.replace(/\\\"/g,'&quot;')}" ${r.selected?.[n]?'':'disabled'} onchange="updateRetroReviewResult(${i},${JSON.stringify(n)},this.value)">
+            <option value="correct" ${r.results?.[n]==='correct'?'selected':''}>正解</option>
+            <option value="wrong" ${r.results?.[n]==='wrong'?'selected':''}>不正解</option>
+          </select></div>'''
+          if old not in s:
+              raise SystemExit('target selector block not found')
+          p.write_text(s.replace(old,new,1),encoding='utf-8')
+      - name: Commit fix
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          git diff --cached --quiet && exit 0
+          git commit -m "fix: show result selector for selected retro problems [skip ci]"
+          git push
