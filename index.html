@@ -361,6 +361,9 @@ function syncRetroReviewStateFromDOM(){
       retroReviewRows[rowIndex].results[name]=el.value;
     }
   });
+  retroReviewRows.forEach(r=>{
+    r.problemNames=Object.keys(r.selected||{}).filter(n=>r.selected[n]);
+  });
 }
 
 function getRetroProblemNames(){
@@ -377,16 +380,12 @@ function addRetroReviewRow(defaultDate=''){
   let date=defaultDate;
   if(!date){
     const last=retroReviewRows[retroReviewRows.length-1];
-    if(last){
-      const selected=last.problemNames||[];
-      const wrong=selected.filter(n=>last.results?.[n]==='wrong');
-      const nextStage=wrong.length ? last.stage : last.stage+1;
-      const gap=nextStage<=1?1:nextStage===2?3:nextStage===3?7:nextStage===4?14:30;
-      date=addDays(last.date,gap);
-    }else date=addDays(studyDate,1);
+    date=last?.date ? addDays(last.date,1) : addDays(studyDate,1);
   }
   if(date>maxDate)date=maxDate;
   if(date<=studyDate)date=addDays(studyDate,1);
+
+  // 前回不正解だった問題は候補として自動選択。ただし他の問題も自由に追加できる。
   const selectedNames=retroReviewRows.length
     ? (retroReviewRows[retroReviewRows.length-1].problemNames||[]).filter(n=>retroReviewRows[retroReviewRows.length-1].results?.[n]==='wrong')
     : allNames;
@@ -427,7 +426,6 @@ function updateRetroReviewResult(rowIndex,problemName,result){
   if(!retroReviewRows[rowIndex])return;
   retroReviewRows[rowIndex].results ||= {};
   retroReviewRows[rowIndex].results[problemName]=result;
-  requestAnimationFrame(()=>renderRetroReviewPanel());
 }
 
 function renderRetroReviewPanel(){
@@ -450,12 +448,12 @@ function renderRetroReviewPanel(){
   panel.style.display='block';
   if(!retroReviewRows.length){
     panel.innerHTML=`<h3>過去に実施した復習</h3>
-      <p class="muted small">過去に実施した復習を任意で追加できます。追加した復習では、実施した問題だけを選択し、正解／不正解を記録します。</p>
+      <p class="muted small">過去に実施した復習を任意で追加できます。各回で実際に復習した問題だけを選択し、その結果を記録します。</p>
       <button class="light" type="button" onclick="addRetroReviewRow()">＋ 過去の復習を追加</button>`;
     return;
   }
   panel.innerHTML=`<h3>過去に実施した復習</h3>
-    <p class="muted small">復習回は任意で追加できます。次の回には前回不正解だった問題が自動で選択されますが、他の問題も自由に追加できます。</p>
+    <p class="muted small">復習回は任意で追加できます。前回不正解だった問題は次回の候補として自動選択されますが、他の問題も自由に追加できます。</p>
     ${retroReviewRows.map((r,i)=>`<div class="item">
       <div class="row" style="justify-content:space-between"><b>復習${i+1}</b><button class="danger" type="button" onclick="removeRetroReviewRow(${i})">削除</button></div>
       <label>実施日</label><input type="date" value="${r.date}" max="${today()}" min="${addDays(date,1)}" onchange="updateRetroReviewRow(${i},'date',this.value)">
