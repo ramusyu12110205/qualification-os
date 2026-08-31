@@ -419,6 +419,7 @@ function updateRetroReviewResult(rowIndex,problemName,result){
   if(!retroReviewRows[rowIndex])return;
   retroReviewRows[rowIndex].results ||= {};
   retroReviewRows[rowIndex].results[problemName]=result;
+  renderRetroReviewPanel();
 }
 
 function renderRetroReviewPanel(){
