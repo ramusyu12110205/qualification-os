@@ -348,12 +348,23 @@ async function finishReviewSession(){
   await loadAll();toast('復習を記録しました');
 }
 
+function syncRetroReviewStateFromDOM(){
+  document.querySelectorAll('#retroReviewPanel select[data-retro-row][data-retro-problem]').forEach(el=>{
+    const rowIndex=Number(el.dataset.retroRow);
+    const problemName=el.dataset.retroProblem;
+    if(!Number.isInteger(rowIndex)||!problemName||!retroReviewRows[rowIndex])return;
+    retroReviewRows[rowIndex].results ||= {};
+    retroReviewRows[rowIndex].results[problemName]=el.value;
+  });
+}
+
 function getRetroProblemNames(){
   const raw=document.getElementById('recordProblems')?.value.trim()||'';
   return [...new Set(raw.split(/\n|,|、/).map(x=>x.trim()).filter(Boolean))];
 }
 
 function addRetroReviewRow(defaultDate=''){
+  syncRetroReviewStateFromDOM();
   const studyDate=document.getElementById('recordDate')?.value;
   const maxDate=today();
   const names=getRetroProblemNames();
@@ -374,6 +385,7 @@ function addRetroReviewRow(defaultDate=''){
 }
 
 function removeRetroReviewRow(index){
+  syncRetroReviewStateFromDOM();
   retroReviewRows.splice(index,1);
   retroReviewRows.forEach((r,i)=>r.stage=i+1);
   renderRetroReviewPanel();
@@ -419,7 +431,7 @@ function renderRetroReviewPanel(){
       <div style="margin-top:10px">
         ${names.map(n=>`<div class="row" style="margin:8px 0;align-items:center">
           <div style="flex:1;min-width:180px"><b>${n}</b></div>
-          <div style="flex:0 1 180px"><select onchange="updateRetroReviewResult(${i},${JSON.stringify(n)},this.value)">
+          <div style="flex:0 1 180px"><select data-retro-row="${i}" data-retro-problem="${n.replace(/\"/g,'&quot;')}" onchange="updateRetroReviewResult(${i},${JSON.stringify(n)},this.value)">
             <option value="correct" ${r.results?.[n]==='correct'?'selected':''}>正解</option>
             <option value="wrong" ${r.results?.[n]==='wrong'?'selected':''}>不正解</option>
           </select></div>
@@ -430,6 +442,7 @@ function renderRetroReviewPanel(){
 }
 
 async function saveRetroReviewHistory(problemMap){
+  syncRetroReviewStateFromDOM();
   if(!retroReviewRows.length)return;
   const items=[];
   for(const row of retroReviewRows){
