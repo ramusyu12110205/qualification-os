@@ -4,6 +4,9 @@ on:
   push:
     branches: [main]
 
+permissions:
+  contents: write
+
 jobs:
   patch:
     runs-on: ubuntu-latest
@@ -13,14 +16,10 @@ jobs:
         shell: python
         run: |
           from pathlib import Path
-          import re
-
           p = Path('index.html')
           s = p.read_text(encoding='utf-8')
-
           start = s.index('function syncRetroReviewStateFromDOM(){')
           end = s.index('async function saveStudyRecord(){', start)
-
           new = r'''function syncRetroReviewStateFromDOM(){
             document.querySelectorAll('#retroReviewPanel [data-retro-row]').forEach(el=>{
               const rowIndex=Number(el.dataset.retroRow);
@@ -47,7 +46,6 @@ jobs:
             const maxDate=today();
             const allNames=getRetroProblemNames();
             if(!studyDate||!allNames.length)return;
-
             let date=defaultDate;
             if(!date){
               const last=retroReviewRows[retroReviewRows.length-1];
@@ -61,11 +59,9 @@ jobs:
             }
             if(date>maxDate)date=maxDate;
             if(date<=studyDate)date=addDays(studyDate,1);
-
             const selectedNames=retroReviewRows.length
               ? (retroReviewRows[retroReviewRows.length-1].problemNames||[]).filter(n=>retroReviewRows[retroReviewRows.length-1].results?.[n]==='wrong')
               : allNames;
-
             retroReviewRows.push({
               stage:retroReviewRows.length+1,
               date,
@@ -115,7 +111,6 @@ jobs:
             if(type!=='new_problems'||!date||!names.length||date>=today()){
               panel.style.display='none';panel.innerHTML='';return;
             }
-
             retroReviewRows.forEach(r=>{
               r.selected ||= {};
               const oldResults=r.results||{};
@@ -124,7 +119,6 @@ jobs:
               r.problemNames=names.filter(n=>r.selected[n]);
               r.results=Object.fromEntries(r.problemNames.map(n=>[n,oldResults[n]||'correct']));
             });
-
             panel.style.display='block';
             if(!retroReviewRows.length){
               panel.innerHTML=`<h3>過去に実施した復習</h3>
@@ -132,7 +126,6 @@ jobs:
                 <button class="light" type="button" onclick="addRetroReviewRow()">＋ 過去の復習を追加</button>`;
               return;
             }
-
             panel.innerHTML=`<h3>過去に実施した復習</h3>
               <p class="muted small">復習回は任意で追加できます。次の回には前回不正解だった問題が自動で選択されますが、他の問題も自由に追加できます。</p>
               ${retroReviewRows.map((r,i)=>`<div class="item">
@@ -170,7 +163,6 @@ jobs:
           }
 
           '''
-
           s = s[:start] + new + s[end:]
           p.write_text(s, encoding='utf-8')
       - name: Commit patched index
