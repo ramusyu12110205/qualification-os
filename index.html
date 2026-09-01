@@ -835,14 +835,14 @@ function parsePastRows(){
   const allowed={new_problems:'新規問題',review:'復習',textbook:'テキスト',lecture:'講義',mock:'模試',other:'その他'};
   const reverse=Object.fromEntries(Object.entries(allowed).map(([k,v])=>[v,k]));
   text.split(/\r?\n/).map(x=>x.trim()).filter(Boolean).forEach((line,i)=>{
-    const parts=line.split('|').map(x=>x.trim());
+    const parts=line.split(/[|｜]/).map(x=>x.trim());
     if(parts.length<4){
-      errors.push(`${i+1}行目：「日付｜科目｜内容｜分｜メモ」の5列で入力してください`);
+      errors.push(`${i+1}行目：「日付｜科目｜内容｜分｜メモ」の形式で入力してください`);
       return;
     }
     const [date,subjectName,activityText,minutesText,memo='']=parts;
     const activityType=reverse[activityText]||activityText;
-    const minutes=Number(minutesText);
+    const minutes=Number(String(minutesText).replace(/分$/,'').trim());
     const subject=subjects.find(s=>s.qualification_id===qid && s.name===subjectName);
     if(!/^\\d{4}-\\d{2}-\\d{2}$/.test(date) || Number.isNaN(parseDate(date).getTime())){
       errors.push(`${i+1}行目：日付が不正です`);
