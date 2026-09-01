@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AI解説 | 資格勉強OS</title>
+<style>
+:root{--bg:#080c17;--card:#12182a;--text:#f5f7ff;--muted:#98a3bf;--accent:#8b5cf6;--cyan:#22d3ee;--line:#26314d;--danger:#fb7185}
+*{box-sizing:border-box}body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;max-width:980px;margin:auto;padding:18px 18px 80px;background:radial-gradient(circle at top left,#1a1640 0,#090e1a 42%,#050812 100%);color:var(--text)}
+h1{margin:0;font-size:30px}.muted{color:var(--muted)}.small{font-size:13px}.card{background:linear-gradient(145deg,rgba(18,24,42,.96),rgba(10,15,28,.98));border:1px solid var(--line);border-radius:22px;padding:20px;margin:14px 0}.row{display:flex;gap:9px;flex-wrap:wrap;align-items:center}button{border:0;border-radius:11px;padding:10px 15px;font-weight:850;cursor:pointer;min-height:42px}.primary{background:var(--accent);color:#fff}.light{background:#222b43;color:#e8ecff;border:1px solid #33405f}.danger{background:#3d1725;color:#ffc1cf;border:1px solid #6b2941}input,textarea{width:100%;padding:11px;border:1px solid #394563;border-radius:11px;background:#0c1322;color:#f4f6ff;font-size:16px}textarea{min-height:100px}label{display:block;font-weight:800;margin:11px 0 6px}.preview{max-width:100%;max-height:360px;display:block;margin-top:12px;border-radius:14px;border:1px solid #33405f}.explanation{white-space:pre-wrap;line-height:1.8}.history-item{border:1px solid var(--line);border-radius:16px;padding:16px;margin:10px 0;background:#0f1627}.title{font-size:19px;font-weight:900}.key{border-left:3px solid var(--cyan);padding-left:12px;margin-top:12px;white-space:pre-wrap}.top{display:flex;justify-content:space-between;gap:10px;align-items:center}.status{min-height:22px;color:#b9c4df}.auth{text-align:center;padding:80px 20px}
+@media(max-width:700px){body{padding:12px 12px 90px}.card{padding:16px;border-radius:18px}.top{align-items:flex-start;flex-direction:column}}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+<div id="auth" class="card auth" style="display:none"><div style="font-size:44px">🤖</div><h1>AI解説</h1><p class="muted">資格勉強OSにログインしてください。</p><button class="primary" onclick="login()">Googleでログイン</button><p id="authError" class="small"></p></div>
+<div id="app" style="display:none">
+  <div class="top"><div><div class="muted small">QUALIFICATION OS</div><h1>📷 AI解説</h1><div class="muted">分からなかった問題を写真で残して、短く解説してもらう場所</div></div><div class="row"><button class="light" onclick="location.href='./'">← 資格勉強OSへ</button><button class="light" onclick="logout()">ログアウト</button></div></div>
+  <div class="card">
+    <h2>問題を撮影・アップロード</h2>
+    <p class="muted small">写真を選ぶと、AIが「何を問われているか → なぜそうなるか → 重要ポイント」の順で簡潔に整理します。</p>
+    <label>問題の写真</label>
+    <input id="image" type="file" accept="image/*" capture="environment">
+    <img id="preview" class="preview" style="display:none">
+    <label>補足メモ（任意）</label>
+    <textarea id="memo" placeholder="ここが分からない、仕訳の意味が分からない、など"></textarea>
+    <div class="row" style="margin-top:12px"><button class="primary" id="explainBtn" onclick="explain()">AIに簡潔に解説してもらう</button><span id="status" class="status"></span></div>
+  </div>
+  <div class="card"><div class="top"><div><h2>📝 AI解説メモ</h2><div class="muted small">ここに保存した解説が残ります。あとから見返せます。</div></div><button class="light" onclick="loadHistory()">更新</button></div><div id="history" style="margin-top:12px"></div></div>
+</div>
+<div id="toast" style="display:none;position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:#101827;border:1px solid #354361;padding:11px 15px;border-radius:12px;z-index:10"></div>
+<script>
+const SUPABASE_URL='https://txprypfzdsfaupguhybl.supabase.co';
+const SUPABASE_PUBLISHABLE_KEY='sb_publishable_qiCaP0cBNhms5-usSDzKlQ_nywzlU36';
+const sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
+let currentUser=null;
+const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
+function toast(m){const t=document.getElementById('toast');t.textContent=m;t.style.display='block';setTimeout(()=>t.style.display='none',1800)}
+async function boot(user){currentUser=user;document.getElementById('auth').style.display='none';document.getElementById('app').style.display='block';await loadHistory()}
+async function init(){const {data:{session}}=await sb.auth.getSession();if(session)boot(session.user);else document.getElementById('auth').style.display='block';sb.auth.onAuthStateChange((e,s)=>{if(e==='SIGNED_IN'&&s)boot(s.user);if(e==='SIGNED_OUT'){currentUser=null;document.getElementById('app').style.display='none';document.getElementById('auth').style.display='block'}})}
+async function login(){const {error}=await sb.auth.signInWithOAuth({provider:'google',options:{redirectTo:location.href}});if(error)document.getElementById('authError').textContent=error.message}
+async function logout(){await sb.auth.signOut()}
+async function compress(file){return new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>{const im=new Image();im.onload=()=>{const max=1600;const scale=Math.min(1,max/Math.max(im.width,im.height));const c=document.createElement('canvas');c.width=Math.round(im.width*scale);c.height=Math.round(im.height*scale);c.getContext('2d').drawImage(im,0,0,c.width,c.height);resolve(c.toDataURL('image/jpeg',.78))};im.onerror=reject;im.src=r.result};r.onerror=reject;r.readAsDataURL(file)})}
+document.getElementById('image').addEventListener('change',async e=>{const f=e.target.files?.[0];if(!f)return;const data=await compress(f);const p=document.getElementById('preview');p.src=data;p.style.display='block'});
+async function explain(){const f=document.getElementById('image').files?.[0];if(!f){alert('問題の写真を選択してください');return}const btn=document.getElementById('explainBtn'),st=document.getElementById('status');btn.disabled=true;st.textContent='AIが画像を読んでいます…';try{const imageDataUrl=await compress(f);const {data:{session}}=await sb.auth.getSession();if(!session)throw new Error('ログインが切れています');const res=await fetch(SUPABASE_URL+'/functions/v1/study-ai-explain',{method:'POST',headers:{Authorization:'Bearer '+session.access_token,'Content-Type':'application/json'},body:JSON.stringify({imageDataUrl,questionText:document.getElementById('memo').value})});const data=await res.json();if(!res.ok)throw new Error(data.error||'AI解説に失敗しました');st.textContent='保存しました';document.getElementById('memo').value='';await loadHistory();document.getElementById('image').value='';document.getElementById('preview').style.display='none';toast('AI解説を保存しました')}catch(e){st.textContent='';alert(e.message)}finally{btn.disabled=false}}
+async function loadHistory(){if(!currentUser)return;const {data,error}=await sb.from('study_explanations').select('*').eq('user_id',currentUser.id).order('created_at',{ascending:false});if(error){document.getElementById('history').innerHTML='<div class="history-item">読み込みに失敗しました。</div>';return}if(!data?.length){document.getElementById('history').innerHTML='<div class="history-item">まだAI解説はありません。</div>';return}document.getElementById('history').innerHTML=data.map(x=>`<article class="history-item"><div class="top"><div><div class="title">${esc(x.title||'AI解説')}</div><div class="muted small">${new Date(x.created_at).toLocaleString('ja-JP')}</div></div><button class="danger" onclick="removeItem('${x.id}')">削除</button></div><p><b>問題の要点</b><br>${esc(x.question_text||'—')}</p><div class="explanation"><b>解説</b><br>${esc(x.explanation)}</div>${x.key_points?`<div class="key"><b>重要ポイント</b><br>${esc(x.key_points)}</div>`:''}</article>`).join('')}
+async function removeItem(id){if(!confirm('このAI解説を削除しますか？'))return;const {error}=await sb.from('study_explanations').delete().eq('id',id).eq('user_id',currentUser.id);if(error)alert('削除できませんでした');else loadHistory()}
+init();
+</script>
+</body>
+</html>
