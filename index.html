@@ -844,7 +844,7 @@ function parsePastRows(){
     const activityType=reverse[activityText]||activityText;
     const minutes=Number(String(minutesText).replace(/分$/,'').trim());
     const subject=subjects.find(s=>s.qualification_id===qid && s.name===subjectName);
-    if(!/^\\d{4}-\\d{2}-\\d{2}$/.test(date) || Number.isNaN(parseDate(date).getTime())){
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(date) || Number.isNaN(parseDate(date).getTime())){
       errors.push(`${i+1}行目：日付が不正です`);
       return;
     }
