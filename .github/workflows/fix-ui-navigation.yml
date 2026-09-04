@@ -1,0 +1,53 @@
+name: Fix UI tab state
+on:
+  push:
+    branches: [main]
+permissions:
+  contents: write
+jobs:
+  fix:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch tab state and status tab highlight
+        shell: python
+        run: |
+          from pathlib import Path
+          p = Path('index.html')
+          s = p.read_text(encoding='utf-8')
+          old_boot = "  await loadAll();\n  openTab('review');\n}"
+          new_boot = "  await loadAll();\n  const initialTab = ['review','record','status','settings'].includes(location.hash.slice(1)) ? location.hash.slice(1) : (sessionStorage.getItem('qualification-os-tab') || 'review');\n  openTab(initialTab, false);\n}"
+          if old_boot in s:
+              s = s.replace(old_boot, new_boot, 1)
+          old_open = "function openTab(name){\n  ['review','record','status','settings'].forEach(x=>{"
+          new_open = "function openTab(name, updateHistory=true){\n  if(!['review','record','status','settings'].includes(name))name='review';\n  sessionStorage.setItem('qualification-os-tab',name);\n  if(updateHistory){history.replaceState(null,'','#'+name);}\n  ['review','record','status','settings'].forEach(x=>{"
+          if old_open in s:
+              s = s.replace(old_open, new_open, 1)
+          old_showdash = "function showDashboard(){\n  const box=document.getElementById('dashboard'),map={};"
+          new_showdash = "function setStatusTab(type){\n  const buttons=document.querySelectorAll('#tab-status .row > button');\n  buttons.forEach((b,i)=>{const active=(type==='qualification'&&i===0)||(type==='all'&&i===1)||(type==='month'&&i===2);b.classList.toggle('primary',active);b.classList.toggle('light',!active);});\n}\nfunction showDashboard(){\n  setStatusTab('qualification');\n  const box=document.getElementById('dashboard'),map={};"
+          if old_showdash in s:
+              s = s.replace(old_showdash, new_showdash, 1)
+          old_stats = "function showStats(type){\n  const box=document.getElementById('dashboard');"
+          new_stats = "function showStats(type){\n  setStatusTab(type);\n  const box=document.getElementById('dashboard');"
+          if old_stats in s:
+              s = s.replace(old_stats, new_stats, 1)
+          p.write_text(s, encoding='utf-8')
+      - name: Commit fix
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html
+          if git diff --cached --quiet; then
+            echo 'No change needed'
+            exit 0
+          fi
+          git commit -m 'Preserve active tab and status subtab'
+          git push
+      - name: Remove one-time workflow
+        if: success()
+        shell: bash
+        run: |
+          git rm .github/workflows/fix-ui-navigation.yml
+          git commit -m 'Remove one-time UI navigation fixer'
+          git push
