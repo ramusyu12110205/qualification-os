@@ -1,1 +1,0 @@
-Temporary restore checkpoint. Existing index.html is restored from the parent commit before the accidental overwrite.
