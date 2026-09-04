@@ -257,7 +257,8 @@ async function boot(user){
   document.getElementById('userLabel').textContent=user.email||'';
   document.getElementById('settingsUser').textContent=user.email||'';
   await loadAll();
-  openTab('review');
+  const initialTab = ['review','record','status','settings'].includes(location.hash.slice(1)) ? location.hash.slice(1) : (sessionStorage.getItem('qualification-os-tab') || 'review');
+  openTab(initialTab, false);
 }
 
 async function loadAll(){
@@ -274,7 +275,10 @@ async function loadAll(){
   renderAll();
 }
 function renderAll(){updateHero();renderReview();}
-function openTab(name){
+function openTab(name, updateHistory=true){
+  if(!['review','record','status','settings'].includes(name))name='review';
+  sessionStorage.setItem('qualification-os-tab',name);
+  if(updateHistory){history.replaceState(null,'','#'+name);}
   ['review','record','status','settings'].forEach(x=>{
     const el=document.getElementById('tab-'+x); if(el) el.style.display=x===name?'block':'none';
     const a=document.getElementById('tabbtn-'+x),b=document.getElementById('bottom-'+x);
@@ -549,7 +553,12 @@ function updateHero(){
   else{document.getElementById('heroCountdown').textContent='—';document.getElementById('heroExamName').textContent='資格マスタで設定';}
 }
 
+function setStatusTab(type){
+  const buttons=document.querySelectorAll('#tab-status .row > button');
+  buttons.forEach((b,i)=>{const active=(type==='qualification'&&i===0)||(type==='all'&&i===1)||(type==='month'&&i===2);b.classList.toggle('primary',active);b.classList.toggle('light',!active);});
+}
 function showDashboard(){
+  setStatusTab('qualification');
   const box=document.getElementById('dashboard'),map={};sessions.forEach(s=>{map[s.qualification_id]=(map[s.qualification_id]||0)+Number(s.minutes||0)});
   const rows=Object.entries(map).map(([id,m])=>[qualifications.find(q=>q.id===id)?.name||'資格',m,id]).sort((a,b)=>b[1]-a[1]);
   box.innerHTML=rows.length?rows.map(([name,m,id])=>`<div class="item clickable" onclick="showQualification('${id}')"><div class="row" style="justify-content:space-between"><b>${esc(name)}</b><strong>${minutesText(m)}</strong></div><div class="bar" style="margin:8px 0"><div style="width:${rows[0]?.[1]?m/rows[0][1]*100:0}%"></div></div><span class="muted small">資格の攻略状況を見る</span></div>`).join(''):'<div class="item">まだ勉強記録がありません。</div>';
@@ -567,6 +576,7 @@ function showUnit(id){
   `<h3>問題の状態</h3>`+ps.map(p=>`<div class="item"><b>${esc(p.name)}</b> <span class="badge">${p.status==='mastered'?'MASTER':p.last_result==='wrong'?'再復習':p.next_review_date?'次回 '+fmt(p.next_review_date):'—'}</span><br><span class="muted small">実施 ${p.attempts}回</span></div>`).join('')||'<div class="item">問題がありません。</div>';
 }
 function showStats(type){
+  setStatusTab(type);
   const box=document.getElementById('dashboard');
   if(type==='all'){box.innerHTML=`<h3>⏱ 全体の累積</h3><div class="stat">${minutesText(sessions.reduce((a,s)=>a+Number(s.minutes||0),0))}</div><p class="muted">${sessions.length}件の勉強記録</p>`;return}
   const map={};sessions.forEach(s=>{map[s.study_date]=(map[s.study_date]||0)+Number(s.minutes||0)});
