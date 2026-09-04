@@ -1,0 +1,38 @@
+name: Adjust qualification OS home dashboard
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/adjust-home-dashboard.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch index.html
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('index.html')
+          s = p.read_text(encoding='utf-8')
+          marker = '<div class="mini"><b>今日の復習</b><strong id="heroDue">0問</strong></div>'
+          replacement = '<div class="mini"><b>今日の復習</b><strong id="heroDue">0問</strong><div class="muted small">今日やる問題</div></div>'
+          if marker not in s:
+              raise SystemExit('heroDue marker not found')
+          if replacement not in s:
+              s = s.replace(marker, replacement, 1)
+          p.write_text(s, encoding='utf-8')
+          PY
+      - name: Commit patch and remove workflow
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html
+          git rm .github/workflows/adjust-home-dashboard.yml
+          git commit -m 'Clarify home dashboard review metric'
+          git push
