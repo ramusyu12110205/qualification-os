@@ -1,6 +1,5 @@
 // Flashcard enhancements: qualification/subject linking, shared-answer 4-choice, study sync, history deletion.
 (function(){
-  const originalShowDeckForm = window.showDeckForm;
   window.renderSubjectOptions = function(selected){
     const q=document.getElementById('deckQualification'), s=document.getElementById('deckSubject');
     if(!q||!s)return;
@@ -16,10 +15,10 @@
       '<label>ファイル名</label><input id="deckName" placeholder="例：消費税区分">'+
       '<label>説明（任意）</label><input id="deckDescription">'+
       '<label>連携する資格</label><select id="deckQualification" onchange="renderSubjectOptions()"><option value="">連携しない</option>'+
-      (window.qualifications||[]).map(q=>'<option value="'+q.id+'">'+esc(q.name)+'</option>').join('')+'</select>'+
-      '<label>科目</label><select id="deckSubject"></select>'+
-      '<label>4択の判定方式</label><div class="row"><label style="font-weight:500"><input type="radio" name="questionMode" value="one_to_one" checked> 1対1対応</label><label style="font-weight:500"><input type="radio" name="questionMode" value="shared_choices"> 同じ答えを共有</label></div>'+
-      '<p class="muted small">同じ答えを共有：複数の問題が同じ答えになるカード向け。</p>'+
+      (window.qualifications||[]).map(q=>'<option value="'+q.id+'">'+esc(q.name)+'</option>').join('')+'</select>'+\
+      '<label>科目</label><select id="deckSubject"></select>'+\
+      '<label>4択の判定方式</label><div class="row"><label style="font-weight:500"><input type="radio" name="questionMode" value="one_to_one" checked> 1対1対応</label><label style="font-weight:500"><input type="radio" name="questionMode" value="shared_choices"> 同じ答えを共有</label></div>'+\
+      '<p class="muted small">同じ答えを共有：複数の問題が同じ答えになるカード向け。答えが4種類未満でも、登録されている答えだけで選択肢を作ります。</p>'+\
       '<div class="row" style="margin-top:12px"><button class="primary" onclick="saveDeck()">保存</button><button class="light" onclick="showHome()">戻る</button></div>';
     document.getElementById('deckName').value=d?.name||'';document.getElementById('deckDescription').value=d?.description||'';
     const q=document.getElementById('deckQualification');q.value=d?.qualification_id||'';renderSubjectOptions(d?.subject_id||'');
@@ -32,37 +31,57 @@
     const q=id?sb.from('flashcard_decks').update(payload).eq('id',id).eq('user_id',user.id):sb.from('flashcard_decks').insert({...payload,user_id:user.id});
     const{error}=await q;if(error)return toast(error.message);await loadDecks();showHome();
   };
-  const originalBoot=window.boot;
-  window.boot=async function(){await originalBoot();};
-  const originalLoadHome=window.loadHome;
-  window.loadHome=async function(){await loadMasters();await originalLoadHome();};
   window.qualifications=[];window.subjects=[];
   window.loadMasters=async function(){
     const q=await sb.from('qualifications').select('id,name').order('name');if(q.error)return toast(q.error.message);window.qualifications=q.data||[];
     const s=await sb.from('subjects').select('id,name,qualification_id').order('name');if(s.error)return toast(s.error.message);window.subjects=s.data||[];
   };
-  // Re-run master loading now; the original boot may already have run before this script is loaded.
-  (async()=>{if(window.user){await loadMasters();}})();
+  (async()=>{try{await loadMasters();if(typeof loadHistory==='function')await loadHistory();}catch(e){console.error(e);}})();
+
   const originalStartSession=window.startSession;
   window.startSession=async function(mode){
-    if(mode==='choice'&&window.currentCards){const unique=[...new Set(currentCards.map(c=>c.answer))];if(currentCards.length<4)return toast('4択には4枚以上のカードが必要です');if(currentDeck.question_mode==='shared_choices'&&unique.length<4)return toast('同じ答えを共有する4択には4種類以上の答えが必要です');}
+    if(mode==='choice'&&currentDeck?.question_mode==='shared_choices'){
+      if(!currentCards.length)return toast('カードを1枚以上登録してください');
+      const{data,error}=await sb.from('flashcard_sessions').insert({user_id:user.id,deck_id:currentDeck.id,mode}).select().single();
+      if(error)return toast(error.message);
+      session=data;sessionCards=[...currentCards];idx=0;answerShown=false;paused=false;elapsed=0;sessionCorrect=0;sessionDoneCount=0;startedAt=Date.now();
+      hideAll();$('session').classList.remove('hidden');renderSession();
+      timerHandle=setInterval(()=>{if(!paused){elapsed=Math.floor((Date.now()-startedAt)/1000);if($('timer'))$('timer').textContent=fmt(elapsed)}},500);
+      return;
+    }
+    if(mode==='choice'&&currentCards.length<4)return toast('4択には4枚以上のカードが必要です');
     return originalStartSession(mode);
   };
+
   window.renderChoice=function(){
     const c=sessionCards[idx];let opts=[];
     if(currentDeck.question_mode==='shared_choices'){
-      const answers=[...new Set(currentCards.map(x=>x.answer))].filter(a=>a!==c.answer).sort(()=>Math.random()-.5).slice(0,3);
-      opts=[c.answer,...answers].sort(()=>Math.random()-.5).map((answer,i)=>({id:'answer-'+i,answer}));
-    }else opts=[c,...currentCards.filter(x=>x.id!==c.id).sort(()=>Math.random()-.5).slice(0,3)].sort(()=>Math.random()-.5);
+      const answers=[...new Set(currentCards.map(x=>x.answer))];
+      const others=answers.filter(a=>a!==c.answer).slice(0,3);
+      opts=[c.answer,...others].map((answer,i)=>({id:'answer-'+i,answer}));
+    }else{
+      opts=[c,...currentCards.filter(x=>x.id!==c.id).sort(()=>Math.random()-.5).slice(0,3)].sort(()=>Math.random()-.5);
+    }
     document.getElementById('body').innerHTML='<div class="choice">'+opts.map(o=>'<button class="light" onclick="choose(\''+o.id+'\')">'+esc(o.answer)+'</button>').join('')+'</div>';
   };
   window.choose=async function(id){
     const c=sessionCards[idx];let ok=false;
-    if(currentDeck.question_mode==='shared_choices'){const b=[...document.querySelectorAll('#body button')].find(x=>x.getAttribute('onclick')==="choose('"+id+"')");ok=!!b&&b.textContent.trim()===c.answer;}else ok=id===c.id;
+    if(currentDeck.question_mode==='shared_choices'){
+      const b=[...document.querySelectorAll('#body button')].find(x=>x.getAttribute('onclick')==="choose('"+id+"')");ok=!!b&&b.textContent.trim()===c.answer;
+    }else ok=id===c.id;
     sessionCorrect+=ok?1:0;if(!await recordCard(ok?'correct':'incorrect'))return;sessionDoneCount++;
     document.getElementById('body').innerHTML='<div class="answer '+(ok?'correct':'incorrect')+'">'+(ok?'⭕ 正解':'❌ 不正解')+'<br>'+esc(c.answer)+'</div><button class="primary" onclick="nextCard()">次へ</button>';
   };
-  const originalLoadHistory=window.loadHistory;
+
+  window.deleteCard=async function(id){
+    if(!confirm('このカードを削除しますか？'))return;
+    const{error}=await sb.from('flashcards').delete().eq('id',id).eq('user_id',user.id);
+    if(error)return toast(error.message);
+    toast('カードを削除しました');
+    await openDeck(currentDeck.id);
+    await manageCards();
+  };
+
   window.loadHistory=async function(){
     const{data,error}=await sb.from('flashcard_sessions').select('*,flashcard_decks(name)').order('created_at',{ascending:false}).limit(10);if(error)return toast(error.message);
     document.getElementById('history').innerHTML=data?.length?data.map(x=>'<div class="item"><div class="row" style="justify-content:space-between"><div><b>'+esc(x.flashcard_decks?.name||'')+'</b> <span class="badge">'+(x.mode==='choice'?'4択':'自由回答')+'</span><div class="muted small">'+new Date(x.started_at).toLocaleString('ja-JP')+' ・ '+x.card_count+'枚 ・ '+fmt(x.duration_seconds)+(x.mode==='choice'?' ・ 正解'+x.correct_count+'問':'')+(x.synced_to_study?' ・ 資格勉強OSへ同期済み':'')+'</div></div><button class="danger" onclick="deleteHistory(\''+x.id+'\',\''+(x.study_record_id||'')+'\')">削除</button></div></div>').join(''):'<p class="muted">まだ履歴がありません。</p>';
