@@ -36,6 +36,7 @@
   function hook(){
     installStyle();
     if(typeof window.showDashboard==='function')window.showDashboard=renderStudyDashboard;
+    var recordDate=document.getElementById('recordDate');if(recordDate)recordDate.value=studyDay();
     var now=new Date(),next=new Date(now.getFullYear(),now.getMonth(),now.getDate(),5,0,5);if(now>=next)next.setDate(next.getDate()+1);
     setTimeout(function(){
       window.today=studyDay;
