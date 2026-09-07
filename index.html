@@ -623,7 +623,7 @@ function renderQualificationMasterInline(){
       <div style="padding-top:10px">
         <label>資格名</label><input id="qn-${q.id}" value="${esc(q.name)}">
         <label>試験日</label><input id="qd-${q.id}" type="date" value="${q.exam_date||''}">
-        <label>科目</label><textarea id="qs-${q.id}">${subjects.filter(s=>s.qualification_id===q.id).map(s=>s.name).join('\n')}</textarea>
+        <label>科目</label><textarea id="qs-${q.id}">${subjects.filter(s=>s.qualification_id===q.id).map(s=>s.name).join('\\n')}</textarea>
         <div class="row">
           <button class="primary" onclick="updateQualification('${q.id}')">保存</button>
           <button class="danger" onclick="archiveQualification('${q.id}')">資格を削除</button>
@@ -965,6 +965,6 @@ async function importLocalData(){
 window.addEventListener('error',e=>{console.error(e.error||e.message)});
 init().catch(e=>{console.error(e);document.getElementById('authError').textContent='初期化に失敗しました: '+(e.message||e)})
 </script>
-<script src="study-dashboard-enhance.js"></script>
+<script src="study-dashboard-enhance.js?v=20260908-0217"></script>
 </body>
 </html>
