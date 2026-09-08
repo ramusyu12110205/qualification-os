@@ -52,7 +52,15 @@
     var st=(typeof sessions!=='undefined'&&Array.isArray(sessions))?sessions:[];
     var h=box.querySelector('h3');if(!h)return;
     if(h.textContent.indexOf('今週の学習時間')!==-1){patchWeekly(box,st);return}
-    if(h.textContent.indexOf('月別の学習時間')!==-1){var year=String(parseDate(studyDay()).getFullYear());if(box.dataset.monthlyYear!==year)renderYearMonthly(box,st);}
+    if(h.textContent.indexOf('月別の学習時間')!==-1){
+      var year=String(parseDate(studyDay()).getFullYear());
+      var total=st.reduce(function(a,s){return a+Number(s.minutes||0)},0);
+      var signature=year+':'+total+':'+st.length;
+      if(!box.querySelector('.sd-year-chart')||box.dataset.monthlySignature!==signature){
+        renderYearMonthly(box,st);
+        box.dataset.monthlySignature=signature;
+      }
+    }
   }
 
   function install(){
