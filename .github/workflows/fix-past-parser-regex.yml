@@ -36,6 +36,19 @@ jobs:
                   s = s.replace(marker, tag + '\n' + marker, 1)
                   p.write_text(s, encoding='utf-8')
           PY
+      - name: Install study dashboard final fixes
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('index.html')
+          s = p.read_text(encoding='utf-8')
+          tag = '<script src="study-dashboard-final-fix.js"></script>'
+          if tag not in s:
+              marker = '</body>'
+              if marker in s:
+                  s = s.replace(marker, tag + '\n' + marker, 1)
+                  p.write_text(s, encoding='utf-8')
+          PY
       - name: Commit fix if needed
         run: |
           git config user.name 'github-actions[bot]'
@@ -44,6 +57,6 @@ jobs:
           if git diff --cached --quiet; then
             echo 'No change needed'
           else
-            git commit -m 'Add study dashboard enhancement'
+            git commit -m 'Add study dashboard final fixes'
             git push
           fi
