@@ -6,7 +6,7 @@
   function total(qid){return sessions.filter(function(s){return s.qualification_id===qid}).reduce(function(a,s){return a+Number(s.minutes||0)},0)}
   function retake(q){if((q.result!=='failed'&&qstatus(q)!=='failed')||!q.exam_date)return 0;return sessions.filter(function(s){return s.qualification_id===q.id&&s.study_date>q.exam_date}).reduce(function(a,s){return a+Number(s.minutes||0)},0)}
   function resultSelect(id,v){return '<select id="'+id+'"><option value="">未入力</option><option value="passed" '+(v==='passed'?'selected':'')+'>合格</option><option value="failed" '+(v==='failed'?'selected':'')+'>不合格</option></select>'}
-  function modeSelect(id,v){return '<select id="'+id+'"><option value="overall" '+(v!=='subject'?'selected':'')+'>試験全体で合否を入力</option><option value="subject" '+(v==='subject'?'selected':'')+'>科目ごとに合否を入力</select>'}
+  function modeSelect(id,v){return '<select id="'+id+'"><option value="overall" '+(v!=='subject'?'selected':'')+'>試験全体で合否を入力</option><option value="subject" '+(v==='subject'?'selected':'')+'>科目ごとに合否を入力</option></select>'}
   function subjectFields(q){return '<div class="item"><b>科目ごとの合否</b>'+subjects.filter(function(s){return s.qualification_id===q.id}).map(function(s){return '<div class="row" style="margin:9px 0;align-items:center"><span style="flex:1">'+esc(s.name)+'</span><div style="width:180px">'+resultSelect('sr-'+s.id,s.result)+'</div></div>'}).join('')+'</div>'}
   function render(){
     var box=document.getElementById('panel-qualification');if(!box)return;
@@ -14,7 +14,7 @@
     html+=qualifications.length?qualifications.map(function(q){return '<details class="item"><summary style="cursor:pointer"><b>'+esc(q.name)+'</b> '+badge(qstatus(q))+' <span class="badge">'+(q.exam_date?fmt(q.exam_date):'試験日未設定')+'</span></summary><div style="padding-top:10px"><label>資格名</label><input id="rn-'+q.id+'" value="'+esc(q.name)+'"><label>試験日</label><input id="rd-'+q.id+'" type="date" value="'+(q.exam_date||'')+'"><label>合否の管理方法</label>'+modeSelect('rm-'+q.id,q.result_mode)+'<div id="rw-'+q.id+'">'+(q.result_mode==='subject'?subjectFields(q):'<label>試験全体の合否</label>'+resultSelect('rr-'+q.id,q.result)+'<label>不合格の場合の次回試験日</label><input id="rnxt-'+q.id+'" type="date" value="'+(q.next_exam_date||'')+'">')+'</div><label>科目</label><textarea id="rs-'+q.id+'">'+subjects.filter(function(s){return s.qualification_id===q.id}).map(function(s){return s.name}).join('\n')+'</textarea><div class="row"><button class="primary" onclick="updateQualificationResultAware(\''+q.id+'\')">保存</button><button class="danger" onclick="archiveQualification(\''+q.id+'\')">資格を削除</button></div><div class="item" style="margin-top:12px"><b>勉強時間</b><div class="statgrid" style="margin-top:8px"><div class="mini"><b>通算</b><strong>'+minutesText(total(q.id))+'</strong></div><div class="mini"><b>再試験</b><strong>'+minutesText(retake(q))+'</strong></div></div>'+(q.next_exam_date?'<div class="muted small" style="margin-top:8px">次回試験：'+fmt(q.next_exam_date)+'</div>':'')+'</div></div></details>'}).join(''):'<div class="item">まだ資格がありません。</div>';
     box.innerHTML=html;
     var nm=document.getElementById('newQMode');if(nm)nm.onchange=function(){var w=document.getElementById('newResultWrap');w.innerHTML=this.value==='subject'?'<p class="muted small">資格を追加後、各科目の合否を個別に入力できます。</p>':'<label>試験全体の合否</label>'+resultSelect('newResult','')+'<label>不合格の場合の次回試験日</label><input id="newNextDate" type="date">'};
-    qualifications.forEach(function(q){var m=document.getElementById('rm-'+q.id);if(m)m.onchange=function(){var w=document.getElementById('rw-'+q.id);w.innerHTML=this.value==='subject'?subjectFields(Object.assign({},q,{result_mode:'subject'})):'<label>試験全体の合否</label>'+resultSelect('rr-'+q.id,q.result)+'<label>不合格の場合の次回試験日</label><input id="rnxt-'+q.id+'" type="date" value="'+(q.next_exam_date||'">')}});
+    qualifications.forEach(function(q){var m=document.getElementById('rm-'+q.id);if(m)m.onchange=function(){var w=document.getElementById('rw-'+q.id);w.innerHTML=this.value==='subject'?subjectFields(Object.assign({},q,{result_mode:'subject'})):'<label>試験全体の合否</label>'+resultSelect('rr-'+q.id,q.result)+'<label>不合格の場合の次回試験日</label><input id="rnxt-'+q.id+'" type="date" value="'+(q.next_exam_date||'')+'">'}});
   }
   window.renderQualificationMasterInline=render;
   window.addQualificationResultAware=async function(){
@@ -22,7 +22,7 @@
     if(!name){alert('資格名を入力してください');return}
     var qres=await sb.from('qualifications').insert({user_id:currentUser.id,name:name,exam_date:date,result_mode:mode,result:mode==='overall'?result:null,next_exam_date:mode==='overall'&&result==='failed'?next:null}).select().single();
     if(qres.error){alert('資格の登録に失敗しました: '+qres.error.message);return}
-    var names=[...new Set(raw.split(/\r?\n|,|、/).map(function(n){return n.trim()}).filter(Boolean))];
+    var names=[...new Set(raw.split(/\r?\n|,|、/).map(function(x){return x.trim()}).filter(Boolean))];
     if(names.length){var sr=await sb.from('subjects').insert(names.map(function(n,i){return{user_id:currentUser.id,qualification_id:qres.data.id,name:n,sort_order:i}}));if(sr.error){alert('科目の登録に失敗しました: '+sr.error.message);return}}
     await loadAll();render();toast('資格を登録しました');
   };
@@ -40,22 +40,21 @@
   window.showQualificationResultAware=function(id){var q=qualifications.find(function(x){return x.id===id});if(!q)return;var box=document.getElementById('dashboard'),ss=subjects.filter(function(s){return s.qualification_id===id}),status=qstatus(q);box.innerHTML='<button class="light" onclick="showDashboard()">← 資格一覧</button><div class="quest"><div class="kicker">Qualification</div><h2>'+esc(q.name)+'</h2><div class="row" style="margin-top:8px">'+badge(status)+(q.exam_date?'<span class="badge">試験 '+fmt(q.exam_date)+'</span>':'')+(q.next_exam_date?'<span class="badge">次回 '+fmt(q.next_exam_date)+'</span>':'')+'</div></div><div class="statgrid" style="margin:12px 0"><div class="mini"><b>通算勉強時間</b><strong>'+minutesText(total(q.id))+'</strong></div><div class="mini"><b>再試験の勉強時間</b><strong>'+minutesText(retake(q))+'</strong></div></div>'+(q.result_mode==='subject'?'<div class="item"><b>科目合否</b>'+ss.map(function(s){return '<div class="row" style="justify-content:space-between;margin-top:8px"><span>'+esc(s.name)+'</span>'+badge(s.result)+'</div>'}).join('')+'</div>':'')+ss.map(function(s){var ps=problems.filter(function(p){return p.subject_id===s.id}),m=ps.filter(function(p){return p.status==='mastered'}).length;return '<div class="item clickable" onclick="showUnit(\''+s.id+'\')"><div class="row" style="justify-content:space-between"><b>'+esc(s.name)+'</b><strong>'+m+' / '+ps.length+' MASTER</strong></div><div class="bar" style="margin-top:8px"><div style="width:'+(ps.length?m/ps.length*100:0)+'%"></div></div></div>'}).join('')||'<div class="item">科目がありません。</div>'};
   var style=document.createElement('style');style.textContent='.badge.good{color:#b7f7d5;border-color:#286c50;background:#102c23}.badge.bad{color:#ffc1cf;border-color:#6b2941;background:#3d1725}.statgrid .mini strong{font-size:18px}';document.head.appendChild(style);
   render();
-  
-  // ホームのNEXT EXAMを資格の合否・再受験日と連動させる。
+
+  // 元のホーム表示を合否・次回試験日に合わせる。
   function refreshHeroExam(){
     var el=document.getElementById('heroCountdown'),nameEl=document.getElementById('heroExamName');
     if(!el||!nameEl)return;
     var todayStr=typeof today==='function'?today():new Date().toISOString().slice(0,10);
-    var todayDate=parseDate(todayStr);
-    var candidates=[];
+    var todayDate=parseDate(todayStr),candidates=[];
     qualifications.forEach(function(q){
       var status=qstatus(q);
       if(status==='passed')return;
       if(status==='failed'){
-        if(q.next_exam_date)candidates.push({q:q,date:q.next_exam_date,label:'次回試験'});
+        if(q.next_exam_date)candidates.push({q:q,date:q.next_exam_date});
         return;
       }
-      if(q.exam_date&&parseDate(q.exam_date)>=todayDate)candidates.push({q:q,date:q.exam_date,label:'試験'});
+      if(q.exam_date&&parseDate(q.exam_date)>=todayDate)candidates.push({q:q,date:q.exam_date});
     });
     candidates.sort(function(a,b){return a.date.localeCompare(b.date)});
     var next=candidates[0];
