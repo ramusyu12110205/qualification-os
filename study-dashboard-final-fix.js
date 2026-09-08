@@ -50,3 +50,65 @@
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install);else install();
 })();
+
+// 過去の勉強記録入力の補正。既存の入力UI・保存処理はそのまま使い、解析だけを拡張する。
+(function(){
+  function normalizeDate(value){
+    var m=String(value||'').trim().match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+    if(!m)return null;
+    var y=Number(m[1]),mo=Number(m[2]),day=Number(m[3]);
+    var d=new Date(y,mo-1,day);
+    if(d.getFullYear()!==y||d.getMonth()!==mo-1||d.getDate()!==day)return null;
+    return y+'-'+String(mo).padStart(2,'0')+'-'+String(day).padStart(2,'0');
+  }
+  function parsePastRowsFixed(){
+    var text=document.getElementById('pastRows')?.value||'';
+    var qid=document.getElementById('pastQualification')?.value;
+    var rows=[],errors=[];
+    var allowed={new_problems:'新規問題',review:'復習',textbook:'テキスト',lecture:'講義',mock:'模試',other:'その他'};
+    var reverse=Object.fromEntries(Object.entries(allowed).map(function(x){return [x[1],x[0]]}));
+    var cumulative=[];
+    text.split(/\r?\n/).map(function(x){return x.trim()}).filter(Boolean).forEach(function(line,i){
+      var parts=line.split(/[|｜]/).map(function(x){return x.trim()});
+      if(parts.length<4){errors.push((i+1)+'行目：「日付｜科目｜内容｜分｜メモ」の形式で入力してください');return}
+      var date=normalizeDate(parts[0]),subjectName=parts[1],activityText=parts[2],minutesText=parts[3],memo=parts.slice(4).join('｜');
+      var subject=(typeof subjects!=='undefined'&&Array.isArray(subjects))?subjects.find(function(s){return s.qualification_id===qid&&s.name===subjectName}):null;
+      if(!date){errors.push((i+1)+'行目：日付が不正です');return}
+      if(!subject){errors.push((i+1)+'行目：科目「'+subjectName+'」が資格マスタにありません');return}
+      var minutes=Number(String(minutesText).replace(/分$/,'').replace(/,/g,'').trim());
+      if(!Number.isInteger(minutes)||minutes<=0){errors.push((i+1)+'行目：勉強時間は1分以上の整数で入力してください');return}
+      if(activityText==='累計'){
+        cumulative.push({index:i,date:date,subject:subject,minutes:minutes,memo:memo||null});
+        return;
+      }
+      var activityType=reverse[activityText]||activityText;
+      if(!Object.keys(allowed).includes(activityType)){errors.push((i+1)+'行目：内容「'+activityText+'」は使えません');return}
+      rows.push({study_date:date,subject_id:subject.id,subject_name:subject.name,activity_type:activityType,activity_label:allowed[activityType],minutes:minutes,memo:memo||null});
+    });
+    var grouped={};
+    cumulative.forEach(function(x){var key=x.subject.id;if(!grouped[key])grouped[key]=[];grouped[key].push(x)});
+    Object.values(grouped).forEach(function(list){
+      list.sort(function(a,b){return a.date.localeCompare(b.date)||a.index-b.index});
+      var previous=0;
+      list.forEach(function(x){
+        var delta=x.minutes-previous;
+        if(delta<0)delta=x.minutes;
+        if(delta>0)rows.push({study_date:x.date,subject_id:x.subject.id,subject_name:x.subject.name,activity_type:'other',activity_label:'累計',minutes:delta,memo:x.memo});
+        previous=x.minutes;
+      });
+    });
+    rows.sort(function(a,b){return a.study_date.localeCompare(b.study_date)});
+    return {rows:rows,errors:errors};
+  }
+  function escLocal(value){return String(value??'').replace(/[&<>"']/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]})}
+  function previewPastStudyFixed(){
+    var preview=document.getElementById('pastPreview');if(!preview)return;
+    var result=parsePastRowsFixed(),rows=result.rows,errors=result.errors,out='';
+    if(errors.length)out+='<div class="item" style="border-color:#6b2941"><b style="color:#ffb4c3">入力エラー</b><ul style="margin:8px 0">'+errors.map(function(e){return '<li>'+escLocal(e)+'</li>'}).join('')+'</ul></div>';
+    if(rows.length){var total=rows.reduce(function(a,r){return a+r.minutes},0);out+='<div class="item"><div class="sectiontitle"><b>登録プレビュー</b><span class="badge">'+rows.length+'件 / '+(Math.floor(total/60)?Math.floor(total/60)+'時間':'')+(total%60?total%60+'分':total?'':'0分')+'</span></div>'+rows.map(function(r){return '<div class="record-meta" style="margin:8px 0"><span>📅 '+escLocal(r.study_date)+'</span><span>'+escLocal(r.subject_name)+'</span><span>'+escLocal(r.activity_label)+'</span><span>'+r.minutes+'分</span>'+(r.memo?'<span>💬 '+escLocal(r.memo)+'</span>':'')+'</div>'}).join('')+'<div class="row" style="margin-top:12px"><button class="primary" onclick="savePastStudy()">この内容で登録</button><button class="light" onclick="document.getElementById(\'pastPreview\').innerHTML=\'\'">閉じる</button></div></div>'}
+    if(!rows.length&&!errors.length)out='<div class="item">入力がありません。</div>';
+    preview.innerHTML=out;
+  }
+  window.parsePastRows=parsePastRowsFixed;
+  window.previewPastStudy=previewPastStudyFixed;
+})();
