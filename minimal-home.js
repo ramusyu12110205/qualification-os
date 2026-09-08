@@ -25,21 +25,10 @@
   function showOriginal(){const app=document.getElementById('app');if(!app)return;const home=document.getElementById('minimalHome');if(home)home.style.display='none';[...app.children].forEach(ch=>{if(ch.id!=='minimalHome')ch.style.display=''})}
   function mhNavigate(name){if(name==='home'){showHome();return}if(name==='flash'){location.href='flashcards.html';return}showOriginal();if(originalOpenTab)originalOpenTab(name==='record'?'record':name==='status'?'status':name==='settings'?'settings':'review');document.querySelectorAll('.mh-nav button').forEach(b=>b.classList.toggle('active',b.dataset.mh===name))}
   function showHome(){hideOriginal();renderHome()}
-  function getNextExam(q,today){
-    const candidates=q.flatMap(qual=>{
-      const result=qual.result;
-      const isPassed=result==='passed';
-      if(isPassed)return [];
-      const examDate=result==='failed'&&qual.next_exam_date ? qual.next_exam_date : qual.exam_date;
-      if(!examDate||examDate<today)return [];
-      return [{...qual,display_exam_date:examDate}];
-    });
-    return candidates.sort((a,b)=>a.display_exam_date.localeCompare(b.display_exam_date))[0]||null;
-  }
   function renderHome(){
     ensureHome();const {q,s,p,st}=getData(),today=todayM();document.getElementById('mhDate').textContent=new Intl.DateTimeFormat('ja-JP',{year:'numeric',month:'long',day:'numeric',weekday:'short'}).format(new Date());
     const totalToday=st.filter(x=>x.study_date===today).reduce((a,x)=>a+Number(x.minutes||0),0),pct=Math.min(100,Math.round(totalToday/GOAL*100));document.getElementById('mhDonut').style.setProperty('--pct',pct+'%');document.getElementById('mhGoalPct').textContent=pct+'%';document.getElementById('mhGoalTime').textContent=`${totalToday} / ${GOAL}分`;document.getElementById('mhGoalSub').textContent=totalToday>=GOAL?'今日の目標を達成しました！':`あと${GOAL-totalToday}分で目標達成`;
-    const next=getNextExam(q,today);if(next){const d=daysUntil(next.display_exam_date);document.getElementById('mhExamDays').textContent=d===0?'本日':`あと ${d}日`;document.getElementById('mhExamName').textContent=escM(next.name);document.getElementById('mhExamDate').textContent=`試験日 ${fmtM(next.display_exam_date)}`}else{document.getElementById('mhExamDays').textContent='—';document.getElementById('mhExamName').textContent='試験日を設定してください';document.getElementById('mhExamDate').textContent='資格・科目から設定できます'}document.getElementById('mhWelcomeSub').textContent=totalToday>=GOAL?'今日の目標達成。いいペースです。':totalToday?`今日は${totalToday}分学習中。あと${GOAL-totalToday}分。`:'まずは今日の学習を1つ記録しよう。';
+    const next=q.filter(x=>x.exam_date&&daysUntil(x.exam_date)>=0).sort((a,b)=>a.exam_date.localeCompare(b.exam_date))[0];if(next){const d=daysUntil(next.exam_date);document.getElementById('mhExamDays').textContent=d===0?'本日':`あと ${d}日`;document.getElementById('mhExamName').textContent=escM(next.name);document.getElementById('mhExamDate').textContent=`試験日 ${fmtM(next.exam_date)}`}else{document.getElementById('mhExamDays').textContent='—';document.getElementById('mhExamName').textContent='試験日を設定してください';document.getElementById('mhExamDate').textContent='資格・科目から設定できます'}document.getElementById('mhWelcomeSub').textContent=totalToday>=GOAL?'今日の目標達成。いいペースです。':totalToday?`今日は${totalToday}分学習中。あと${GOAL-totalToday}分。`:'まずは今日の学習を1つ記録しよう。';
     const due=p.filter(x=>x.status==='pending'&&x.next_review_date&&x.next_review_date<=today).length,tomorrow=addM(today,1),weekEnd=addM(today,7),tomorrowDue=p.filter(x=>x.status==='pending'&&x.next_review_date===tomorrow).length,weekDue=p.filter(x=>x.status==='pending'&&x.next_review_date&&x.next_review_date>=today&&x.next_review_date<weekEnd).length,streak=calcStreak(st);
     document.getElementById('mhTasks').innerHTML=`<div class="mh-task"><div><div class="mh-task-name">今日の復習</div><div class="mh-task-bar"><i style="width:${due?Math.min(100,due/30*100):100}%"></i></div></div><div class="mh-task-val">${due}問</div></div><div class="mh-task"><div><div class="mh-task-name">勉強時間を60分以上</div><div class="mh-task-bar"><i style="width:${pct}%"></i></div></div><div class="mh-task-val">${totalToday}/${GOAL}分</div></div><div class="mh-task"><div><div class="mh-task-name">連続学習を継続</div><div class="mh-task-bar"><i style="width:${Math.min(100,streak/7*100)}%"></i></div></div><div class="mh-task-val">${streak}日</div></div>`;
     const rows=q.map(qual=>{const ps=p.filter(x=>{const sub=s.find(y=>y.id===x.subject_id);return sub?.qualification_id===qual.id});const mastered=ps.filter(x=>x.status==='mastered').length;return {name:qual.name,total:ps.length,mastered,pct:ps.length?Math.round(mastered/ps.length*100):0}}).filter(x=>x.total>0).slice(0,6);document.getElementById('mhProgress').innerHTML=rows.length?rows.map(x=>`<div class="mh-progress-row"><div class="mh-progress-name" title="${escM(x.name)}">${escM(x.name)}</div><div class="mh-progress-bar"><i style="width:${x.pct}%"></i></div><div class="mh-progress-pct">${x.pct}%</div></div>`).join(''):'<div class="mh-empty">問題を登録すると資格別の進捗が表示されます。</div>';
@@ -51,4 +40,38 @@
   function calcStreak(st){const days=[...new Set(st.map(x=>x.study_date))].sort().reverse();if(!days.length||days[0]!==todayM())return 0;let n=0;for(let i=0;i<days.length;i++){if(days[i]===addM(todayM(),-i))n++;else break}return n}
   function bootMinimal(){if(ready)return;ready=true;ensureHome();originalOpenTab=window.openTab;window.openTab=function(name){if(name==='review'&&document.getElementById('minimalHome')?.style.display!=='none')showOriginal();return originalOpenTab?originalOpenTab(name):undefined};showHome()}
   const wait=setInterval(()=>{if(document.getElementById('app')){clearInterval(wait);setTimeout(bootMinimal,250)}},100);document.addEventListener('DOMContentLoaded',()=>setTimeout(()=>{if(document.getElementById('app'))bootMinimal()},300));window.minimalHomeRefresh=renderHome;
+  
+  // 元のホーム（#heroCountdown）の試験表示も、合否・次回試験日に合わせる。
+  function patchOriginalHero(){
+    const original=window.updateHero;
+    if(typeof original!=='function'||original.__resultAware)return;
+    const wrapped=function(){
+      original.apply(this,arguments);
+      try{
+        const data=getData(),today=todayM();
+        const candidates=data.q.filter(function(q){
+          if(!q.exam_date)return false;
+          if(q.result==='passed')return false;
+          if(q.result==='failed')return !!q.next_exam_date;
+          return daysUntil(q.exam_date)>=0;
+        }).sort(function(a,b){
+          const ad=a.result==='failed'?a.next_exam_date:a.exam_date;
+          const bd=b.result==='failed'?b.next_exam_date:b.exam_date;
+          return ad.localeCompare(bd);
+        });
+        const next=candidates[0],count=document.getElementById('heroCountdown'),name=document.getElementById('heroExamName');
+        if(!count||!name)return;
+        if(!next){count.textContent='—';name.textContent='次回試験を設定してください';return;}
+        const date=next.result==='failed'?next.next_exam_date:next.exam_date;
+        const diff=daysUntil(date);
+        count.textContent=diff===0?'本日':`あと ${diff}日`;
+        name.textContent=`${next.name} / ${fmtM(date)}`;
+      }catch(e){console.error(e)}
+    };
+    wrapped.__resultAware=true;
+    window.updateHero=wrapped;
+    wrapped();
+  }
+  setTimeout(patchOriginalHero,400);
+  setTimeout(patchOriginalHero,1200);
 })();
