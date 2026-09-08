@@ -1,3 +1,4 @@
+// cache refresh: grouped upcoming review display
 (function(){
   function pad(n){return String(n).padStart(2,'0')}
   function localDate(d){d=d||new Date();return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())}
