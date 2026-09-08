@@ -66,4 +66,21 @@
   var baseUpdateHero=window.updateHero;
   window.updateHero=function(){if(baseUpdateHero)baseUpdateHero();refreshHeroExam()};
   refreshHeroExam();
+
+  // 学習状況の問題一覧は、問題番号を数値として昇順表示する。
+  var baseShowUnit=window.showUnit;
+  window.showUnit=function(id){
+    if(baseShowUnit)baseShowUnit.apply(this,arguments);
+    setTimeout(function(){
+      var box=document.getElementById('dashboard');if(!box)return;
+      var title=box.querySelector('h2');if(!title)return;
+      var items=[...box.querySelectorAll('.item')].filter(function(el){return /^\s*\d+/.test((el.textContent||'').trim())});
+      items.sort(function(a,b){
+        var ma=(a.textContent||'').trim().match(/^\d+/),mb=(b.textContent||'').trim().match(/^\d+/);
+        var na=ma?parseInt(ma[0],10):999999,nb=mb?parseInt(mb[0],10):999999;
+        return na-nb;
+      });
+      if(items.length){var parent=items[0].parentElement;items.forEach(function(el){parent.appendChild(el)})}
+    },0);
+  };
 })();
