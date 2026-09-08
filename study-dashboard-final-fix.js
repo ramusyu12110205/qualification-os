@@ -12,10 +12,27 @@
   function monthStart(d){return new Date(d.getFullYear(),d.getMonth(),1)}
   function monthKey(d){return d.getFullYear()+'-'+pad(d.getMonth()+1)}
   function daysInMonth(d){return new Date(d.getFullYear(),d.getMonth()+1,0).getDate()}
+  function bindPreviousWeekToggle(box,st){
+    var chart=box.querySelector('.sd-chart:not(.sd-month-chart)');if(!chart)return;
+    var base=parseDate(studyDay()),ws=weekStart(base),map={};st.forEach(function(s){map[s.study_date]=(map[s.study_date]||0)+Number(s.minutes||0)});
+    chart.querySelectorAll('.sd-day').forEach(function(dayEl,index){
+      var prevDate=new Date(ws.getFullYear(),ws.getMonth(),ws.getDate()+index-7),prevMinutes=map[iso(prevDate)]||0;
+      var prevValue=dayEl.querySelector('.sd-prev-value');
+      if(!prevValue){prevValue=document.createElement('div');prevValue.className='sd-prev-value';dayEl.appendChild(prevValue)}
+      prevValue.textContent='先週 '+minutesText(prevMinutes);
+      dayEl.setAttribute('role','button');dayEl.setAttribute('tabindex','0');dayEl.setAttribute('aria-label',(['月','火','水','木','金','土','日'][index]||'')+'曜日の先週の学習時間 '+minutesText(prevMinutes)+'。タップで表示・非表示');
+      if(dayEl.dataset.prevToggleBound==='1')return;
+      dayEl.dataset.prevToggleBound='1';
+      function toggle(){dayEl.classList.toggle('sd-prev-open')}
+      dayEl.addEventListener('click',toggle);
+      dayEl.addEventListener('keydown',function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();toggle()}});
+    });
+  }
   function patchWeekly(box,st){
     var base=parseDate(studyDay()),ws=weekStart(base),todayKey=iso(base),elapsed=Math.floor((base-ws)/86400000)+1,start=iso(ws),prevStart=iso(new Date(ws.getFullYear(),ws.getMonth(),ws.getDate()-7)),prevEnd=iso(new Date(base.getFullYear(),base.getMonth(),base.getDate()-7)),current=sumRange(st,start,todayKey),previous=sumRange(st,prevStart,prevEnd),change=pctChange(current,previous),summary=box.querySelectorAll('.sd-summary > div');
     if(summary.length>=3){summary[0].querySelector('strong').textContent=minutesText(current);summary[1].querySelector('strong').textContent=minutesText(current/elapsed);summary[2].querySelector('strong').textContent=change==null?'—':(change>0?'＋':'')+change+'%'}
     var compare=box.querySelectorAll('.sd-compare');if(compare.length){var cards=compare[0].querySelectorAll('.sd-compare-card');if(cards.length>=2){cards[0].querySelector('span').textContent='先週の同曜日まで';cards[0].querySelector('b').textContent=minutesText(previous);cards[1].querySelector('span').textContent='今週の学習日数';cards[1].querySelector('small').textContent=elapsed+'日中'}}
+    bindPreviousWeekToggle(box,st);
   }
   function renderYearMonthly(box,st){
     var base=parseDate(studyDay()),year=base.getFullYear(),months=[],map={};st.forEach(function(s){if(s.study_date){var d=parseDate(s.study_date),k=monthKey(d);map[k]=(map[k]||0)+Number(s.minutes||0)}});for(var i=0;i<12;i++){var d=new Date(year,i,1);months.push({d:d,key:monthKey(d),label:(i+1)+'月',minutes:map[monthKey(d)]||0,days:daysInMonth(d)})}
@@ -25,7 +42,7 @@
   function sync(){var box=document.getElementById('dashboard');if(!box)return;var st=(typeof sessions!=='undefined'&&Array.isArray(sessions))?sessions:[],h=box.querySelector('h3');if(!h)return;if(h.textContent.indexOf('今週の学習時間')!==-1){patchWeekly(box,st);return}if(h.textContent.indexOf('月別の学習時間')!==-1){var year=String(parseDate(studyDay()).getFullYear()),total=st.reduce(function(a,s){return a+Number(s.minutes||0)},0),signature=year+':'+total+':'+st.length;if(!box.querySelector('.sd-year-chart')||box.dataset.monthlySignature!==signature){renderYearMonthly(box,st);box.dataset.monthlySignature=signature}}}
   function install(){
     if(!window.__qResultEnhanceLoading){window.__qResultEnhanceLoading=true;var qscript=document.createElement('script');qscript.src='qualification-result-enhance-v2.js?v=20260908-1200';document.head.appendChild(qscript)}
-    if(!document.getElementById('dashboardFinalFixStyle')){var s=document.createElement('style');s.id='dashboardFinalFixStyle';s.textContent='.sd-month-total{display:flex;justify-content:space-between;align-items:center;margin:10px 0;padding:14px 16px;background:#0e1422;border:1px solid #26314d;border-radius:14px}.sd-month-total span{color:#98a3bf;font-size:12px;font-weight:800}.sd-month-total strong{font-size:24px}.sd-year-chart{overflow-x:auto}.sd-year-chart .sd-day{min-width:70px}.sd-month-avg{font-size:10px;color:#98a3bf;margin-top:4px;white-space:nowrap}@media(max-width:700px){.sd-year-chart{justify-content:flex-start}.sd-year-chart .sd-day{min-width:68px}}';document.head.appendChild(s)}
+    if(!document.getElementById('dashboardFinalFixStyle')){var s=document.createElement('style');s.id='dashboardFinalFixStyle';s.textContent='.sd-month-total{display:flex;justify-content:space-between;align-items:center;margin:10px 0;padding:14px 16px;background:#0e1422;border:1px solid #26314d;border-radius:14px}.sd-month-total span{color:#98a3bf;font-size:12px;font-weight:800}.sd-month-total strong{font-size:24px}.sd-year-chart{overflow-x:auto}.sd-year-chart .sd-day{min-width:70px}.sd-month-avg{font-size:10px;color:#98a3bf;margin-top:4px;white-space:nowrap}.sd-chart:not(.sd-month-chart) .sd-day{cursor:pointer;user-select:none}.sd-chart:not(.sd-month-chart) .sd-day:focus-visible{outline:2px solid #8b5cf6;outline-offset:3px;border-radius:8px}.sd-prev-value{height:16px;line-height:16px;font-size:10px;color:#98a3bf;opacity:0;white-space:nowrap;transition:opacity .15s}.sd-prev-open .sd-prev-value{opacity:1}@media(max-width:700px){.sd-year-chart{justify-content:flex-start}.sd-year-chart .sd-day{min-width:68px}}';document.head.appendChild(s)}
     var old=window.scrollTo;window.scrollTo=function(x,y){if(typeof x==='object'&&x&&Number(x.top)===0)return;return old.apply(window,arguments)};
     var originalShowDashboard=window.showDashboard;window.showDashboard=function(){var mode=localStorage.getItem('qualification-os-dashboard-mode')||'qualification';var b=document.querySelector('#tab-status [data-dashboard-mode="'+mode+'"]');if(!b){var buttons=document.querySelectorAll('#tab-status .row > button');buttons.forEach(function(x){var t=x.textContent||'';if((mode==='qualification'&&t.indexOf('資格一覧')!==-1)||(mode==='weekly'&&t.indexOf('週・月')!==-1))b=x});}if(b)b.click();else if(originalShowDashboard)originalShowDashboard()};
     var originalShowStats=window.showStats;window.showStats=function(type){if(type==='month'){localStorage.setItem('qualification-os-dashboard-mode','monthly');var box=document.getElementById('dashboard'),st=(typeof sessions!=='undefined'&&Array.isArray(sessions))?sessions:[];if(box){renderYearMonthly(box,st);return}}if(originalShowStats)return originalShowStats.apply(this,arguments)};
