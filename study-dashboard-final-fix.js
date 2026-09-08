@@ -67,6 +67,15 @@
     if(!document.getElementById('dashboardFinalFixStyle')){var s=document.createElement('style');s.id='dashboardFinalFixStyle';s.textContent='.sd-month-total{display:flex;justify-content:space-between;align-items:center;margin:10px 0;padding:14px 16px;background:#0e1422;border:1px solid #26314d;border-radius:14px}.sd-month-total span{color:#98a3bf;font-size:12px;font-weight:800}.sd-month-total strong{font-size:24px}.sd-year-chart{overflow-x:auto}.sd-year-chart .sd-day{min-width:70px}.sd-month-avg{font-size:10px;color:#98a3bf;margin-top:4px;white-space:nowrap}@media(max-width:700px){.sd-year-chart{justify-content:flex-start}.sd-year-chart .sd-day{min-width:68px}}';document.head.appendChild(s)}
     var old=window.scrollTo;window.scrollTo=function(x,y){if(typeof x==='object'&&x&&Number(x.top)===0)return;return old.apply(window,arguments)};
     var originalShowDashboard=window.showDashboard;window.showDashboard=function(){var mode=localStorage.getItem('qualification-os-dashboard-mode')||'qualification';var b=document.querySelector('#tab-status [data-dashboard-mode="'+mode+'"]');if(!b){var buttons=document.querySelectorAll('#tab-status .row > button');buttons.forEach(function(x){var t=x.textContent||'';if((mode==='qualification'&&t.indexOf('資格一覧')!==-1)||(mode==='weekly'&&t.indexOf('週・月')!==-1))b=x});}if(b)b.click();else if(originalShowDashboard)originalShowDashboard()};
+    var originalShowStats=window.showStats;window.showStats=function(type){
+      if(type==='month'){
+        localStorage.setItem('qualification-os-dashboard-mode','monthly');
+        var box=document.getElementById('dashboard');
+        var st=(typeof sessions!=='undefined'&&Array.isArray(sessions))?sessions:[];
+        if(box){renderYearMonthly(box,st);return;}
+      }
+      if(originalShowStats)return originalShowStats.apply(this,arguments);
+    };
     var box=document.getElementById('dashboard');if(!box)return;
     var scheduled=false;
     new MutationObserver(function(){if(scheduled)return;scheduled=true;setTimeout(function(){scheduled=false;sync()},0)}).observe(box,{childList:true,subtree:true});
