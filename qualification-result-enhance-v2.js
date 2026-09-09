@@ -88,13 +88,14 @@
     list.querySelectorAll('details').forEach(function(details){
       var container=details.querySelector(':scope > div');if(!container)return;
       var items=[...container.children].filter(function(el){return el.classList.contains('item')});
-      items.sort(function(a,b){
+      var sorted=items.slice().sort(function(a,b){
         var am=(a.textContent||'').trim().match(/^\s*(\d+)/),bm=(b.textContent||'').trim().match(/^\s*(\d+)/);
         if(am&&bm)return parseInt(am[1],10)-parseInt(bm[1],10);
         if(am)return -1;if(bm)return 1;
         return (a.textContent||'').localeCompare(b.textContent||'','ja');
       });
-      items.forEach(function(el){container.appendChild(el)});
+      var changed=sorted.some(function(el,i){return el!==items[i]});
+      if(changed)sorted.forEach(function(el){container.appendChild(el)});
     });
   }
   var reviewList=document.getElementById('reviewList');
