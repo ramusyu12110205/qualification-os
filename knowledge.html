@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>知識カード | 資格勉強OS</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{--bg:#080c17;--card:#12182a;--text:#f5f7ff;--muted:#98a3bf;--accent:#8b5cf6;--line:#26314d}
+*{box-sizing:border-box}body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;max-width:1000px;margin:auto;padding:18px 18px 70px;background:radial-gradient(circle at top left,#1a1640 0,#090e1a 42%,#050812 100%);color:var(--text)}
+h1,h2,h3{margin-top:0}.muted{color:var(--muted)}.small{font-size:13px}.card{background:linear-gradient(145deg,rgba(18,24,42,.96),rgba(10,15,28,.98));border:1px solid var(--line);border-radius:20px;padding:18px;margin:14px 0}.item{border:1px solid var(--line);border-radius:14px;padding:14px;margin:9px 0;background:#0f1627}.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}button{border:0;border-radius:11px;padding:10px 15px;font-weight:850;cursor:pointer;min-height:42px}.primary{background:var(--accent);color:#fff}.light{background:#222b43;color:#e8ecff;border:1px solid #33405f}.danger{background:#3d1725;color:#ffc1cf;border:1px solid #6b2941}input,textarea{width:100%;padding:11px;border:1px solid #394563;border-radius:11px;background:#0c1322;color:#f4f6ff;font-size:16px}textarea{min-height:92px;resize:vertical}label{display:block;font-weight:800;margin:10px 0 6px}.hidden{display:none!important}.knowledge-section{margin-top:14px;padding-top:12px;border-top:1px solid #26314d}.knowledge-section:first-child{margin-top:0;padding-top:0;border-top:0}.knowledge-section h3{font-size:14px;margin-bottom:7px}.knowledge-section ol,.knowledge-section ul{margin:6px 0 0;padding-left:24px}.knowledge-section li{margin:5px 0;line-height:1.55}.meaning{font-size:17px;line-height:1.65;font-weight:750}.date{font-size:12px;color:var(--muted)}
+@media(max-width:700px){body{padding:12px 12px 60px}.grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div id="auth" class="card hidden"><h2>🧠 知識カード</h2><p class="muted">Googleでログインしてください。</p><button class="primary" onclick="login()">Googleでログイン</button></div>
+<div id="app" class="hidden">
+<header class="row" style="justify-content:space-between"><div><h1>🧠 知識カード</h1><div class="muted small">動画・本などで得た雑多な知識を、自分の言葉で蓄積します。</div></div><div class="row"><button class="primary" onclick="showForm()">＋ 知識を記録</button><button class="light" onclick="location.href='index.html'">← 資格勉強OS</button></div></header>
+<section id="form" class="card hidden">
+<h2 id="formTitle">知識を記録</h2>
+<label>① 何の話だった？</label><textarea id="what" maxlength="500" placeholder="1〜2行で簡潔に"></textarea>
+<div class="grid">
+<div><label>② 重要だと思ったこと（最大3つ）</label><textarea id="important" placeholder="1つ目&#10;2つ目&#10;3つ目"></textarea></div>
+<div><label>③ 分からなかった言葉（最大3個）</label><textarea id="unknown" placeholder="言葉1&#10;言葉2&#10;言葉3"></textarea></div>
+</div>
+<label>④ 「つまり何？」を自分の言葉で</label><textarea id="meaning" maxlength="500" placeholder="1〜2行で、自分なりに"></textarea>
+<div class="row" style="margin-top:12px"><button class="primary" onclick="saveCard()">保存</button><button class="light" onclick="hideForm()">戻る</button></div>
+</section>
+<section class="card"><div class="row" style="justify-content:space-between"><h2>知識の蓄積</h2><span class="badge" id="count"></span></div><input id="search" placeholder="キーワードで検索" oninput="renderCards()"><div id="cards" style="margin-top:10px"></div></section>
+</div>
+<div id="toast" style="position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:#101827;border:1px solid #354361;color:#fff;padding:11px 15px;border-radius:12px;display:none;z-index:10"></div>
+<script>
+const sb=window.supabase.createClient('https://txprypfzdsfaupguhybl.supabase.co','sb_publishable_qiCaP0cBNhms5-usSDzKlQ_nywzlU36');
+let user=null,cards=[],editingId='';
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function toast(s){const e=$('toast');e.textContent=s;e.style.display='block';setTimeout(()=>e.style.display='none',1800)}
+function lines(text,max){return text.split(/\r?\n/).map(x=>x.trim()).filter(Boolean).slice(0,max)}
+async function boot(){const{data:{session}}=await sb.auth.getSession();if(session){user=session.user;$('app').classList.remove('hidden');await loadCards()}else $('auth').classList.remove('hidden')}
+async function login(){await sb.auth.signInWithOAuth({provider:'google',options:{redirectTo:location.href}})}
+async function loadCards(){const{data,error}=await sb.from('knowledge_cards').select('*').eq('user_id',user.id).order('created_at',{ascending:false});if(error)return toast(error.message);cards=data||[];renderCards()}
+function renderCards(){const q=$('search').value.trim().toLowerCase();const shown=cards.filter(c=>!q||[c.what_was_it,c.in_my_words,...(c.important_points||[]),...(c.unknown_terms||[])].join(' ').toLowerCase().includes(q));$('count').textContent=shown.length+'件';$('cards').innerHTML=shown.length?shown.map(c=>`<article class="item"><div class="date">${new Date(c.created_at).toLocaleDateString('ja-JP')}</div><div class="knowledge-section"><h3>① 何の話だった？</h3><div>${esc(c.what_was_it).replace(/\n/g,'<br>')}</div></div><div class="knowledge-section"><h3>② 重要だと思ったこと</h3><ol>${(c.important_points||[]).map(x=>`<li>${esc(x)}</li>`).join('')}</ol></div>${(c.unknown_terms||[]).length?`<div class="knowledge-section"><h3>③ 分からなかった言葉</h3><ul>${c.unknown_terms.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div>`:''}<div class="knowledge-section"><h3>④ 「つまり何？」を自分の言葉で</h3><div class="meaning">${esc(c.in_my_words).replace(/\n/g,'<br>')}</div></div><div class="row" style="margin-top:12px"><button class="light" onclick="editCard('${c.id}')">編集</button><button class="danger" onclick="deleteCard('${c.id}')">削除</button></div></article>`).join(''):'<p class="muted">まだ知識カードがありません。</p>'}
+function showForm(c=null){editingId=c?.id||'';$('formTitle').textContent=c?'知識カードを編集':'知識を記録';$('what').value=c?.what_was_it||'';$('important').value=(c?.important_points||[]).join('\n');$('unknown').value=(c?.unknown_terms||[]).join('\n');$('meaning').value=c?.in_my_words||'';$('form').classList.remove('hidden');$('what').focus();window.scrollTo({top:0,behavior:'smooth'})}
+function hideForm(){$('form').classList.add('hidden');editingId=''}
+function editCard(id){showForm(cards.find(c=>c.id===id))}
+async function saveCard(){const what=$('what').value.trim(),important=lines($('important').value,3),unknown=lines($('unknown').value,3),meaning=$('meaning').value.trim();if(!what||!meaning)return toast('①と④は入力してください');const payload={what_was_it:what,important_points:important,unknown_terms:unknown,in_my_words:meaning,updated_at:new Date().toISOString()};const q=editingId?sb.from('knowledge_cards').update(payload).eq('id',editingId).eq('user_id',user.id):sb.from('knowledge_cards').insert({...payload,user_id:user.id});const{error}=await q;if(error)return toast(error.message);toast(editingId?'更新しました':'記録しました');hideForm();await loadCards()}
+async function deleteCard(id){if(!confirm('この知識カードを削除しますか？'))return;const{error}=await sb.from('knowledge_cards').delete().eq('id',id).eq('user_id',user.id);if(error)return toast(error.message);await loadCards();toast('削除しました')}
+boot();
+</script>
+</body>
+</html>
