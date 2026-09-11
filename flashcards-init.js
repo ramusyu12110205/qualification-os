@@ -1,5 +1,10 @@
 // Flashcard UI initialization / explorer
 (function(){
+  const gate=document.createElement('style');
+  gate.id='fc-initial-load-gate';
+  gate.textContent='html{visibility:hidden!important}';
+  document.head.appendChild(gate);
+
   const prepareHome=()=>{
     const home=document.getElementById('home');
     if(!home)return;
@@ -85,7 +90,7 @@
       const count=counts.get(String(q.id))||0;
       return '<button class="fc-qualification" onclick="openQualification(\''+q.id+'\')">'+
         '<span class="fc-folder">📁</span><span class="fc-qualification-name">'+esc(q.name)+'</span>'+
-        '<span class="fc-qualification-count">'+count+'枚</span><span class="fc-arrow">›</span></button>';
+        '<span class="fc-qualification-count">'+count+'枚</span><span class="fc-arrow">›</span>';
     }).join(''):'<p class="muted">資格がまだ登録されていません。</p>';
   };
 
@@ -146,4 +151,21 @@
     style.textContent='.fc-qualification{width:100%;display:flex;align-items:center;gap:13px;margin:9px 0;padding:17px 15px;text-align:left;background:#0f1627;color:#f5f7ff;border:1px solid #263553;border-radius:16px}.fc-qualification:active,.fc-file-row:active{background:#151d32;transform:scale(.995)}.fc-folder{font-size:30px;flex:none}.fc-qualification-name{font-size:19px;font-weight:900;flex:1}.fc-qualification-count,.fc-file-count{font-size:13px;color:#d7ceff;background:#261b50;border:1px solid #45337c;border-radius:999px;padding:4px 9px;flex:none}.fc-arrow{font-size:28px;color:#98a3bf;line-height:1;flex:none}.fc-page-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px}.fc-breadcrumb{font-size:13px;color:#98a3bf;font-weight:800;margin-bottom:4px}.fc-page-head h2{margin:0 0 3px}.fc-file-row{width:100%;display:flex;align-items:center;gap:13px;margin:8px 0;padding:15px 13px;text-align:left;background:#0f1627;color:#f5f7ff;border:1px solid #263553;border-radius:15px}.fc-file-icon{font-size:27px;flex:none}.fc-file-main{display:flex;flex-direction:column;gap:3px;flex:1;min-width:0}.fc-file-main b{font-size:17px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.fc-file-main span{font-size:12px;color:#98a3bf;min-height:1em}.fc-file-list{margin-top:4px}'
     document.head.appendChild(style);
   }
+
+  const releaseGate=()=>{
+    const gateStyle=document.getElementById('fc-initial-load-gate');
+    if(gateStyle)gateStyle.remove();
+  };
+  const waitForInitialRender=()=>{
+    const app=document.getElementById('app');
+    const auth=document.getElementById('auth');
+    if(!app||!auth)return releaseGate();
+    if(!app.classList.contains('hidden')){
+      window.showHome().finally(releaseGate);
+      return;
+    }
+    if(!auth.classList.contains('hidden')){releaseGate();return;}
+    setTimeout(waitForInitialRender,50);
+  };
+  setTimeout(waitForInitialRender,0);
 })();
