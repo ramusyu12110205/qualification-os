@@ -44,11 +44,11 @@ setTimeout(()=>{
       if(window.loadMasters)await window.loadMasters();
       await baseLoadDecks();
       const box=document.getElementById('decks');
-      if(!box||!Array.isArray(window.decks))return;
+      if(!box||!Array.isArray(decks))return;
       const qMap=new Map((window.qualifications||[]).map(q=>[String(q.id),q.name]));
       const sMap=new Map((window.subjects||[]).map(s=>[String(s.id),{name:s.name,qid:s.qualification_id}]));
       const groups=new Map();
-      window.decks.forEach(d=>{
+      decks.forEach(d=>{
         const sub=sMap.get(String(d.subject_id));
         const qName=qMap.get(String(d.qualification_id))||'資格未設定';
         const key=qName+'__'+(sub?.name||'科目未設定');
@@ -57,11 +57,11 @@ setTimeout(()=>{
       });
       const escName=s=>esc(s);
       box.innerHTML=[...groups.values()].map(g=>
-        '<section class="fc-subject-group"><div class="fc-subject-title"><span>📚 '+escName(g.qName)+'</span><b>'+escName(g.subName)+'</b></div>'+
+        '<section class="fc-subject-group"><div class="fc-subject-title"><span>📚 '+escName(g.qName)+'</span><b>'+escName(g.subName)+'</b></div>'+ 
         g.decks.map(d=>'<div class="item"><div class="row" style="justify-content:space-between"><div><b>'+esc(d.name)+'</b><div class="muted small">'+esc(d.description||'')+'</div></div><span class="badge" id="count-'+d.id+'">…</span></div><div class="row" style="margin-top:10px"><button class="primary" onclick="openDeck(\''+d.id+'\')">開く</button><button class="light" onclick="editDeck(\''+d.id+'\')">編集</button><button class="danger" onclick="archiveDeck(\''+d.id+'\')">削除</button></div></div>').join('')+
         '</section>'
       ).join('');
-      for(const d of window.decks){
+      for(const d of decks){
         const{count}=await sb.from('flashcards').select('*',{count:'exact',head:true}).eq('deck_id',d.id);
         const el=document.getElementById('count-'+d.id);if(el)el.textContent=(count||0)+'枚';
       }
