@@ -1,84 +1,21 @@
-// 暗記カード：スタート画面は資格、資格を押すと紐づくカード一覧
+// Flashcard UI initialization / explorer
 (function(){
-  const baseStart=window.startSession;
-  const baseShowDeckForm=window.showDeckForm;
-
-  function addStyles(){
-    if(document.getElementById('fc-explorer-style'))return;
-    const style=document.createElement('style');
-    style.id='fc-explorer-style';
-    style.textContent=`
-      .fc-folder{display:flex;align-items:center;gap:12px;margin:10px 0;padding:17px 16px;border:1px solid #39476a;border-radius:15px;background:#10182a;cursor:pointer}
-      .fc-folder:active{transform:scale(.99);background:#151d32}
-      .fc-folder-icon{font-size:29px;flex:none}
-      .fc-folder-info{flex:1;min-width:0}
-      .fc-folder-name{font-size:20px;font-weight:900}
-      .fc-folder-meta{color:#98a3bf;font-size:13px;margin-top:4px}
-      .fc-folder-arrow{font-size:28px;color:#98a3bf}
-      .fc-card-item{border-top:1px solid #26314d;padding:12px 2px}
-      .fc-card-item:first-child{border-top:0}
-      .fc-card-item summary{cursor:pointer;font-weight:850;line-height:1.55}
-      .fc-card-num{color:#98a3bf;margin-right:5px}
-      .fc-card-answer{margin:9px 0 2px;padding:11px 12px;border-radius:10px;background:#0c1322;color:#dfe5f7;line-height:1.6}
-      .fc-card-file{margin-top:6px;color:#7f8aa7;font-size:12px}
-    `;
-    document.head.appendChild(style);
-  }
-
-  async function fetchDecks(){
-    const{data,error}=await sb.from('flashcard_decks').select('*').eq('archived',false).order('created_at');
-    if(error){toast(error.message);return []}
-    decks=data||[];
-    return decks;
-  }
-
-  async function renderQualificationHome(){
-    addStyles();
-    hideAll();
-    $('home').classList.remove('hidden');
-    await loadMasters();
-    await fetchDecks();
-    const qs=window.qualifications||[];
-    $('home').innerHTML=`<div class="card"><div class="row" style="justify-content:space-between"><div><h2>📁 資格</h2><p class="muted small">資格を選ぶと、その資格に紐づく暗記カードを表示します。</p></div><button class="light" onclick="location.href='index.html'">← 資格勉強OS</button></div><div id="fc-qualification-list"></div></div>`;
-    const box=document.getElementById('fc-qualification-list');
-    if(!qs.length){box.innerHTML='<p class="muted">まだ資格が登録されていません。</p>';return}
-    const cardsByQ=new Map();
-    for(const q of qs)cardsByQ.set(String(q.id),0);
-    for(const d of decks){
-      if(!d.qualification_id)continue;
-      const r=await sb.from('flashcards').select('*',{count:'exact',head:true}).eq('deck_id',d.id);
-      const key=String(d.qualification_id);
-      cardsByQ.set(key,(cardsByQ.get(key)||0)+(r.count||0));
+  // スタート画面は資格だけ。資格を開くと、その資格に紐づく暗記ファイルを表示する。
+  const prepareHome=()=>{
+    const home=document.getElementById('home');
+    if(!home)return;
+    const card=home.querySelector('.card');
+    if(card){
+      const h2=card.querySelector('h2');if(h2)h2.textContent='📁 資格';
+      const p=card.querySelector('p');if(p)p.textContent='資格を選ぶと、その資格に紐づく暗記カードファイルを表示します。';
     }
-    box.innerHTML=qs.map(q=>`<div class="fc-folder" onclick="openQualificationCards('${q.id}')"><div class="fc-folder-icon">📁</div><div class="fc-folder-info"><div class="fc-folder-name">${esc(q.name)}</div><div class="fc-folder-meta">${cardsByQ.get(String(q.id))||0}枚</div></div><div class="fc-folder-arrow">›</div></div>`).join('');
-  }
-
-  // boot() が呼ばれる前に上書きするので、旧「暗記ファイル」画面は一度も描画しない。
-  window.loadHome=async function(){await renderQualificationHome()};
-  window.showHome=function(){renderQualificationHome()};
-
-  window.openQualificationCards=async function(qid){
-    addStyles();
-    await loadMasters();
-    await fetchDecks();
-    const q=(window.qualifications||[]).find(x=>String(x.id)===String(qid));
-    if(!q)return;
-    const qdecks=decks.filter(d=>String(d.qualification_id)===String(qid));
-    const deckIds=qdecks.map(d=>d.id);
-    let cards=[];
-    if(deckIds.length){
-      const{data,error}=await sb.from('flashcards').select('*').in('deck_id',deckIds).order('created_at');
-      if(error)return toast(error.message);
-      cards=data||[];
-    }
-    const deckMap=new Map(qdecks.map(d=>[String(d.id),d.name]));
-    hideAll();$('deck').classList.remove('hidden');
-    $('deck').innerHTML=`<div class="card"><div class="row" style="justify-content:space-between"><div><h2>📁 ${esc(q.name)}</h2><div class="muted">${cards.length}枚</div></div><button class="light" onclick="showHome()">← 戻る</button></div></div><div class="card"><h3>📝 カード一覧</h3><div id="fc-qualification-cards"></div></div>`;
-    const list=document.getElementById('fc-qualification-cards');
-    list.innerHTML=cards.length?cards.map((c,i)=>`<details class="fc-card-item"><summary><span class="fc-card-num">${i+1}.</span>${esc(c.prompt)}</summary><div class="fc-card-answer">${esc(c.answer)}</div><div class="fc-card-file">ファイル：${esc(deckMap.get(String(c.deck_id))||'')}</div></details>`).join(''):'<p class="muted">この資格にはまだカードがありません。</p>';
+    const history=[...home.querySelectorAll('.card')].find(x=>x.querySelector('#history'));
+    if(history)history.classList.add('hidden');
   };
+  prepareHome();
 
-  // 既存の4択判定・カード削除・ファイル作成機能は維持。
+  // 既存の拡張機能が読み込まれた後の関数を使う。
+  const baseStart=window.startSession;
   window.startSession=async function(mode){
     if(mode==='choice'&&currentDeck?.question_mode==='shared_choices'){
       const u=[...new Set(currentCards.map(c=>c.answer))];
@@ -87,6 +24,7 @@
     return baseStart(mode);
   };
 
+  const baseShowDeckForm=window.showDeckForm;
   window.showDeckForm=async function(d){
     if(!window.qualifications?.length||!window.subjects?.length)await loadMasters();
     return baseShowDeckForm(d);
@@ -103,14 +41,78 @@
     await manageCards();
   };
 
-  // 自由回答の「ランダム／順番通り」は従来どおり利用可能。
+  // 自由回答だけ、ランダム／順番通りを選べる。
   window.startFreeSession=async function(order){
     if(order!=='ordered')return window.startSession('free');
     if(!currentCards.length)return toast('カードを1枚以上登録してください');
     const{data,error}=await sb.from('flashcard_sessions').insert({user_id:user.id,deck_id:currentDeck.id,mode:'free'}).select().single();
     if(error)return toast(error.message);
-    session=data;sessionCards=[...currentCards];idx=0;answerShown=false;paused=false;elapsed=0;sessionCorrect=0;sessionDoneCount=0;startedAt=Date.now();
+    session=data;
+    sessionCards=[...currentCards];
+    idx=0;answerShown=false;paused=false;elapsed=0;sessionCorrect=0;sessionDoneCount=0;startedAt=Date.now();
     hideAll();$('session').classList.remove('hidden');renderSession();
     timerHandle=setInterval(()=>{if(!paused){elapsed=Math.floor((Date.now()-startedAt)/1000);if($('timer'))$('timer').textContent=fmt(elapsed)}},500);
   };
+
+  // 資格一覧を描画する。既存の「ファイル一覧」はここでは表示しない。
+  window.loadDecks=async function(){
+    prepareHome();
+    const box=document.getElementById('decks');
+    if(!box)return;
+    if(window.loadMasters)await window.loadMasters();
+    const{data,error}=await sb.from('flashcard_decks').select('*').eq('archived',false).order('created_at');
+    if(error)return toast(error.message);
+    decks=data||[];
+    const qualifications=window.qualifications||[];
+    const counts=new Map();
+    decks.forEach(d=>{
+      const qid=String(d.qualification_id||'');
+      if(qid)counts.set(qid,(counts.get(qid)||0));
+    });
+    for(const d of decks){
+      const{count}=await sb.from('flashcards').select('*',{count:'exact',head:true}).eq('deck_id',d.id);
+      const qid=String(d.qualification_id||'');
+      if(qid)counts.set(qid,(counts.get(qid)||0)+(count||0));
+    }
+    box.innerHTML=qualifications.length?qualifications.map(q=>{
+      const count=counts.get(String(q.id))||0;
+      return '<button class="fc-qualification" onclick="openQualification(\''+q.id+'\')">'+
+        '<span class="fc-folder">📁</span><span class="fc-qualification-name">'+esc(q.name)+'</span>'+
+        '<span class="fc-qualification-count">'+count+'枚</span><span class="fc-arrow">›</span></button>';
+    }).join(''):'<p class="muted">資格がまだ登録されていません。</p>';
+  };
+
+  window.showHome=function(){
+    hideAll();
+    prepareHome();
+    $('home').classList.remove('hidden');
+    loadDecks();
+  };
+
+  window.openQualification=async function(qid){
+    if(!window.qualifications?.length)await loadMasters();
+    const q=(window.qualifications||[]).find(x=>String(x.id)===String(qid));
+    if(!q)return toast('資格が見つかりません');
+    const{data,error}=await sb.from('flashcard_decks').select('*').eq('archived',false).eq('qualification_id',qid).order('created_at');
+    if(error)return toast(error.message);
+    decks=decks?.length?decks:data||[];
+    hideAll();
+    $('deck').classList.remove('hidden');
+    const subjects=new Map((window.subjects||[]).map(s=>[String(s.id),s.name]));
+    $('deck').innerHTML='<div class="card fc-qualification-page"><div class="fc-page-head"><div><div class="fc-breadcrumb">📁 資格</div><h2>📚 '+esc(q.name)+'</h2><div class="muted small">暗記ファイル</div></div><button class="light" onclick="showHome()">← 戻る</button></div>'+
+      '<div class="fc-file-list">'+
+      (data?.length?data.map(d=>'<button class="fc-file-row" onclick="openDeck(\''+d.id+'\')"><span class="fc-file-icon">📄</span><span class="fc-file-main"><b>'+esc(d.name)+'</b><span>'+esc(subjects.get(String(d.subject_id))||'')+'</span></span><span class="fc-file-count" id="qcount-'+d.id+'">…</span><span class="fc-arrow">›</span></button>').join(''):'<p class="muted">この資格にはまだ暗記ファイルがありません。</p>')+
+      '</div></div>';
+    for(const d of data||[]){
+      const{count}=await sb.from('flashcards').select('*',{count:'exact',head:true}).eq('deck_id',d.id);
+      const el=document.getElementById('qcount-'+d.id);if(el)el.textContent=(count||0)+'枚';
+    }
+  };
+
+  if(!document.getElementById('fc-explorer-clean-style')){
+    const style=document.createElement('style');
+    style.id='fc-explorer-clean-style';
+    style.textContent='.fc-qualification{width:100%;display:flex;align-items:center;gap:13px;margin:9px 0;padding:17px 15px;text-align:left;background:#0f1627;color:#f5f7ff;border:1px solid #263553;border-radius:16px}.fc-qualification:active,.fc-file-row:active{background:#151d32;transform:scale(.995)}.fc-folder{font-size:30px;flex:none}.fc-qualification-name{font-size:19px;font-weight:900;flex:1}.fc-qualification-count,.fc-file-count{font-size:13px;color:#d7ceff;background:#261b50;border:1px solid #45337c;border-radius:999px;padding:4px 9px;flex:none}.fc-arrow{font-size:28px;color:#98a3bf;line-height:1;flex:none}.fc-page-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px}.fc-breadcrumb{font-size:13px;color:#98a3bf;font-weight:800;margin-bottom:4px}.fc-page-head h2{margin:0 0 3px}.fc-file-row{width:100%;display:flex;align-items:center;gap:13px;margin:8px 0;padding:15px 13px;text-align:left;background:#0f1627;color:#f5f7ff;border:1px solid #263553;border-radius:15px}.fc-file-icon{font-size:27px;flex:none}.fc-file-main{display:flex;flex-direction:column;gap:3px;flex:1;min-width:0}.fc-file-main b{font-size:17px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.fc-file-main span{font-size:12px;color:#98a3bf;min-height:1em}.fc-file-list{margin-top:4px}'
+    document.head.appendChild(style);
+  }
 })();
