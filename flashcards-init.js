@@ -8,8 +8,6 @@
       const h2=card.querySelector('h2');if(h2)h2.textContent='📁 資格';
       const p=card.querySelector('p');if(p)p.textContent='資格を選ぶと、その資格の科目ファイルを表示します。';
     }
-    const history=[...home.querySelectorAll('.card')].find(x=>x.querySelector('#history'));
-    if(history)history.classList.add('hidden');
   };
   prepareHome();
 
@@ -51,6 +49,23 @@
     timerHandle=setInterval(()=>{if(!paused){elapsed=Math.floor((Date.now()-startedAt)/1000);if($('timer'))$('timer').textContent=fmt(elapsed)}},500);
   };
 
+  const baseOpenDeck=window.openDeck;
+  window.openDeck=async function(id){
+    await baseOpenDeck(id);
+    const box=document.getElementById('deck');
+    if(!box||!currentDeck)return;
+    const actionRow=box.querySelector('.card .row[style*="margin:14px 0"]');
+    if(!actionRow)return;
+    const free=actionRow.querySelector('button[onclick="startSession(\'free\')"]');
+    if(free)free.remove();
+    const b1=document.createElement('button');
+    b1.className='primary';b1.textContent='🔀 自由回答・ランダム';b1.onclick=()=>window.startFreeSession('random');
+    const b2=document.createElement('button');
+    b2.className='primary';b2.textContent='🔢 自由回答・順番通り';b2.onclick=()=>window.startFreeSession('ordered');
+    actionRow.insertBefore(b1,actionRow.firstChild);
+    actionRow.insertBefore(b2,actionRow.children[1]||null);
+  };
+
   window.loadDecks=async function(){
     prepareHome();
     const box=document.getElementById('decks');
@@ -69,7 +84,7 @@
     box.innerHTML=qualifications.length?qualifications.map(q=>{
       const count=counts.get(String(q.id))||0;
       return '<button class="fc-qualification" onclick="openQualification(\''+q.id+'\')">'+
-        '<span class="fc-folder">📁</span><span class="fc-qualification-name">'+esc(q.name)+'</span>'+
+        '<span class="fc-folder">📁</span><span class="fc-qualification-name">'+esc(q.name)+'</span>'+\
         '<span class="fc-qualification-count">'+count+'枚</span><span class="fc-arrow">›</span></button>';
     }).join(''):'<p class="muted">資格がまだ登録されていません。</p>';
   };
@@ -79,9 +94,9 @@
     prepareHome();
     $('home').classList.remove('hidden');
     loadDecks();
+    loadHistory();
   };
 
-  // 資格 → 科目ファイル
   window.openQualification=async function(qid){
     if(!window.qualifications?.length)await loadMasters();
     const q=(window.qualifications||[]).find(x=>String(x.id)===String(qid));
@@ -106,7 +121,6 @@
       '</div></div>';
   };
 
-  // 科目 → その科目に属する従来の暗記ファイル
   window.openSubject=async function(subjectId,qid){
     if(!decks.length){
       const{data}=await sb.from('flashcard_decks').select('*').eq('archived',false).eq('qualification_id',qid).order('created_at');
