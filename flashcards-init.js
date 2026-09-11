@@ -98,8 +98,7 @@
     hideAll();
     prepareHome();
     $('home').classList.remove('hidden');
-    loadDecks();
-    loadHistory();
+    return Promise.all([loadDecks(),loadHistory()]);
   };
 
   window.openQualification=async function(qid){
