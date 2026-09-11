@@ -89,3 +89,47 @@ setTimeout(()=>{
   new MutationObserver(replace).observe(deck,{childList:true,subtree:true});
   replace();
 },0);
+
+// スタート画面はファイルだけを並べ、ファイルを押すと詳細画面を開くエクスプローラー式にする。
+setTimeout(()=>{
+  const oldLoadDecks=window.loadDecks;
+  if(!oldLoadDecks||oldLoadDecks.__fileExplorer)return;
+  const explorer=async function(){
+    await oldLoadDecks();
+    const box=document.getElementById('decks');
+    if(!box)return;
+    const qMap=new Map((window.qualifications||[]).map(q=>[String(q.id),q.name]));
+    const sMap=new Map((window.subjects||[]).map(s=>[String(s.id),s.name]));
+    box.innerHTML=decks.map(d=>{
+      const q=qMap.get(String(d.qualification_id))||'';
+      const sub=sMap.get(String(d.subject_id))||'';
+      const meta=[q,sub].filter(Boolean).join(' / ');
+      return '<div class="fc-file" onclick="openDeck(\''+d.id+'\')"><div class="fc-file-icon">📁</div><div class="fc-file-info"><b>'+esc(d.name)+'</b><span>'+esc(meta)+'</span></div><div class="fc-file-count" id="count-'+d.id+'">…</div><div class="fc-file-arrow">›</div></div>';
+    }).join('')||'<p class="muted">まだファイルがありません。</p>';
+    for(const d of decks){
+      const{count}=await sb.from('flashcards').select('*',{count:'exact',head:true}).eq('deck_id',d.id);
+      const el=document.getElementById('count-'+d.id);if(el)el.textContent=(count||0)+'枚';
+    }
+  };
+  explorer.__fileExplorer=true;
+  window.loadDecks=explorer;
+  const style=document.createElement('style');style.id='fc-explorer-style';style.textContent='.fc-file{display:flex;align-items:center;gap:13px;margin:9px 0;padding:15px 14px;border:1px solid #263553;border-radius:15px;background:#0f1627;cursor:pointer;transition:.15s}.fc-file:active{transform:scale(.99);background:#151d32}.fc-file-icon{font-size:30px;flex:none}.fc-file-info{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}.fc-file-info b{font-size:17px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.fc-file-info span{font-size:12px;color:#98a3bf;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.fc-file-count{font-size:13px;color:#d7ceff;background:#261b50;border:1px solid #45337c;border-radius:999px;padding:4px 9px;flex:none}.fc-file-arrow{font-size:28px;color:#98a3bf;line-height:1;flex:none}';document.head.appendChild(style);
+
+  const oldOpenDeck=window.openDeck;
+  if(!oldOpenDeck||oldOpenDeck.__fileExplorerDetail)return;
+  const detail=async function(id){
+    await oldOpenDeck(id);
+    const box=document.getElementById('deck');if(!box)return;
+    const header=box.querySelector('.card');if(!header)return;
+    const q=(window.qualifications||[]).find(x=>String(x.id)===String(currentDeck?.qualification_id));
+    const s=(window.subjects||[]).find(x=>String(x.id)===String(currentDeck?.subject_id));
+    const meta=[q?.name,s?.name].filter(Boolean).join(' / ');
+    if(meta){const h2=header.querySelector('h2');if(h2)h2.insertAdjacentHTML('afterend','<div class="muted small" style="margin-top:4px">'+esc(meta)+'</div>')}
+    const list=document.createElement('div');list.className='card fc-card-list';
+    list.innerHTML='<h3>📄 ファイルの中身</h3>'+(currentCards.length?currentCards.map((c,i)=>'<details class="fc-card-item"><summary><span>'+String(i+1)+'.</span> '+esc(c.prompt)+'</summary><div class="fc-card-answer">'+esc(c.answer)+'</div></details>').join(''):'<p class="muted">まだカードがありません。</p>');
+    box.appendChild(list);
+    if(!document.getElementById('fc-card-style')){const st=document.createElement('style');st.id='fc-card-style';st.textContent='.fc-card-item{border-top:1px solid #26314d;padding:11px 2px}.fc-card-item:first-of-type{margin-top:8px}.fc-card-item summary{cursor:pointer;font-weight:800;line-height:1.5}.fc-card-item summary span{color:#98a3bf;margin-right:5px}.fc-card-answer{margin:9px 0 2px;padding:11px 12px;border-radius:10px;background:#0c1322;color:#dfe5f7;line-height:1.6}';document.head.appendChild(st)}
+  };
+  detail.__fileExplorerDetail=true;
+  window.openDeck=detail;
+},0);
