@@ -23,33 +23,36 @@ window.deleteCard=async function(id){
   await manageCards();
 };
 
-// 自由回答の出題順を「ランダム／順番通り」から選べるようにする。
-setTimeout(()=>{
-  window.startFreeSession=async function(order){
-    if(order!=='ordered')return window.startSession('free');
-    if(!currentCards.length)return toast('カードを1枚以上登録してください');
-    const{data,error}=await sb.from('flashcard_sessions').insert({user_id:user.id,deck_id:currentDeck.id,mode:'free'}).select().single();
-    if(error)return toast(error.message);
-    session=data;
-    sessionCards=[...currentCards];
-    idx=0;answerShown=false;paused=false;elapsed=0;sessionCorrect=0;sessionDoneCount=0;startedAt=Date.now();
-    hideAll();$('session').classList.remove('hidden');renderSession();
-    timerHandle=setInterval(()=>{if(!paused){elapsed=Math.floor((Date.now()-startedAt)/1000);if($('timer'))$('timer').textContent=fmt(elapsed)}},500);
-  };
-
-  const deck=document.getElementById('deck');
-  if(!deck)return;
-  const replace=()=>{
-    const button=[...deck.querySelectorAll('button')].find(b=>(b.textContent||'').trim()==='自由回答で暗記');
-    if(!button||button.dataset.orderReady)return;
-    button.dataset.orderReady='1';
-    button.textContent='自由回答（ランダム）';
-    button.setAttribute('onclick',"startFreeSession('random')");
-    const ordered=button.cloneNode(true);
-    ordered.textContent='自由回答（順番通り）';
-    ordered.setAttribute('onclick',"startFreeSession('ordered')");
-    button.parentElement.insertBefore(ordered,button.nextSibling);
-  };
-  new MutationObserver(replace).observe(deck,{childList:true,subtree:true});
-  replace();
-},0);
+// 暗記ファイルを「資格 → 科目」ごとにまとめて表示する。
+const baseLoadDecks=window.loadDecks;
+window.loadDecks=async function(){
+  const result=await baseLoadDecks();
+  const box=document.getElementById('decks');
+  if(!box||!Array.isArray(window.decks))return result;
+  const items=[...box.children].filter(el=>el.classList.contains('item'));
+  if(!items.length)return result;
+  const byId=new Map(window.decks.map(d=>[String(d.id),d]));
+  const groups=new Map();
+  items.forEach(item=>{
+    const btn=item.querySelector('button[onclick^="openDeck("]');
+    const m=btn?.getAttribute('onclick')?.match(/openDeck\('([^']+)'\)/);
+    const d=m?byId.get(m[1]):null;
+    const q=(window.qualifications||[]).find(x=>x.id===d?.qualification_id);
+    const s=(window.subjects||[]).find(x=>x.id===d?.subject_id);
+    const key=(q?.name||'資格未設定')+'\u0000'+(s?.name||'科目未設定');
+    if(!groups.has(key))groups.set(key,{q:q?.name||'資格未設定',s:s?.name||'科目未設定',items:[]});
+    groups.get(key).items.push(item);
+  });
+  box.innerHTML='';
+  [...groups.values()].forEach(g=>{
+    const section=document.createElement('div');
+    section.style.margin='18px 0 8px';
+    const title=document.createElement('div');
+    title.style.cssText='font-weight:900;font-size:16px;margin:8px 2px 6px;color:#e8ecff';
+    title.textContent=g.s==='科目未設定'?g.q:g.q+' ／ '+g.s;
+    section.appendChild(title);
+    g.items.forEach(item=>section.appendChild(item));
+    box.appendChild(section);
+  });
+  return result;
+};
