@@ -84,7 +84,7 @@
     box.innerHTML=qualifications.length?qualifications.map(q=>{
       const count=counts.get(String(q.id))||0;
       return '<button class="fc-qualification" onclick="openQualification(\''+q.id+'\')">'+
-        '<span class="fc-folder">📁</span><span class="fc-qualification-name">'+esc(q.name)+'</span>'+\
+        '<span class="fc-folder">📁</span><span class="fc-qualification-name">'+esc(q.name)+'</span>'+
         '<span class="fc-qualification-count">'+count+'枚</span><span class="fc-arrow">›</span></button>';
     }).join(''):'<p class="muted">資格がまだ登録されていません。</p>';
   };
