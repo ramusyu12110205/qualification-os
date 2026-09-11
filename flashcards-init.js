@@ -22,3 +22,34 @@ window.deleteCard=async function(id){
   currentCards=data||[];
   await manageCards();
 };
+
+// 自由回答の出題順を「ランダム／順番通り」から選べるようにする。
+setTimeout(()=>{
+  window.startFreeSession=async function(order){
+    if(order!=='ordered')return window.startSession('free');
+    if(!currentCards.length)return toast('カードを1枚以上登録してください');
+    const{data,error}=await sb.from('flashcard_sessions').insert({user_id:user.id,deck_id:currentDeck.id,mode:'free'}).select().single();
+    if(error)return toast(error.message);
+    session=data;
+    sessionCards=[...currentCards];
+    idx=0;answerShown=false;paused=false;elapsed=0;sessionCorrect=0;sessionDoneCount=0;startedAt=Date.now();
+    hideAll();$('session').classList.remove('hidden');renderSession();
+    timerHandle=setInterval(()=>{if(!paused){elapsed=Math.floor((Date.now()-startedAt)/1000);if($('timer'))$('timer').textContent=fmt(elapsed)}},500);
+  };
+
+  const deck=document.getElementById('deck');
+  if(!deck)return;
+  const replace=()=>{
+    const button=[...deck.querySelectorAll('button')].find(b=>(b.textContent||'').trim()==='自由回答で暗記');
+    if(!button||button.dataset.orderReady)return;
+    button.dataset.orderReady='1';
+    button.textContent='自由回答（ランダム）';
+    button.setAttribute('onclick',"startFreeSession('random')");
+    const ordered=button.cloneNode(true);
+    ordered.textContent='自由回答（順番通り）';
+    ordered.setAttribute('onclick',"startFreeSession('ordered')");
+    button.parentElement.insertBefore(ordered,button.nextSibling);
+  };
+  new MutationObserver(replace).observe(deck,{childList:true,subtree:true});
+  replace();
+},0);
