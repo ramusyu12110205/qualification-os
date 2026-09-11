@@ -1,20 +1,18 @@
 // Flashcard UI initialization / explorer
 (function(){
-  // スタート画面は資格だけ。資格を開くと、その資格に紐づく暗記ファイルを表示する。
   const prepareHome=()=>{
     const home=document.getElementById('home');
     if(!home)return;
     const card=home.querySelector('.card');
     if(card){
       const h2=card.querySelector('h2');if(h2)h2.textContent='📁 資格';
-      const p=card.querySelector('p');if(p)p.textContent='資格を選ぶと、その資格に紐づく暗記カードファイルを表示します。';
+      const p=card.querySelector('p');if(p)p.textContent='資格を選ぶと、その資格の科目ファイルを表示します。';
     }
     const history=[...home.querySelectorAll('.card')].find(x=>x.querySelector('#history'));
     if(history)history.classList.add('hidden');
   };
   prepareHome();
 
-  // 既存の拡張機能が読み込まれた後の関数を使う。
   const baseStart=window.startSession;
   window.startSession=async function(mode){
     if(mode==='choice'&&currentDeck?.question_mode==='shared_choices'){
@@ -41,7 +39,6 @@
     await manageCards();
   };
 
-  // 自由回答だけ、ランダム／順番通りを選べる。
   window.startFreeSession=async function(order){
     if(order!=='ordered')return window.startSession('free');
     if(!currentCards.length)return toast('カードを1枚以上登録してください');
@@ -54,7 +51,6 @@
     timerHandle=setInterval(()=>{if(!paused){elapsed=Math.floor((Date.now()-startedAt)/1000);if($('timer'))$('timer').textContent=fmt(elapsed)}},500);
   };
 
-  // 資格一覧を描画する。既存の「ファイル一覧」はここでは表示しない。
   window.loadDecks=async function(){
     prepareHome();
     const box=document.getElementById('decks');
@@ -65,10 +61,6 @@
     decks=data||[];
     const qualifications=window.qualifications||[];
     const counts=new Map();
-    decks.forEach(d=>{
-      const qid=String(d.qualification_id||'');
-      if(qid)counts.set(qid,(counts.get(qid)||0));
-    });
     for(const d of decks){
       const{count}=await sb.from('flashcards').select('*',{count:'exact',head:true}).eq('deck_id',d.id);
       const qid=String(d.qualification_id||'');
@@ -89,23 +81,48 @@
     loadDecks();
   };
 
+  // 資格 → 科目ファイル
   window.openQualification=async function(qid){
     if(!window.qualifications?.length)await loadMasters();
     const q=(window.qualifications||[]).find(x=>String(x.id)===String(qid));
     if(!q)return toast('資格が見つかりません');
     const{data,error}=await sb.from('flashcard_decks').select('*').eq('archived',false).eq('qualification_id',qid).order('created_at');
     if(error)return toast(error.message);
-    decks=decks?.length?decks:data||[];
+    decks=data||[];
     hideAll();
     $('deck').classList.remove('hidden');
     const subjects=new Map((window.subjects||[]).map(s=>[String(s.id),s.name]));
-    $('deck').innerHTML='<div class="card fc-qualification-page"><div class="fc-page-head"><div><div class="fc-breadcrumb">📁 資格</div><h2>📚 '+esc(q.name)+'</h2><div class="muted small">暗記ファイル</div></div><button class="light" onclick="showHome()">← 戻る</button></div>'+
-      '<div class="fc-file-list">'+
-      (data?.length?data.map(d=>'<button class="fc-file-row" onclick="openDeck(\''+d.id+'\')"><span class="fc-file-icon">📄</span><span class="fc-file-main"><b>'+esc(d.name)+'</b><span>'+esc(subjects.get(String(d.subject_id))||'')+'</span></span><span class="fc-file-count" id="qcount-'+d.id+'">…</span><span class="fc-arrow">›</span></button>').join(''):'<p class="muted">この資格にはまだ暗記ファイルがありません。</p>')+
-      '</div></div>';
+    const groups=new Map();
     for(const d of data||[]){
+      const sid=String(d.subject_id||'');
+      const name=subjects.get(sid)||'科目未設定';
+      if(!groups.has(sid))groups.set(sid,{id:sid,name,decks:[]});
+      groups.get(sid).decks.push(d);
+    }
+    const list=[...groups.values()];
+    $('deck').innerHTML='<div class="card fc-qualification-page"><div class="fc-page-head"><div><div class="fc-breadcrumb">📁 資格</div><h2>📚 '+esc(q.name)+'</h2><div class="muted small">科目ファイル</div></div><button class="light" onclick="showHome()">← 戻る</button></div>'+
+      '<div class="fc-file-list">'+
+      (list.length?list.map(g=>'<button class="fc-file-row" onclick="openSubject(\''+g.id+'\',\''+qid+'\')"><span class="fc-file-icon">📁</span><span class="fc-file-main"><b>'+esc(g.name)+'</b><span>暗記ファイル '+g.decks.length+'個</span></span><span class="fc-arrow">›</span></button>').join(''):'<p class="muted">この資格にはまだ科目ファイルがありません。</p>')+
+      '</div></div>';
+  };
+
+  // 科目 → その科目に属する従来の暗記ファイル
+  window.openSubject=async function(subjectId,qid){
+    if(!decks.length){
+      const{data}=await sb.from('flashcard_decks').select('*').eq('archived',false).eq('qualification_id',qid).order('created_at');
+      decks=data||[];
+    }
+    const subject=(window.subjects||[]).find(s=>String(s.id)===String(subjectId));
+    const subjectDecks=decks.filter(d=>String(d.subject_id||'')===String(subjectId));
+    hideAll();
+    $('deck').classList.remove('hidden');
+    $('deck').innerHTML='<div class="card fc-qualification-page"><div class="fc-page-head"><div><div class="fc-breadcrumb">📁 資格 → 📁 科目</div><h2>📚 '+esc(subject?.name||'科目未設定')+'</h2><div class="muted small">暗記カードファイル</div></div><button class="light" onclick="openQualification(\''+qid+'\')">← 戻る</button></div>'+
+      '<div class="fc-file-list">'+
+      (subjectDecks.length?subjectDecks.map(d=>'<button class="fc-file-row" onclick="openDeck(\''+d.id+'\')"><span class="fc-file-icon">📄</span><span class="fc-file-main"><b>'+esc(d.name)+'</b><span>'+esc(d.description||'')+'</span></span><span class="fc-file-count" id="scount-'+d.id+'">…</span><span class="fc-arrow">›</span></button>').join(''):'<p class="muted">この科目にはまだ暗記カードファイルがありません。</p>')+
+      '</div></div>';
+    for(const d of subjectDecks){
       const{count}=await sb.from('flashcards').select('*',{count:'exact',head:true}).eq('deck_id',d.id);
-      const el=document.getElementById('qcount-'+d.id);if(el)el.textContent=(count||0)+'枚';
+      const el=document.getElementById('scount-'+d.id);if(el)el.textContent=(count||0)+'枚';
     }
   };
 
