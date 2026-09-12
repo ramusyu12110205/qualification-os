@@ -76,11 +76,13 @@
     await baseOpenDeck(id);
     const box=$('deck');if(!box||!currentDeck)return;
     const action=box.querySelector('.card .row[style*="margin:14px 0"]');if(!action)return;
-    const oldFree=[...action.querySelectorAll('button')].find(b=>b.textContent.includes('自由回答'));
-    if(oldFree)oldFree.remove();
+    [...action.querySelectorAll('button')].filter(b=>b.textContent.includes('自由回答')).forEach(b=>b.remove());
     const random=document.createElement('button');random.className='primary';random.textContent='🔀 自由回答・ランダム';random.onclick=()=>startFreeFiltered('random');
     const ordered=document.createElement('button');ordered.className='primary';ordered.textContent='🔢 自由回答・順番通り';ordered.onclick=()=>startFreeFiltered('ordered');
     action.insertBefore(random,action.firstChild);action.insertBefore(ordered,action.children[1]||null);
+    if(![...action.querySelectorAll('button')].some(b=>b.textContent.includes('カードを管理'))){
+      const manage=document.createElement('button');manage.className='light';manage.textContent='カードを管理（編集・削除）';manage.onclick=()=>window.manageCards();action.appendChild(manage);
+    }
     const filter=document.createElement('div');filter.className='fc-weak-filter';filter.innerHTML='<div class="muted small" style="margin-bottom:6px">🎯 苦手カード抽出</div><div class="row"><select id="fc-filter-mode"><option value="all">全カード</option><option value="last_incorrect">直前に不正解</option><option value="incorrect_gte">不正解○回以上</option><option value="correct_lte">正解○回以下</option></select><input id="fc-filter-number" type="number" min="0" value="3" style="max-width:120px" placeholder="回数"><span class="muted small">※回数条件のみ使用</span></div>';
     box.querySelector('.card').appendChild(filter);
     filter.querySelector('#fc-filter-mode').onchange=()=>{filterMode=filter.querySelector('#fc-filter-mode').value;filter.querySelector('#fc-filter-number').disabled=filterMode==='all'||filterMode==='last_incorrect'};
