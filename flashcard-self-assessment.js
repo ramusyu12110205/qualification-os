@@ -53,12 +53,17 @@
     const c=sessionCards[idx];
     $('body').innerHTML=(answerShown?'<div class="answer">'+escLocal(c.answer)+'</div>':'<p class="muted">頭の中で答えてから「答えを見る」</p>')+
       '<button class="primary" onclick="revealSelf()">'+(answerShown?'':'答えを見る')+'</button>'+
-      (answerShown?'<div class="row" style="justify-content:center;margin-top:12px"><button class="success" onclick="selfCorrect()">⭕ 正解</button><button class="danger" onclick="selfIncorrect()">❌ 不正解</button></div>':'');
+      (answerShown?'<div class="row" style="justify-content:center;margin-top:12px"><button class="success" onclick="selfCorrect()">⭕ 正解</button><button class="danger" onclick="selfIncorrect()">❌ 不正解</button><button class="light" onclick="selfNoJudge()">➖ 判定なし</button></div>':'');
   }
 
   window.revealSelf=function(){answerShown=true;renderFreeSelf()};
   window.selfCorrect=()=>rateSelf(true);
   window.selfIncorrect=()=>rateSelf(false);
+  window.selfNoJudge=function(){
+    sessionDoneCount++;
+    if(idx+1>=sessionCards.length)return endSession();
+    nextCard();
+  };
 
   const baseRenderSession=window.renderSession;
   window.renderSession=function(){
