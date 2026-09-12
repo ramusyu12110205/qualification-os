@@ -90,7 +90,7 @@
       const count=counts.get(String(q.id))||0;
       return '<button class="fc-qualification" onclick="openQualification(\''+q.id+'\')">'+
         '<span class="fc-folder">📁</span><span class="fc-qualification-name">'+esc(q.name)+'</span>'+
-        '<span class="fc-qualification-count">'+count+'枚</span><span class="fc-arrow">›</span>';
+        '<span class="fc-qualification-count">'+count+'枚</span><span class="fc-arrow">›</span></button>';
     }).join(''):'<p class="muted">資格がまだ登録されていません。</p>';
   };
 
@@ -144,10 +144,75 @@
     }
   };
 
+  // カード選択：1枚でも複数枚でも、別ファイルへ移動／コピーできるようにする
+  const baseManageCards=window.manageCards;
+  window.manageCards=function(){
+    baseManageCards();
+    const box=document.getElementById('manage');
+    if(!box||!currentDeck)return;
+    const cardItems=[...box.querySelectorAll('.card')];
+    const listCard=cardItems[1];
+    if(!listCard)return;
+    const items=[...listCard.querySelectorAll('.item')];
+    items.forEach((item,i)=>{
+      const card=currentCards[i];
+      if(!card)return;
+      const row=item.querySelector('.editgrid');
+      if(!row)return;
+      const check=document.createElement('input');
+      check.type='checkbox';check.className='fc-move-check';check.dataset.id=card.id;
+      check.style.cssText='width:22px;height:22px;flex:none;margin:0 8px 0 0';
+      const label=item.querySelector('.small.muted');
+      if(label)label.prepend(check);
+    });
+    const toolbar=document.createElement('div');
+    toolbar.className='fc-card-transfer-toolbar';
+    toolbar.innerHTML='<button class="light" id="fc-select-all">☑ 全選択</button><button class="primary" id="fc-copy-selected">📋 コピー</button><button class="primary" id="fc-move-selected">↗ 別ファイルへ移動</button><span id="fc-selected-count" class="muted small">0枚選択</span>';
+    listCard.insertBefore(toolbar,listCard.querySelector('h3')?.nextSibling||listCard.firstChild);
+    const updateCount=()=>{toolbar.querySelector('#fc-selected-count').textContent=box.querySelectorAll('.fc-move-check:checked').length+'枚選択'};
+    box.querySelectorAll('.fc-move-check').forEach(x=>x.addEventListener('change',updateCount));
+    toolbar.querySelector('#fc-select-all').onclick=()=>{const checks=[...box.querySelectorAll('.fc-move-check')];const on=checks.some(x=>!x.checked);checks.forEach(x=>x.checked=on);updateCount()};
+    toolbar.querySelector('#fc-copy-selected').onclick=()=>transferSelected(false);
+    toolbar.querySelector('#fc-move-selected').onclick=()=>transferSelected(true);
+  };
+
+  async function transferSelected(move){
+    const box=document.getElementById('manage');
+    const ids=[...box.querySelectorAll('.fc-move-check:checked')].map(x=>x.dataset.id);
+    if(!ids.length)return toast('カードを選択してください');
+    const targets=(decks||[]).filter(d=>!d.archived&&String(d.id)!==String(currentDeck.id));
+    if(!targets.length)return toast('移動先のファイルがありません');
+    const options=targets.map((d,i)=>(i+1)+'. '+d.name).join('\n');
+    const answer=prompt('移動先の番号を入力してください\n\n'+options);
+    if(answer===null)return;
+    const n=parseInt(answer,10),target=targets[n-1];
+    if(!target)return toast('移動先が正しくありません');
+    const selected=currentCards.filter(c=>ids.includes(String(c.id)));
+    if(!selected.length)return toast('カードが見つかりません');
+    const{error:insertError}=await sb.from('flashcards').insert(selected.map(c=>({prompt:c.prompt,answer:c.answer,deck_id:target.id,user_id:user.id})));
+    if(insertError)return toast('コピーに失敗しました：'+insertError.message);
+    if(move){
+      const{error:deleteError}=await sb.from('flashcards').delete().in('id',ids).eq('deck_id',currentDeck.id).eq('user_id',user.id);
+      if(deleteError)return toast('移動元の削除に失敗しました：'+deleteError.message);
+    }
+    toast(ids.length+'枚を'+(move?'移動':'コピー')+'しました');
+    const targetId=target.id;
+    if(move){
+      currentCards=currentCards.filter(c=>!ids.includes(String(c.id)));
+      await manageCards();
+    }else{
+      await manageCards();
+    }
+  }
+
+  if(!document.getElementById('fc-transfer-style')){
+    const style=document.createElement('style');style.id='fc-transfer-style';style.textContent='.fc-card-transfer-toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:10px 0 14px;padding:10px;border:1px solid #26314d;border-radius:12px;background:#0c1322}.fc-card-transfer-toolbar .muted{margin-left:auto}@media(max-width:700px){.fc-card-transfer-toolbar .muted{width:100%;margin-left:0}}';document.head.appendChild(style);
+  }
+
   if(!document.getElementById('fc-explorer-clean-style')){
     const style=document.createElement('style');
     style.id='fc-explorer-clean-style';
-    style.textContent='.fc-qualification{width:100%;display:flex;align-items:center;gap:13px;margin:9px 0;padding:17px 15px;text-align:left;background:#0f1627;color:#f5f7ff;border:1px solid #263553;border-radius:16px}.fc-qualification:active,.fc-file-row:active{background:#151d32;transform:scale(.995)}.fc-folder{font-size:30px;flex:none}.fc-qualification-name{font-size:19px;font-weight:900;flex:1}.fc-qualification-count,.fc-file-count{font-size:13px;color:#d7ceff;background:#261b50;border:1px solid #45337c;border-radius:999px;padding:4px 9px;flex:none}.fc-arrow{font-size:28px;color:#98a3bf;line-height:1;flex:none}.fc-page-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px}.fc-breadcrumb{font-size:13px;color:#98a3bf;font-weight:800;margin-bottom:4px}.fc-page-head h2{margin:0 0 3px}.fc-file-row{width:100%;display:flex;align-items:center;gap:13px;margin:8px 0;padding:15px 13px;text-align:left;background:#0f1627;color:#f5f7ff;border:1px solid #263553;border-radius:15px}.fc-file-icon{font-size:27px;flex:none}.fc-file-main{display:flex;flex-direction:column;gap:3px;flex:1;min-width:0}.fc-file-main b{font-size:17px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.fc-file-main span{font-size:12px;color:#98a3bf;min-height:1em}.fc-file-list{margin-top:4px}'
+    style.textContent='.fc-qualification{width:100%;display:flex;align-items:center;gap:13px;margin:9px 0;padding:17px 15px;text-align:left;background:#0f1627;color:#f5f7ff;border:1px solid #263553;border-radius:16px}.fc-qualification:active,.fc-file-row:active{background:#151d32;transform:scale(.995)}.fc-folder{font-size:30px;flex:none}.fc-qualification-name{font-size:19px;font-weight:900;flex:1}.fc-qualification-count,.fc-file-count{font-size:13px;color:#d7ceff;background:#261b50;border:1px solid #45337c;border-radius:999px;padding:4px 9px;flex:none}.fc-arrow{font-size:28px;color:#98a3bf;line-height:1;flex:none}.fc-page-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px}.fc-breadcrumb{font-size:13px;color:#98a3bf;font-weight:800;margin-bottom:4px}.fc-page-head h2{margin:0 0 3px}.fc-file-row{width:100%;display:flex;align-items:center;gap:13px;margin:8px 0;padding:15px 13px;text-align:left;background:#0f1627;color:#f5f7ff;border:1px solid #263553;border-radius:15px}.fc-file-icon{font-size:27px;flex:none}.fc-file-main{display:flex;flex-direction:column;gap:3px;flex:1;min-width:0}.fc-file-main b{font-size:17px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.fc-file-main span{font-size:12px;color:#98a3bf;min-height:1em}.fc-file-list{margin-top:4px}';
     document.head.appendChild(style);
   }
 
