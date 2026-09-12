@@ -196,7 +196,6 @@
       if(deleteError)return toast('移動元の削除に失敗しました：'+deleteError.message);
     }
     toast(ids.length+'枚を'+(move?'移動':'コピー')+'しました');
-    const targetId=target.id;
     if(move){
       currentCards=currentCards.filter(c=>!ids.includes(String(c.id)));
       await manageCards();
@@ -232,4 +231,11 @@
     setTimeout(waitForInitialRender,50);
   };
   setTimeout(waitForInitialRender,0);
+})();
+
+(function(){
+  const s=document.createElement('script');
+  s.src='flashcard-self-assessment.js?v=20260912';
+  s.async=false;
+  document.head.appendChild(s);
 })();
