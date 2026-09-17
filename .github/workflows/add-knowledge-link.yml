@@ -1,0 +1,32 @@
+name: Add knowledge card link
+on:
+  push:
+    paths:
+      - '.github/workflows/add-knowledge-link.yml'
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Add link
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('index.html')
+          s=p.read_text(encoding='utf-8')
+          old="    <button class=\"primary\" onclick=\"location.href='flashcards.html'\">🧠 暗記カード</button>"
+          new=old+"\n    <button class=\"primary\" onclick=\"location.href='knowledge.html'\">💡 知識カード</button>"
+          if 'location.href=\'knowledge.html\'' not in s:
+              if old not in s:
+                  raise SystemExit('target not found')
+              p.write_text(s.replace(old,new,1),encoding='utf-8')
+          PY
+      - name: Commit
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html
+          git diff --cached --quiet || git commit -m '資格OSから知識カードへ移動できるリンクを追加 [skip ci]'
+          git push
