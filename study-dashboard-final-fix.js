@@ -54,7 +54,7 @@
 // 過去の勉強記録入力の補正。既存の入力UI・保存処理はそのまま使い、解析だけを拡張する。
 (function(){
   function normalizeDate(value){
-    var m=String(value||'').trim().match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+    var m=String(value||'').trim().match(/^(\\d{4})-(\\d{1,2})-(\\d{1,2})$/);
     if(!m)return null;
     var y=Number(m[1]),mo=Number(m[2]),day=Number(m[3]);
     var d=new Date(y,mo-1,day);
@@ -111,4 +111,62 @@
   }
   window.parsePastRows=parsePastRowsFixed;
   window.previewPastStudy=previewPastStudyFixed;
+})();
+
+// 30日後の定着チェック。既存の復習UIを拡張し、通常復習とは別枠で扱う。
+(function(){
+  function dateToday(){var d=new Date();if(d.getHours()<5)d.setDate(d.getDate()-1);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
+  function esc(s){return String(s??'').replace(/[&<>"']/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]})}
+  var masteryMode=false;
+  function masteryItems(){var t=dateToday();return problems.filter(function(p){return p.status==='mastered'&&p.next_review_date&&p.next_review_date<=t})}
+  function extraItems(){return problems.filter(function(p){return p.status==='pending'&&p.mastery_check_failed_at})}
+  function renderExtra(){
+    var list=document.getElementById('reviewList');if(!list)return;
+    var existing=list.querySelector('.sd-extra-review');if(existing)existing.remove();
+    var items=extraItems();if(!items.length)return;
+    var wrap=document.createElement('div');wrap.className='item sd-extra-review';
+    wrap.innerHTML='<div class="sectiontitle"><b>🔥 Extra復習</b><span class="badge">'+items.length+'問</span></div><div class="muted small" style="margin:6px 0 10px">30日後の定着チェックで間違えた問題です。</div>'+items.map(function(p){var sub=subjects.find(function(s){return s.id===p.subject_id}),q=qualifications.find(function(x){return x.id===sub?.qualification_id});return '<label style="display:flex;gap:10px;align-items:center;margin:7px 0"><input class="dueCheck" type="checkbox" data-id="'+p.id+'" style="width:auto"><span><b>'+esc(p.name)+'</b><br><span class="muted small">'+esc(q?.name||'')+' / '+esc(sub?.name||'')+'</span></span></label>'}).join('');
+    list.insertBefore(wrap,list.firstChild);
+  }
+  function renderMastery(){
+    var list=document.getElementById('reviewList');if(!list)return;
+    var existing=list.querySelector('.sd-mastery-review');if(existing)existing.remove();
+    var items=masteryItems();if(!items.length)return;
+    var wrap=document.createElement('div');wrap.className='item sd-mastery-review';
+    wrap.innerHTML='<div class="sectiontitle"><b>🎓 30日後の定着チェック</b><span class="badge">'+items.length+'問</span></div><div class="muted small" style="margin:6px 0 10px">一度完了した問題を30日後に確認します。</div>'+items.map(function(p){var sub=subjects.find(function(s){return s.id===p.subject_id}),q=qualifications.find(function(x){return x.id===sub?.qualification_id});return '<label style="display:flex;gap:10px;align-items:center;margin:7px 0"><input class="masteryCheck" type="checkbox" data-id="'+p.id+'" style="width:auto"><span><b>'+esc(p.name)+'</b><br><span class="muted small">'+esc(q?.name||'')+' / '+esc(sub?.name||'')+'</span></span></label>'}).join('')+'<button class="primary" id="startMasteryBtn" style="margin-top:8px">選択した問題を確認</button>';
+    list.insertBefore(wrap,list.firstChild);
+    wrap.querySelector('#startMasteryBtn').onclick=startMasteryReview;
+  }
+  function refreshSections(){renderMastery();renderExtra()}
+  var baseRenderReview=window.renderReview;
+  window.renderReview=function(){baseRenderReview();refreshSections()};
+  function startMasteryReview(){
+    reviewQueue=[...document.querySelectorAll('.masteryCheck:checked')].map(function(x){return problems.find(function(p){return p.id===x.dataset.id})}).filter(Boolean);
+    if(!reviewQueue.length){alert('確認する問題を選択してください');return}
+    masteryMode=true;reviewIndex=0;reviewAnswers=[];document.getElementById('reviewModal').classList.add('open');showMasteryQuestion();
+  }
+  function showMasteryQuestion(){
+    if(reviewIndex>=reviewQueue.length){document.getElementById('reviewModal').classList.remove('open');document.getElementById('timeModal').classList.add('open');return}
+    var p=reviewQueue[reviewIndex],sub=subjects.find(function(s){return s.id===p.subject_id}),q=qualifications.find(function(x){return x.id===sub?.qualification_id});
+    document.getElementById('reviewProgress').textContent='定着チェック '+(reviewIndex+1)+' / '+reviewQueue.length;
+    document.getElementById('reviewQuestion').innerHTML='<div class="item"><span class="badge">'+esc(q?.name||'')+' / '+esc(sub?.name||'')+'</span><h2 style="margin:12px 0 6px">'+esc(p.name)+'</h2><div class="muted small">30日後の定着チェック</div><div class="row" style="margin-top:18px"><button class="primary" onclick="answerReview(\'correct\')">✓ 合ってた</button><button class="light" onclick="answerReview(\'wrong\')">✕ 間違えた</button></div></div>';
+  }
+  var baseAnswerReview=window.answerReview;
+  window.answerReview=function(result){if(!masteryMode)return baseAnswerReview(result);reviewAnswers.push({problemId:reviewQueue[reviewIndex].id,result:result});reviewIndex++;showMasteryQuestion()};
+  var baseCloseReview=window.closeReview;
+  window.closeReview=function(){masteryMode=false;baseCloseReview()};
+  var baseCancel=window.cancelReviewTime;
+  window.cancelReviewTime=function(){masteryMode=false;baseCancel()};
+  var baseFinish=window.finishReviewSession;
+  window.finishReviewSession=async function(){
+    if(!masteryMode)return baseFinish();
+    var minutes=Number(document.getElementById('reviewMinutes').value||0),memo=document.getElementById('reviewMemo').value.trim();
+    if(!minutes){alert('確認時間を入力してください');return}
+    var first=reviewQueue[0],sub=subjects.find(function(s){return s.id===first.subject_id}),qid=sub?.qualification_id;
+    if(!qid){alert('科目情報が見つかりません');return}
+    var res=await sb.rpc('record_mastery_check',{p_qualification_id:qid,p_subject_id:first.subject_id,p_minutes:minutes,p_memo:memo,p_items:reviewAnswers.map(function(x){return {problem_id:x.problemId,result:x.result}})});
+    if(res.error){alert('定着チェックの保存に失敗しました: '+res.error.message);return}
+    document.getElementById('reviewMinutes').value='';document.getElementById('reviewMemo').value='';document.getElementById('timeModal').classList.remove('open');reviewQueue=[];reviewAnswers=[];masteryMode=false;await loadAll();toast('定着チェックを記録しました');
+  };
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',refreshSections);else setTimeout(refreshSections,0);
 })();
