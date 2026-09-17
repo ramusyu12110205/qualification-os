@@ -82,4 +82,22 @@
   if(!document.getElementById('fc-voice-style')){
     const style=document.createElement('style');style.id='fc-voice-style';style.textContent='.fc-voice-card{max-width:760px;margin:14px auto}.fc-voice-card select{background:#0c1322;color:#f4f6ff;border:1px solid #394563;border-radius:9px;padding:8px}.fc-voice-progress{min-height:260px;display:flex;flex-direction:column;justify-content:center;text-align:center}.fc-voice-progress .answer{white-space:pre-wrap}.fc-voice-settings{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:14px}.fc-voice-card label{display:flex;align-items:center;gap:6px;font-size:13px}.fc-voice-settings label:first-child select{min-width:230px}@media(max-width:700px){.fc-voice-settings label{width:100%;justify-content:center}.fc-voice-card select{flex:1}.fc-voice-settings label:first-child select{min-width:0}}';document.head.appendChild(style)
   }
+
+  // カード詳細から戻るときは、直前の「資格 → 科目」階層へ戻す。ホームへ戻さない。
+  const originalVoiceOpenDeck=window.openDeck;
+  window.openDeck=async function(id){
+    await originalVoiceOpenDeck(id);
+    const box=document.getElementById('deck');
+    const back=box?.querySelector('.card .row button.light');
+    if(!back||!currentDeck)return;
+    const qid=currentDeck.qualification_id;
+    const sid=currentDeck.subject_id;
+    if(qid&&sid){
+      back.textContent='← 戻る';
+      back.onclick=()=>window.openSubject(String(sid),String(qid));
+    }else if(qid){
+      back.textContent='← 戻る';
+      back.onclick=()=>window.openQualification(String(qid));
+    }
+  };
 })();
