@@ -100,4 +100,12 @@
       back.onclick=()=>window.openQualification(String(qid));
     }
   };
+
+  // スマホの科目ファイル一覧で、編集・削除ボタンに幅を奪われてファイル名が縦書きになるのを防ぐ。
+  if(!document.getElementById('fc-mobile-file-style')){
+    const style=document.createElement('style');
+    style.id='fc-mobile-file-style';
+    style.textContent='@media(max-width:700px){.fc-file-row{display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;gap:6px;padding:8px}.fc-file-open{min-width:0;width:100%;grid-column:1/-1}.fc-file-main{min-width:0}.fc-file-main b{display:block;white-space:normal;overflow-wrap:anywhere;word-break:normal}.fc-file-edit,.fc-file-delete{grid-column:auto}.fc-file-count{margin-left:auto}}';
+    document.head.appendChild(style);
+  }
 })();
