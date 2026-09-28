@@ -109,3 +109,22 @@
     sortDueReviewItems();
   }
 })();
+
+// 勉強記録を保存したとき、勝手に「今日の復習」の先頭へ戻らないようにする。
+// 保存前にいたタブとスクロール位置を維持する。
+(function(){
+  var originalSave=window.saveStudyRecord;
+  if(typeof originalSave!=='function' || window.__studyRecordScrollFixInstalled)return;
+  window.__studyRecordScrollFixInstalled=true;
+  window.saveStudyRecord=async function(){
+    var scrollY=window.scrollY||window.pageYOffset||0;
+    var tab=location.hash.slice(1)||sessionStorage.getItem('qualification-os-tab')||'record';
+    if(!['review','record','status','settings'].includes(tab))tab='record';
+    await originalSave.apply(this,arguments);
+    // 元処理が保存後にreviewへ切り替えるため、元の画面へ戻す。
+    openTab(tab,false);
+    requestAnimationFrame(function(){
+      requestAnimationFrame(function(){window.scrollTo({top:scrollY,left:0,behavior:'auto'})});
+    });
+  };
+})();
