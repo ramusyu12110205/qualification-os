@@ -16,12 +16,10 @@ h1,h2,h3{margin-top:0}.muted{color:var(--muted)}.small{font-size:13px}.card{back
 <div id="auth" class="card hidden"><h2>🧠 知識カード</h2><p class="muted">Googleでログインしてください。</p><button class="primary" onclick="login()">Googleでログイン</button></div>
 <div id="app" class="hidden">
 <header class="row" style="justify-content:space-between"><div><h1>🧠 知識BOX</h1><div class="muted small">日常や勉強中に得た小さな知識を、気軽に残して後からざっくり整理します。</div></div><div class="row"><button class="primary" onclick="showKnowledgeForm()">＋ 知識を記録</button><button class="light" onclick="location.href='index.html'">← 資格勉強OS</button></div></header>
-
 <div class="mode-nav">
   <button id="knowledgeModeBtn" class="active" onclick="switchMode('knowledge')">🧠 知識BOX</button>
   <button id="researchModeBtn" onclick="switchMode('research')">🔎 あとで調べる</button>
 </div>
-
 <div id="knowledgeMode">
 <section class="card">
   <div class="row" style="justify-content:space-between"><h2>カテゴリ</h2><button class="light" onclick="toggleCategoryManager()">⚙ カテゴリ管理</button></div>
@@ -33,7 +31,6 @@ h1,h2,h3{margin-top:0}.muted{color:var(--muted)}.small{font-size:13px}.card{back
     <p class="muted small category-note">「無分類」は安全な退避先として固定しています。カテゴリを削除すると、そのカテゴリのカードは無分類へ移動します。</p>
   </div>
 </section>
-
 <section id="form" class="card hidden">
 <h2 id="formTitle">知識を記録</h2>
 <label>カテゴリ</label><select id="category"></select>
@@ -45,10 +42,8 @@ h1,h2,h3{margin-top:0}.muted{color:var(--muted)}.small{font-size:13px}.card{back
 <label>④ 「つまり何？」を自分の言葉で</label><textarea id="meaning" maxlength="500" placeholder="1〜2行で、自分なりに"></textarea>
 <div class="row" style="margin-top:12px"><button class="primary" onclick="saveCard()">保存</button><button class="light" onclick="hideKnowledgeForm()">戻る</button></div>
 </section>
-
 <section class="card"><div class="row" style="justify-content:space-between"><h2>知識の蓄積</h2><span class="badge" id="count"></span></div><input id="search" placeholder="キーワードで検索" oninput="renderCards()"><div id="cards" style="margin-top:10px"></div></section>
 </div>
-
 <div id="researchMode" class="hidden">
 <section id="researchForm" class="card hidden">
 <h2 id="researchFormTitle">あとで調べる</h2>
@@ -58,7 +53,6 @@ h1,h2,h3{margin-top:0}.muted{color:var(--muted)}.small{font-size:13px}.card{back
 <textarea id="researchNote" maxlength="1000" placeholder="今は調べない理由や、気になったきっかけなど"></textarea>
 <div class="row" style="margin-top:12px"><button class="primary" onclick="saveResearchItem()">保存</button><button class="light" onclick="hideResearchForm()">戻る</button></div>
 </section>
-
 <section class="card">
   <div class="row" style="justify-content:space-between"><h2>あとで調べる</h2><span class="badge" id="researchCount"></span></div>
   <p class="muted small">「今は調べられないけど、後で知りたい」を一時保存します。完成した知識は知識BOXへ。</p>
@@ -104,6 +98,11 @@ function renderResearchItem(item){return `<article class="item ${item.completed?
 function openResearchAsKnowledge(id){const item=researchItems.find(x=>x.id===id);if(!item)return;switchMode('knowledge');showKnowledgeForm(null,id);$('what').value=item.title;toast('タイトルを引き継ぎました。調べた内容を追加してください')}
 async function setResearchCompleted(id,completed){const{error}=await sb.from('knowledge_research_queue').update({completed,updated_at:new Date().toISOString()}).eq('id',id).eq('user_id',user.id);if(error)return toast(error.message);await loadResearchItems();toast(completed?'完了にしました':'未完了に戻しました')}
 async function deleteResearchItem(id){if(!confirm('この「あとで調べる」項目を削除しますか？'))return;const{error}=await sb.from('knowledge_research_queue').delete().eq('id',id).eq('user_id',user.id);if(error)return toast(error.message);await loadResearchItems();toast('削除しました')}
+function setupEnterNavigation(){
+  $('researchTitle').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();$('researchNote').focus()}});
+  $('researchNote').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();saveResearchItem()}});
+}
+setupEnterNavigation();
 boot();
 </script>
 </body>
