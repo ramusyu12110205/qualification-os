@@ -10,8 +10,10 @@
     return ids;
   }
   function addCard(box){
-    var stat=box.querySelector('.statgrid');
-    if(!stat||box.querySelector('.stc-card'))return;
+    // 資格詳細画面だけに表示する。科目詳細画面などには追加しない。
+    var quest=box.querySelector('.quest');
+    var stat=box.querySelector('.quest + .stat');
+    if(!quest||!stat||box.querySelector('.stc-card'))return;
     var card=document.createElement('div');
     card.className='item stc-card';
     card.style.margin='12px 0';
