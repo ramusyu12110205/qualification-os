@@ -10,7 +10,6 @@
     return ids;
   }
   function addCard(box){
-    // 資格詳細画面だけに表示する。科目詳細画面などには追加しない。
     var quest=box.querySelector('.quest');
     var stat=box.querySelector('.quest + .stat');
     if(!quest||!stat||box.querySelector('.stc-card'))return;
@@ -68,6 +67,18 @@
   if(window.__qosProblemSortLoading)return;
   window.__qosProblemSortLoading=true;
   var s=document.createElement('script');
-  s.src='subject-problem-sort.js?v=20260929-3';
+  s.src='subject-problem-sort.js?v=20260929-4';
+  document.head.appendChild(s);
+})();
+
+// ホーム画面は既存の学習データをそのまま使い、表示だけを独立して差し替える。
+(function(){
+  if(window.__qosCurrentHomeLoader)return;
+  window.__qosCurrentHomeLoader=true;
+  if(!document.getElementById('qos-current-home-css')){
+    var link=document.createElement('link');link.id='qos-current-home-css';link.rel='stylesheet';link.href='minimal-home.css?v=20260929-1';document.head.appendChild(link);
+  }
+  var s=document.createElement('script');
+  s.src='minimal-home.js?v=20260929-1';
   document.head.appendChild(s);
 })();
