@@ -53,18 +53,22 @@ jobs:
         run: |
           python - <<'PY'
           from pathlib import Path
-          import base64
           p = Path('qualification-result-enhance-v2.js')
           s = p.read_text(encoding='utf-8')
-          marker = 'window.__subjectTimeChartPatchInstalled'
-          if marker in s:
-              for start_marker in ('\n(function(){\n  function minutesTextChart', r'\n(function(){\n  function minutesTextChart'):
-                  pos = s.rfind(start_marker)
-                  if pos != -1:
-                      s = s[:pos]
-                      break
-          addition = base64.b64decode('KGZ1bmN0aW9uKCl7CiAgZnVuY3Rpb24gbXQobSl7bT1NYXRoLnJvdW5kKE51bWJlcihtKXx8MCk7dmFyIGg9TWF0aC5mbG9vcihtLzYwKSxuPW0lNjA7cmV0dXJuIGg/KG4/aCsnXHU2NjQyXHU5NTkzJytuKydcdTUyMDYnOmgrJ1x1NjY0Mlx1OTU5MycpOm4rJ1x1NTIwNid9CiAgZnVuY3Rpb24gZXNjKHYpe3JldHVybiBTdHJpbmcodj09bnVsbD8nJzp2KS5yZXBsYWNlKC9bJjw+IiddL2csZnVuY3Rpb24oYyl7cmV0dXJuKHsnJic6JyZhbXA7JywnPCc6JyZsdDsnLCc+JzonJmd0OycsJyInOicmcXVvdDsnLCInIjonJiMzOTsnfSlbY119KX0KICB2YXIgYmFzZT13aW5kb3cuc2hvd1F1YWxpZmljYXRpb25SZXN1bHRBd2FyZTsKICBpZighYmFzZXx8YmFzZS5fX3N0YyklcmV0dXJuOwogIHdpbmRvdy5zaG93UXVhbGlmaWNhdGlvblJlc3VsdEF3YXJlPWZ1bmN0aW9uKGlkKXsKICAgIHZhciByPWJhc2UuYXBwbHkodGhpcyxhcmd1bWVudHMpLGJveD1kb2N1bWVudC5nZXRFbGVtZW50QnlJZCgnZGFzaGJvYXJkJykseXN0YXQ9Ym94JiZib3gucXVlcnlTZWxlY3RvcignLnN0YXRncmlkJyk7CiAgICBpZighYm94fHwhc3RhdClyZXR1cm4gcjsKICAgIHZhciBvbGQ9Ym94LnF1ZXJ5U2VsZWN0b3IoJy5zdGMtY2FyZCcpO2lmKG9sZClvbGQucmVtb3ZlKCk7CiAgICB2YXIgY2FyZD1kb2N1bWVudC5jcmVhdGVFbGVtZW50KCdkaXYnKTtjYXJkLmNsYXNzTmFtZT0naXRlbSBzdGMtY2FyZCc7Y2FyZC5zdHlsZS5tYXJnaW49JzEycHggMCc7CiAgICBjYXJkLmlubmVySFRNTD0nPGRpdiBjbGFzcz0icm93IiBzdHlsZT0ianVzdGlmeS1jb250ZW50OnNwYWNlLWJldHdlZW47YWxpZ24taXRlbXM6Y2VudGVyIj48ZGl2PjxiPlx1NzlkMVx1NzZlZVx1NTIyNVx1MzA2ZVx1NTJjOVx1NWYzN1x1NjY0Mlx1OTU5MzwvYj48ZGl2IGNsYXNzPSJtdXRlZCBzbWFsbCI+XHU4Y2M3XHU2ODNjXHU1MTY4XHU0ZjUzXHUzMDZiXHU1MzYwXHUzMDgxXHUzMDhiXHU1MjcyXHU1NDA4XHUzMDkyXHU3OGJhXHU4YThkPC9kaXY+PC9kaXY+PGJ1dHRvbiBjbGFzcz0ibGlnaHQiIHR5cGU9ImJ1dHRvbiI+XHU1MTg2XHUzMGIwXHUzMGU5XHUzMGQ1XHUzMDkyXHU4OTg4XHUzMDhiPC9idXR0b24+PC9kaXY+PGRpdiBjbGFzcz0ic3RjLXBhbmVsIiBzdHlsZT0iZGlzcGxheTpub25lO21hcmdpbi10b3A6MTJweCI+PC9kaXY+JzsKICAgIHZhciBidG49Y2FyZC5xdWVyeVNlbGVjdG9yKCdidXR0b24nKSxwYW5lbD1jYXJkLnF1ZXJ5U2VsZWN0b3IoJy5zdGMtcGFuZWwnKTsKICAgIGJ0bi5vbmNsaWNrPWZ1bmN0aW9uKCl7dmFyIG9wZW49cGFuZWwuc3R5bGUuZGlzcGxheSE9PSdub25lJztwYW5lbC5zdHlsZS5kaXNwbGF5PW9wZW4/J25vbmUnOidibG9jayc7YnRuLnRleHRDb250ZW50PW9wZW4/J1x1NTE4Nlx1MzBiMFx1MzBlOVx1MzBkNVx1MzA5Mlx1ODk4Ylx1MzA4Yic6J1x1NTE4Nlx1MzBiMFx1MzBlOVx1MzBkNVx1MzA5Mlx1OTU4OVx1MzA1OFx1MzA4Yic7aWYob3BlbilyZXR1cm47CiAgICAgIHZhciByb3dzPXN1YmplY3RzLmZpbHRlcihmdW5jdGlvbihzKXtyZXR1cm4gcy5xdWFsaWZpY2F0aW9uX2lkPT09aWR9KS5tYXAoZnVuY3Rpb24ocyl7cmV0dXJue25hbWU6cy5uYW1lLG06c2Vzc2lvbnMuZmlsdGVyKGZ1bmN0aW9uKHgpe3JldHVybiB4LnN1YmplY3RfaWQ9PT1zLmlkfSkucmVkdWNlKGZ1bmN0aW9uKGEsMil7cmV0dXJuIGErTnVtYmVyKHgubWludXRlc3x8MCl9LDApfX0pLmZpbHRlcihmdW5jdGlvbih4KXtyZXR1cm4geC5tPjB9KS5zb3J0KGZ1bmN0aW9uKGEsYil7cmV0dXJuIGIubS1hLm19KTsKICAgICAgdmFyIHRvdGFsPXJvd3MucmVkdWNlKGZ1bmN0aW9uKGEsMil7cmV0dXJuIGErMi5tfSwwKTtpZighdG90YWwpe3BhbmVsLmlubmVySFRNTD0nPGRpdiBjbGFzcz0ibXV0ZWQgc21hbGwiPlx1MzA3ZVx1MzA2MFx1NzlkMVx1NzZlZVx1NTIyNVx1MzA2ZVx1NTJjOVx1NWYzN1x1OGExOFx1OTMzMlx1MzA0Y1x1MzA0Mlx1MzA4YVx1MzA3ZVx1MzA1Ylx1MzA5M1x1MzAwMjwvZGl2Pic7cmV0dXJufQogICAgICB2YXIgY29sb3JzPVsnIzhiNWNmNicsJyMyMmQzZWUnLCcjMzRkMzk5JywnI2ZiYmYyNCcsJyNmYjcxODUnLCcjNjBhNWZhJywnI2E3OGJmYScsJyNmNDcyYjYnXSxwb3M9MCxzdG9wcz1yb3dzLm1hcChmdW5jdGlvbih4LGkpe3ZhciBlPXBvcyt4Lm0vdG90YWwqMzYwLHo9Y29sb3JzW2klY29sb3JzLmxlbmd0aF0rJyAnK3BvcysnZGVnICcrZSsnZGVnJztwb3M9ZTtyZXR1cm4gel0pLmpvaW4oJywnKSxsaXN0PXJvd3MubWFwKGZ1bmN0aW9uKHgsaSl7cmV0dXJuICc8ZGl2IGNsYXNzPSJzdGMtcm93Ij48c3Bhbj48aSBzdHlsZT0iYmFja2dyb3VuZDonK2NvbG9yc1tpJWNvbG9ycy5sZW5ndGhdKycgIj48L2k+Jytlc2MoeC5uYW1lKSsnPC9zcGFuPjxiPicrTWF0aC5yb3VuZCh4Lm0vdG90YWwqMTAwKSsnJTwvYj48c21hbGw+JyttdCh4Lm0pKyc8L3NtYWxsPjwvZGl2Pid9KS5qb2luKCcnKTsKICAgICAgcGFuZWwuaW5uZXJIVE1MPSc8ZGl2IGNsYXNzPSJzdGMtd3JhcCI+PGRpdiBjbGFzcz0ic3RjLXBpZSIgc3R5bGU9ImJhY2tncm91bmQ6Y29uaWMtZ3JhZGllbnQoJytzdG9wcysnKSI+PGRpdiBjbGFzcz0ic3RjLXBpZS1pbm5lciI+PHN0cm9uZz4nK210KHRvdGFsKSsnPC9zdHJvbmc+PHNwYW4+XHU3OWQxXHU3NmVlXHU1NDA4XHU4YTA4PC9zcGFuPjwvZGl2PjwvZGl2PjxkaXYgY2xhc3M9InN0Yy1saXN0Ij4nK2xpc3QrJzwvZGl2PjwvZGl2Pic7CiAgICB9OwogICAgc3RhdC5pbnNlcnRBZGphY2VudEVsZW1lbnQoJ2FmdGVyZW5kJyxjYXJkKTtyZXR1cm4gcjsKICB9OwogIHdpbmRvdy5zaG93UXVhbGlmaWNhdGlvblJlc3VsdEF3YXJlLl9fc3RjPXRydWU7CiAgdmFyIHM9ZG9jdW1lbnQuY3JlYXRlRWxlbWVudCgnc3R5bGUnKTtzLnRleHRDb250ZW50PScuc3RjLXdyYXB7ZGlzcGxheTpmbGV4O2dhcDoxOHB4O2FsaWduLWl0ZW1zOmNlbnRlcjtmbGV4LXdyYXA6d3JhcH0uc3RjLXBpZXt3aWR0aDoxODBweDtoZWlnaHQ6MTgweDtib3JkZXItcmFkaXVzOjUwJTtkaXNwbGF5OmdyaWQ7cGxhY2UtaXRlbXM6Y2VudGVyfS5zdGMtcGllLWlubmVye3dpZHRoOjEwNXB4O2hlaWdodDoxMDVweDtiYWNrZ3JvdW5kOiMwZTE0MjI7Ym9yZGVyOjFweCBzb2xpZCAjMjYzMTRkO2JvcmRlci1yYWRpdXM6NTAlO2Rpc3BsYXk6ZmxleDtmbGV4LWRpcmVjdGlvbjpjb2x1bW47YWxpZ24taXRlbXM6Y2VudGVyO2p1c3RpZnktY29udGVudDpjZW50ZXJ9LnN0Yy1waWUtaW5uZXIgc3Ryb25ne2ZvbnQtc2l6ZToxOHB4fS5zdGMtcGllLWlubmVyIHNwYW57Zm9udC1zaXplOjExcHg7Y29sb3I6Izk4YTNiZn0uc3RjLWxpc3R7ZmxleDoxO21pbi13aWR0aDoyMjBweH0uc3RjLXJvd3tkaXNwbGF5OmdyaWQ7Z3JpZC10ZW1wbGF0ZS1jb2x1bW5zOm1pbm1heCgwLDFmcikgNDVweCA3MHB4O2dhcDo3cHg7cGFkZGluZzo3cHggMDtib3JkZXItYm90dG9tOjFweCBzb2xpZCAjMjYzMTRkfS5zdGMtcm93IHNwYW57b3ZlcmZsb3c6aGlkZGVuO3RleHQtb3ZlcmZsb3c6ZWxsaXBzaXM7d2hpdGUtc3BhY2U6bm93cmFwfS5zdGMtcm93IGl7ZGlzcGxheTppbmxpbmUtYmxvY2s7d2lkdGg6OXB4O2hlaWdodDo5cHg7Ym9yZGVyLXJhZGl1czo1MCU7bWFyZ2luLXJpZ2h0OjdweH0uc3RjLXJvdyBiLC5zdGMtcm93IHNtYWxse3RleHQtYWxpZ246cmlnaHR9LnN0Yy1yb3cgc21hbGx7Y29sb3I6Izk4YTNiZn1AbWVkaWEobWF4LXdpZHRoOjcwMHB4KXsu c3RjLXdyYXB7anVzdGlmeS1jb250ZW50OmNlbnRlcn0uc3RjLXBpZXt3aWR0aDoxNjVweDtoZWlnaHQ6MTY1cHh9LnN0Yy1saXN0e3dpZHRoOjEwMCV9fSc7ZG9jdW1lbnQuaGVhZC5hcHBlbmRDaGlsZChzKTsKfSkoKTsK').decode()
-          p.write_text(s.rstrip() + '\n' + addition, encoding='utf-8')
+          if 'window.__subjectTimeChartPatchInstalled' in s:
+              pos = s.rfind('function minutesTextChart')
+              if pos != -1:
+                  start = s.rfind('(function(){', 0, pos)
+                  if start != -1:
+                      s = s[:start]
+                      p.write_text(s.rstrip() + '\n', encoding='utf-8')
+          p = Path('index.html')
+          s = p.read_text(encoding='utf-8')
+          tag = '<script src="subject-time-chart.js"></script>'
+          if tag not in s:
+              marker = '</body>'
+              if marker in s:
+                  p.write_text(s.replace(marker, tag + '\n' + marker, 1), encoding='utf-8')
           PY
       - name: Commit fix if needed
         run: |
@@ -74,6 +78,6 @@ jobs:
           if git diff --cached --quiet; then
             echo 'No change needed'
           else
-            git commit -m 'Add subject study time chart'
+            git commit -m 'Install subject study time chart'
             git push
           fi
