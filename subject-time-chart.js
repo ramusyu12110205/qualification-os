@@ -79,6 +79,6 @@
     var link=document.createElement('link');link.id='qos-current-home-css';link.rel='stylesheet';link.href='minimal-home.css?v=20260929-1';document.head.appendChild(link);
   }
   var s=document.createElement('script');
-  s.src='minimal-home.js?v=20260929-1';
+  s.src='minimal-home.js?v=20260929-2';
   document.head.appendChild(s);
 })();
