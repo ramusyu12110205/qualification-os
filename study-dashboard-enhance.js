@@ -54,6 +54,7 @@
       var ps=projectStats(qq,st),exam=qq.exam_date?Math.ceil((parseDate(qq.exam_date)-parseDate(studyDay()))/86400000):null;
       return {q:qq,p:ps,exam:exam,status:statusBadge(statusOf(qq))};
     }).filter(function(x){return x.p.total>0||x.q.exam_date}).sort(function(a,b){return b.p.total-a.p.total});
+    var max=rows.reduce(function(a,x){return Math.max(a,x.p.total)},0)||1;
     var cards=rows.length?rows.map(function(x){
       var examText=x.exam==null?'試験日未設定':x.exam>=0?'試験まで '+x.exam+'日':'試験済み';
       return '<div class="item clickable" onclick="(window.showQualificationResultAware||window.showQualification)(\''+x.q.id+'\')"><div class="row" style="justify-content:space-between"><b>'+escapeHtml(x.q.name)+'</b><strong>'+minutesText(x.p.total)+'</strong></div><div class="row" style="margin-top:7px">'+x.status+'<span class="badge">'+escapeHtml(examText)+'</span></div><div class="bar" style="margin:8px 0"><div style="width:'+Math.round(x.p.total/max*100)+'%"></div></div><span class="muted small">学習日 '+x.p.days+'日'+(x.p.start?' ・ 開始 '+fmtDate(x.p.start):'')+'</span></div>';
