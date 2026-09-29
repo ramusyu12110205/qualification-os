@@ -7,12 +7,13 @@
   const fmtMinutes=n=>{n=Math.max(0,Math.round(Number(n)||0));return `${Math.floor(n/60)}時間${n%60}分`};
   const fmtDate=s=>{if(!s)return '—';const d=new Date(s+'T00:00:00');return `${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()}`};
   const daysUntil=s=>Math.ceil((new Date(s+'T00:00:00')-new Date(today()+'T00:00:00'))/86400000);
-  const getData=()=>{try{return {q:eval('qualifications'),s:eval('subjects'),p:eval('problems'),st:eval('sessions')}}catch(e){return {q:[],s:[],p:[],st:[]}}};
-  const getSB=()=>{try{return eval('sb')}catch(e){return null}};
-  const getUser=()=>{try{return eval('currentUser')}catch(e){return null}};
+  const getData=()=>({q:typeof qualifications!=='undefined'&&Array.isArray(qualifications)?qualifications:[],s:typeof subjects!=='undefined'&&Array.isArray(subjects)?subjects:[],p:typeof problems!=='undefined'&&Array.isArray(problems)?problems:[],st:typeof sessions!=='undefined'&&Array.isArray(sessions)?sessions:[]});
+  const getSB=()=>typeof sb!=='undefined'?sb:null;
+  const getUser=()=>typeof currentUser!=='undefined'?currentUser:null;
   let reviewHistory=[];
   let originalOpenTab=null;
   let historyLoading=false;
+  let homeGuard=null;
   function storageKey(){const u=getUser();return `qualification-os-home-qualification-${u?.id||'guest'}`}
   function selectedQualificationId(q){const saved=localStorage.getItem(storageKey());if(saved&&q.some(x=>x.id===saved))return saved;const active=q.find(x=>x.result!=='passed')||q[0];if(active)localStorage.setItem(storageKey(),active.id);return active?.id||''}
   function ensureHome(){
@@ -31,8 +32,13 @@
   }
   function hideOriginal(){const app=document.getElementById('app');if(!app)return;[...app.children].forEach(ch=>{if(ch.id!=='qosCurrentHome')ch.style.display='none'});const home=document.getElementById('qosCurrentHome');if(home)home.style.display='block';window.scrollTo({top:0,behavior:'smooth'})}
   function showOriginal(){const app=document.getElementById('app');if(!app)return;const home=document.getElementById('qosCurrentHome');if(home)home.style.display='none';[...app.children].forEach(ch=>{if(ch.id!=='qosCurrentHome')ch.style.display=''})}
-  function qchNavigate(name){if(name==='home'){showHome();return}showOriginal();if(originalOpenTab)originalOpenTab(name==='record'?'record':name==='status'?'status':name==='settings'?'settings':'review')}
-  function showHome(){hideOriginal();renderHome()}
+  function qchNavigate(name){
+    if(name==='home'){sessionStorage.setItem('qualification-os-tab','home');showHome();return}
+    sessionStorage.setItem('qualification-os-tab',name);
+    showOriginal();
+    if(originalOpenTab)originalOpenTab(name==='record'?'record':name==='status'?'status':name==='settings'?'settings':'review');
+  }
+  function showHome(){sessionStorage.setItem('qualification-os-tab','home');hideOriginal();renderHome()}
   function getQualificationData(){const {q,s,p,st}=getData();const qid=selectedQualificationId(q);const qual=q.find(x=>x.id===qid)||null;return {q,s,p,st,qid,qual}}
   function dueForQualification(p,s,qid){const ids=new Set(s.filter(x=>x.qualification_id===qid).map(x=>x.id));const t=today();return p.filter(x=>ids.has(x.subject_id)&&x.status==='pending'&&x.next_review_date&&x.next_review_date<=t)}
   function historyForProblem(problemId){return reviewHistory.filter(x=>x.problem_id===problemId).sort((a,b)=>String(b.created_at||b.review_date||'').localeCompare(String(a.created_at||a.review_date||'')))}
@@ -43,7 +49,31 @@
   function toggleAttentionAll(){const list=document.getElementById('qchAttentionList');if(!list)return;list.dataset.expanded=list.dataset.expanded==='1'?'0':'1';renderAttention(attentionProblems(getQualificationData()))}
   function renderHome(){ensureHome();const data=getQualificationData(),t=today();renderQualificationSelect(data.q,data.qid);const qual=data.qual;document.getElementById('qchQualificationName').textContent=qual?.name||'資格未設定';const examDate=qual?(qual.result==='failed'&&qual.next_exam_date?qual.next_exam_date:qual.exam_date):null;const d=examDate?daysUntil(examDate):null;document.getElementById('qchExamDate').textContent=examDate?`${fmtDate(examDate)}${d>=0?'（あと'+d+'日）':''}`:'未設定';const total=data.st.reduce((a,x)=>a+Number(x.minutes||0),0),selected=data.st.filter(x=>x.qualification_id===data.qid).reduce((a,x)=>a+Number(x.minutes||0),0);document.getElementById('qchTotalTime').textContent=fmtMinutes(total);document.getElementById('qchSelectedTimeLabel').textContent=(qual?.name||'選択中の資格')+'の学習時間';document.getElementById('qchSelectedTime').textContent=fmtMinutes(selected);const due=dueForQualification(data.p,data.s,data.qid),overdue=due.filter(x=>x.next_review_date<t).length,todayDue=due.filter(x=>x.next_review_date===t).length;document.getElementById('qchReviewCount').textContent=due.length+'問';document.getElementById('qchDue').textContent=due.length+'問';document.getElementById('qchOverdue').textContent=overdue+'問';document.getElementById('qchTodayDue').textContent=todayDue+'問';renderAttention(attentionProblems(data))}
   async function loadReviewHistory(){if(historyLoading)return;const sb=getSB(),u=getUser();if(!sb||!u)return;historyLoading=true;try{const {data,error}=await sb.from('problem_review_history').select('problem_id,review_date,result,created_at').eq('user_id',u.id).order('created_at',{ascending:false});if(error)throw error;reviewHistory=data||[];if(document.getElementById('qosCurrentHome')?.style.display!=='none')renderHome()}catch(e){console.warn('資格OSホーム: 復習履歴の取得に失敗しました',e)}finally{historyLoading=false}}
-  function install(){ensureHome();originalOpenTab=window.openTab;if(!window.__qosOriginalOpenTab){window.__qosOriginalOpenTab=originalOpenTab;window.openTab=function(name){if(name==='home'){showHome();return}showOriginal();return window.__qosOriginalOpenTab?window.__qosOriginalOpenTab(name):undefined}}else originalOpenTab=window.__qosOriginalOpenTab;showHome();loadReviewHistory()}
+  function install(){
+    ensureHome();
+    originalOpenTab=window.openTab;
+    if(!window.__qosOriginalOpenTab)window.__qosOriginalOpenTab=originalOpenTab;
+    originalOpenTab=window.__qosOriginalOpenTab||originalOpenTab;
+    window.openTab=function(name){
+      if(name==='home'||name==='review'){
+        if(name==='home')sessionStorage.setItem('qualification-os-tab','home');
+        else if(sessionStorage.getItem('qualification-os-tab')!=='record'&&sessionStorage.getItem('qualification-os-tab')!=='status'&&sessionStorage.getItem('qualification-os-tab')!=='settings')sessionStorage.setItem('qualification-os-tab','home');
+        showHome();
+        return;
+      }
+      sessionStorage.setItem('qualification-os-tab',name);
+      showOriginal();
+      return originalOpenTab?originalOpenTab(name):undefined;
+    };
+    showHome();
+    loadReviewHistory();
+    if(homeGuard)clearInterval(homeGuard);
+    homeGuard=setInterval(()=>{
+      const tab=sessionStorage.getItem('qualification-os-tab');
+      const home=document.getElementById('qosCurrentHome');
+      if((tab==='home'||tab==='review'||!tab)&&document.getElementById('app')?.style.display!=='none'&&home?.style.display!=='block')showHome();
+    },250);
+  }
   function readyForInstall(){const app=document.getElementById('app');return !!(app&&app.style.display!=='none'&&getUser())}
   const wait=setInterval(()=>{if(readyForInstall()){clearInterval(wait);setTimeout(install,100)}},100);
   document.addEventListener('DOMContentLoaded',()=>setTimeout(()=>{if(readyForInstall())install()},300));
