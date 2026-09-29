@@ -49,14 +49,51 @@ jobs:
                   s = s.replace(marker, tag + '\n' + marker, 1)
                   p.write_text(s, encoding='utf-8')
           PY
+      - name: Remove qualification overview middle screen
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          p = Path('study-dashboard-enhance.js')
+          s = p.read_text(encoding='utf-8')
+          if 'QUALIFICATION OVERVIEW' in s:
+              pattern = r"  function renderQualificationOverview\(st,q\)\{.*?\n  function renderQualification\(st,q\)\{"
+              replacement = r'''  function renderQualificationOverview(st,q){
+    function statusOf(qq){
+      if(qq.result_mode!=='subject')return qq.result;
+      var ss=subjects.filter(function(s){return s.qualification_id===qq.id});
+      return ss.some(function(s){return s.result==='failed'})?'failed':ss.length&&ss.every(function(s){return s.result==='passed'})?'passed':null;
+    }
+    function statusBadge(v){
+      var label=v==='passed'?'合格':v==='failed'?'不合格':'未入力';
+      var cls=v==='passed'?' good':v==='failed'?' bad':'';
+      return '<span class="badge'+cls+'">'+label+'</span>';
+    }
+    var rows=q.map(function(qq){
+      var ps=projectStats(qq,st),exam=qq.exam_date?Math.ceil((parseDate(qq.exam_date)-parseDate(studyDay()))/86400000):null;
+      return {q:qq,p:ps,exam:exam,status:statusOf(qq)};
+    }).filter(function(x){return x.p.total>0||x.q.exam_date}).sort(function(a,b){return b.p.total-a.p.total});
+    var max=rows.reduce(function(a,x){return Math.max(a,x.p.total)},0)||1;
+    var cards=rows.length?rows.map(function(x){
+      var examText=x.exam==null?'試験日未設定':x.exam>=0?'試験まで '+x.exam+'日':'試験済み';
+      return '<div class="item clickable" onclick="(window.showQualificationResultAware||window.showQualification)(\\''+x.q.id+'\\')"><div class="row" style="justify-content:space-between"><b>'+escapeHtml(x.q.name)+'</b><strong>'+minutesText(x.p.total)+'</strong></div><div class="row" style="margin-top:7px">'+statusBadge(x.status)+'<span class="badge">'+escapeHtml(examText)+'</span></div><div class="bar" style="margin:8px 0"><div style="width:'+Math.round(x.p.total/max*100)+'%"></div></div><span class="muted small">学習日 '+x.p.days+'日'+(x.p.start?' ・ 開始 '+fmtDate(x.p.start):'')+'</span></div>';
+    }).join(''):'<div class="item">まだ勉強記録がありません。</div>';
+    return '<div class="sd-wrap">'+cards+'</div>';
+  }
+  function renderQualification(st,q){'''
+              ns,n = re.subn(pattern, replacement, s, count=1, flags=re.S)
+              if n != 1:
+                  raise SystemExit('qualification overview patch target not found')
+              p.write_text(ns, encoding='utf-8')
+          PY
       - name: Commit fix if needed
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add index.html
+          git add index.html study-dashboard-enhance.js
           if git diff --cached --quiet; then
             echo 'No change needed'
           else
-            git commit -m 'Add study dashboard final fixes'
+            git commit -m 'Remove qualification overview middle screen'
             git push
           fi
