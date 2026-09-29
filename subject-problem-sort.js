@@ -125,18 +125,43 @@
 
   window.__qosSortDueReviewItems=sortDueReviewItems;
 
+  // renderReview() が復習リストを作り直した直後にも必ず数字順を適用する。
+  // 初期ロード時はこのスクリプトの方が後から読み込まれるため、
+  // DOMContentLoadedだけでは間に合わないケースがある。
+  function hookReviewRenderer(){
+    if(typeof window.renderReview!=='function')return false;
+    if(window.renderReview.__qosReviewSortWrapped)return true;
+    const original=window.renderReview;
+    const wrapped=function(){
+      const result=original.apply(this,arguments);
+      setTimeout(sortDueReviewItems,0);
+      return result;
+    };
+    wrapped.__qosReviewSortWrapped=true;
+    window.renderReview=wrapped;
+    return true;
+  }
+  hookReviewRenderer();
+
   const originalShowUnit=window.showUnit;
   window.showUnit=function(id){
     window.__qosCurrentSubjectId=id;
     const result=originalShowUnit?originalShowUnit.apply(this,arguments):undefined;
     setTimeout(installForCurrentUnit,30);
     setTimeout(installForCurrentUnit,150);
-    setTimeout(sortDueReviewItems,150);
     return result;
   };
 
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){setTimeout(installForCurrentUnit,100);setTimeout(sortDueReviewItems,100)});
-  else {setTimeout(installForCurrentUnit,100);setTimeout(sortDueReviewItems,100)}
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){
+    setTimeout(installForCurrentUnit,100);
+    setTimeout(sortDueReviewItems,100);
+    setTimeout(hookReviewRenderer,100);
+  });
+  else {
+    setTimeout(installForCurrentUnit,100);
+    setTimeout(sortDueReviewItems,100);
+    setTimeout(hookReviewRenderer,100);
+  }
 
   const style=document.createElement('style');
   style.textContent='.qos-problem-sort select{min-width:190px}.qos-problem-sort{background:linear-gradient(145deg,#10182a,#0c1220)}@media(max-width:700px){.qos-problem-sort .row>div:last-child{width:100%;min-width:0}.qos-problem-sort select{width:100%}}';
