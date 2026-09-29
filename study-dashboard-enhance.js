@@ -40,10 +40,26 @@
     return '<div class="sd-wrap"><div class="sd-section-head"><div><div class="kicker">MONTHLY STUDY</div><h3>月別の学習時間</h3><div class="muted small">記録を始めた月から現在まで。</div></div><span class="badge">'+months[0].label+' 〜 '+months[months.length-1].label+'</span></div><div class="sd-month-total"><span>総合計</span><strong>'+minutesText(total)+'</strong></div><div class="sd-chart sd-month-chart">'+bars+'</div><div class="sd-compare"><div class="sd-compare-card"><span>今月</span><b>'+minutesText(current)+'</b><small>月の日数 '+months[months.length-1].days+'日</small></div><div class="sd-compare-card"><span>先月比</span><b>'+trend+'</b><small>'+ (months.length>1?minutesText(previous):'比較対象なし') +'</small></div></div><div class="sd-compare"><div class="sd-compare-card"><span>月平均</span><b>'+minutesText(Math.round(total/months.length))+'</b><small>'+months.length+'か月</small></div><div class="sd-compare-card"><span>学習した月</span><b>'+active+'か月</b><small>'+months.length+'か月中</small></div></div></div>';
   }
   function renderQualificationOverview(st,q){
-    var base=parseDate(studyDay()),rows=q.map(function(qq){var ps=projectStats(qq,st),exam=qq.exam_date?Math.ceil((parseDate(qq.exam_date)-base)/86400000):null;return {q:qq,p:ps,exam:exam}}).filter(function(x){return x.p.total>0||x.q.exam_date}).sort(function(a,b){return (a.exam==null?999999:a.exam)-(b.exam==null?999999:b.exam)});
-    var total=rows.reduce(function(a,x){return a+x.p.total},0),active=rows.filter(function(x){return x.p.total>0}).length;
-    var cards=rows.length?rows.map(function(x){var examText=x.exam==null?'試験日未設定':x.exam>=0?'試験まで '+x.exam+'日':'試験済み';return '<div class="sd-overview-card"><div class="sd-overview-head"><div><div class="kicker">QUALIFICATION</div><div class="sd-project-name">'+escapeHtml(x.q.name)+'</div></div><span class="badge">'+escapeHtml(examText)+'</span></div><div class="sd-overview-stats"><div><span>累計</span><b>'+minutesText(x.p.total)+'</b></div><div><span>学習日</span><b>'+x.p.days+'日</b></div><div><span>開始</span><b>'+(x.p.start?fmtDate(x.p.start):'—')+'</b></div><div><span>直近</span><b>'+(x.p.last?fmtDate(x.p.last):'—')+'</b></div></div></div>'}).join(''):'<div class="item">まだ学習資格がありません。</div>';
-    return '<div class="sd-wrap"><div class="sd-section-head"><div><div class="kicker">QUALIFICATION OVERVIEW</div><h3>資格の学習状況</h3><div class="muted small">資格ごとの進み具合を一覧で確認。</div></div><span class="badge">'+active+'資格 学習中</span></div><div class="sd-summary"><div><span>学習時間</span><strong>'+minutesText(total)+'</strong></div><div><span>学習資格数</span><strong>'+active+'資格</strong></div><div><span>平均</span><strong>'+minutesText(active?Math.round(total/active):0)+'</strong></div></div>'+cards+'</div>';
+    function statusOf(qq){
+      if(qq.result_mode!=='subject')return qq.result;
+      var ss=subjects.filter(function(s){return s.qualification_id===qq.id});
+      return ss.some(function(s){return s.result==='failed'})?'failed':ss.length&&ss.every(function(s){return s.result==='passed'})?'passed':null;
+    }
+    function statusBadge(v){
+      var label=v==='passed'?'合格':v==='failed'?'不合格':'未入力';
+      var cls=v==='passed'?' good':v==='failed'?' bad':'';
+      return '<span class="badge'+cls+'">'+label+'</span>';
+    }
+    var rows=q.map(function(qq){
+      var ps=projectStats(qq,st),exam=qq.exam_date?Math.ceil((parseDate(qq.exam_date)-parseDate(studyDay()))/86400000):null;
+      return {q:qq,p:ps,exam:exam,status:statusBadge(statusOf(qq))};
+    }).filter(function(x){return x.p.total>0||x.q.exam_date}).sort(function(a,b){return b.p.total-a.p.total});
+    var max=rows.reduce(function(a,x){return Math.max(a,x.p.total)},0)||1;
+    var cards=rows.length?rows.map(function(x){
+      var examText=x.exam==null?'試験日未設定':x.exam>=0?'試験まで '+x.exam+'日':'試験済み';
+      return '<div class="item clickable" onclick="(window.showQualificationResultAware||window.showQualification)(\''+x.q.id+'\')"><div class="row" style="justify-content:space-between"><b>'+escapeHtml(x.q.name)+'</b><strong>'+minutesText(x.p.total)+'</strong></div><div class="row" style="margin-top:7px">'+x.status+'<span class="badge">'+escapeHtml(examText)+'</span></div><div class="bar" style="margin:8px 0"><div style="width:'+Math.round(x.p.total/max*100)+'%"></div></div><span class="muted small">学習日 '+x.p.days+'日'+(x.p.start?' ・ 開始 '+fmtDate(x.p.start):'')+'</span></div>';
+    }).join(''):'<div class="item">まだ勉強記録がありません。</div>';
+    return '<div class="sd-wrap">'+cards+'</div>';
   }
   function renderQualification(st,q){
     var rows=q.map(function(qq){var ps=projectStats(qq,st);return {q:qq,total:ps.total,days:ps.days,start:ps.start}}).filter(function(x){return x.total>0||x.q.exam_date}).sort(function(a,b){return b.total-a.total});
