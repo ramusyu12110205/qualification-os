@@ -97,8 +97,7 @@
     applySort(subjectId,getSaved(subjectId),container);
   }
 
-  // 「今日の復習」も、科目詳細と同じ並び順設定を使う。
-  // 設定がない場合は数字順を初期値にする。
+  // 「今日の復習」は科目ごとの並び順設定には連動させず、常に問題番号順にする。
   function sortDueReviewItems(){
     const list=document.getElementById('reviewList');
     if(!list)return;
@@ -107,23 +106,14 @@
         return !!el.querySelector('.dueCheck');
       });
       if(!items.length)return;
-      const firstCheck=items[0].querySelector('.dueCheck');
-      const firstProblem=firstCheck&&typeof problems!=='undefined'&&Array.isArray(problems)
-        ? problems.find(function(p){return p.id===firstCheck.dataset.id})
-        : null;
-      const subjectId=firstProblem?.subject_id;
-      if(!subjectId)return;
-      const mode=getSaved(subjectId);
       const sorted=items.slice().sort(function(a,b){
         const ca=a.querySelector('.dueCheck'),cb=b.querySelector('.dueCheck');
-        const pa=ca&&problems.find(function(p){return p.id===ca.dataset.id}),pb=cb&&problems.find(function(p){return p.id===cb.dataset.id});
-        if(mode==='review'){
-          const da=reviewTime(pa),db=reviewTime(pb);
-          if(da!==db)return da-db;
-        }else if(mode==='master'){
-          const ra=masterRank(pa),rb=masterRank(pb);
-          if(ra!==rb)return rb-ra;
-        }
+        const pa=ca&&typeof problems!=='undefined'&&Array.isArray(problems)
+          ? problems.find(function(p){return p.id===ca.dataset.id})
+          : null;
+        const pb=cb&&typeof problems!=='undefined'&&Array.isArray(problems)
+          ? problems.find(function(p){return p.id===cb.dataset.id})
+          : null;
         const na=numberOf(pa),nb=numberOf(pb);
         if(na!==nb)return na-nb;
         return String(pa?.name||'').localeCompare(String(pb?.name||''),'ja');
