@@ -56,13 +56,16 @@ jobs:
           p = Path('qualification-result-enhance-v2.js')
           s = p.read_text(encoding='utf-8')
           marker = 'window.__subjectTimeChartPatchInstalled'
-          start_marker = '\\n(function(){\n  function minutesTextChart'
           if marker in s:
-              s = s[:s.rfind(start_marker)] if start_marker in s else s
+              for start_marker in ("\n(function(){\n  function minutesTextChart", "\\n(function(){\\n  function minutesTextChart"):
+                  pos = s.rfind(start_marker)
+                  if pos != -1:
+                      s = s[:pos]
+                      break
           addition = '''
 (function(){
   function minutesTextChart(m){m=Math.max(0,Math.round(Number(m)||0));if(!m)return '0分';var h=Math.floor(m/60),min=m%60;return h?(min?h+'時間'+min+'分':h+'時間'):min+'分'}
-  function escChart(v){return String(v==null?'':v).replace(/[&<>\\"']/g,function(c){return({'&':'&amp;','<':'&lt;','>':'&gt;','\\"':'&quot;',"'":'&#39;'})[c]})}
+  function escChart(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]})}
   function renderChart(id,panel){
     var ss=subjects.filter(function(s){return s.qualification_id===id});
     var rows=ss.map(function(s){return {name:s.name,minutes:sessions.filter(function(x){return x.subject_id===s.id}).reduce(function(a,x){return a+Number(x.minutes||0)},0)}}).filter(function(r){return r.minutes>0}).sort(function(a,b){return b.minutes-a.minutes});
