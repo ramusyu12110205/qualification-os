@@ -53,35 +53,14 @@ jobs:
         run: |
           python - <<'PY'
           from pathlib import Path
-          import re
+          import base64, re
           p = Path('study-dashboard-enhance.js')
           s = p.read_text(encoding='utf-8')
-          if 'QUALIFICATION OVERVIEW' in s:
+          marker = 'QUALIFICATION OVERVIEW'
+          if marker in s:
               pattern = r"  function renderQualificationOverview\(st,q\)\{.*?\n  function renderQualification\(st,q\)\{"
-              replacement = """  function renderQualificationOverview(st,q){
-    function statusOf(qq){
-      if(qq.result_mode!=='subject')return qq.result;
-      var ss=subjects.filter(function(s){return s.qualification_id===qq.id});
-      return ss.some(function(s){return s.result==='failed'})?'failed':ss.length&&ss.every(function(s){return s.result==='passed'})?'passed':null;
-    }
-    function statusBadge(v){
-      var label=v==='passed'?'合格':v==='failed'?'不合格':'未入力';
-      var cls=v==='passed'?' good':v==='failed'?' bad':'';
-      return '<span class=\"badge'+cls+'\">'+label+'</span>';
-    }
-    var rows=q.map(function(qq){
-      var ps=projectStats(qq,st),exam=qq.exam_date?Math.ceil((parseDate(qq.exam_date)-parseDate(studyDay()))/86400000):null;
-      return {q:qq,p:ps,exam:exam,status:statusOf(qq)};
-    }).filter(function(x){return x.p.total>0||x.q.exam_date}).sort(function(a,b){return b.p.total-a.p.total});
-    var max=rows.reduce(function(a,x){return Math.max(a,x.p.total)},0)||1;
-    var cards=rows.length?rows.map(function(x){
-      var examText=x.exam==null?'試験日未設定':x.exam>=0?'試験まで '+x.exam+'日':'試験済み';
-      return '<div class=\"item clickable\" onclick=\"(window.showQualificationResultAware||window.showQualification)(\\\''+x.q.id+'\\\')\"><div class=\"row\" style=\"justify-content:space-between\"><b>'+escapeHtml(x.q.name)+'</b><strong>'+minutesText(x.p.total)+'</strong></div><div class=\"row\" style=\"margin-top:7px\">'+statusBadge(x.status)+'<span class=\"badge\">'+escapeHtml(examText)+'</span></div><div class=\"bar\" style=\"margin:8px 0\"><div style=\"width:'+Math.round(x.p.total/max*100)+'%\"></div></div><span class=\"muted small\">学習日 '+x.p.days+'日'+(x.p.start?' ・ 開始 '+fmtDate(x.p.start):'')+'</span></div>';
-    }).join(''):'<div class=\"item\">まだ勉強記録がありません。</div>';
-    return '<div class=\"sd-wrap\">'+cards+'</div>';
-  }
-  function renderQualification(st,q){"""
-              ns,n = re.subn(pattern, replacement, s, count=1, flags=re.S)
+              replacement = base64.b64decode('ICBmdW5jdGlvbiByZW5kZXJRdWFsaWZpY2F0aW9uT3ZlcnZpZXcoc3QscSl7CiAgICBmdW5jdGlvbiBzdGF0dXNPZihxcSl7CiAgICAgIGlmKHFxLnJlc3VsdF9tb2RlIT09J3N1YmplY3QnKXJldHVybiBxcS5yZXN1bHQ7CiAgICAgIHZhciBzcz1zdWJqZWN0cy5maWx0ZXIoZnVuY3Rpb24ocyl7cmV0dXJuIHMucXVhbGlmaWNhdGlvbl9pZD09PXFxLmlkfSk7CiAgICAgIHJldHVybiBzcy5zb21lKGZ1bmN0aW9uKHMpe3JldHVybiBzLnJlc3VsdD09PSdmYWlsZWQnfSk/J2ZhaWxlZCc6c3MubGVuZ3RoJiZzcy5ldmVyeShmdW5jdGlvbihzKXtyZXR1cm4gcy5yZXN1bHQ9PT0ncGFzc2VkJ30pPydwYXNzZWQnOm51bGw7CiAgICB9CiAgICBmdW5jdGlvbiBzdGF0dXNCYWRnZSh2KXsKICAgICAgdmFyIGxhYmVsPXY9PT0ncGFzc2VkJz8n5ZCI5qC8Jzp2PT09J2ZhaWxlZCc/J+S4jeWQiOagvCc6J+acquWFpeWKmyc7CiAgICAgIHZhciBjbHM9dj09PSdwYXNzZWQnPycgZ29vZCc6dj09PSdmYWlsZWQnPycgYmFkJzonJzsKICAgICAgcmV0dXJuICc8c3BhbiBjbGFzcz0iYmFkZ2UnK2NscysnIj4nK2xhYmVsKyc8L3NwYW4+JzsKICAgIH0KICAgIHZhciByb3dzPXEubWFwKGZ1bmN0aW9uKHFxKXsKICAgICAgdmFyIHBzPXByb2plY3RTdGF0cyhxcSxzdCksZXhhbT1xcS5leGFtX2RhdGU/TWF0aC5jZWlsKChwYXJzZURhdGUocXEuZXhhbV9kYXRlKS1wYXJzZURhdGUoc3R1ZHlEYXkoKSkpLzg2NDAwMDAwKTpudWxsOwogICAgICByZXR1cm4ge3E6cXEscDpwcyxleGFtOmV4YW0sc3RhdHVzOnN0YXR1c0JhZGdlKHN0YXR1c09mKHFxKSl9OwogICAgfSkuZmlsdGVyKGZ1bmN0aW9uKHgpe3JldHVybiB4LnAudG90YWw+MHx8eC5xLmV4YW1fZGF0ZX0pLnNvcnQoZnVuY3Rpb24oYSxiKXtyZXR1cm4gYi5wLnRvdGFsLWEucC50b3RhbH0pOwogICAgdmFyIG1heD1yb3dzLnJlZHVjZShmdW5jdGlvbihhLHgpe3JldHVybiBNYXRoLm1heChhLHgucC50b3RhbCl9LDApfHwxOwogICAgdmFyIGNhcmRzPXJvd3MubGVuZ3RoP3Jvd3MubWFwKGZ1bmN0aW9uKHgpewogICAgICB2YXIgZXhhbVRleHQ9eC5leGFtPT1udWxsPyfoqabpqJPml6XmnKroqK3lrponOnguZXhhbT49MD8n6Kmm6aiT44G+44GnICcreC5leGFtKyfml6UnOifoqabpqJPmuIjjgb8nOwogICAgICByZXR1cm4gJzxkaXYgY2xhc3M9Iml0ZW0gY2xpY2thYmxlIiBvbmNsaWNrPSIod2luZG93LnNob3dRdWFsaWZpY2F0aW9uUmVzdWx0QXdhcmV8fHdpbmRvdy5zaG93UXVhbGlmaWNhdGlvbikoXCcnK3gucS5pZCsnXCcpIj48ZGl2IGNsYXNzPSJyb3ciIHN0eWxlPSJqdXN0aWZ5LWNvbnRlbnQ6c3BhY2UtYmV0d2VlbiI+PGI+Jytlc2NhcGVIdG1sKHgucS5uYW1lKSsnPC9iPjxzdHJvbmc+JyttaW51dGVzVGV4dCh4LnAudG90YWwpKyc8L3N0cm9uZz48L2Rpdj48ZGl2IGNsYXNzPSJyb3ciIHN0eWxlPSJtYXJnaW4tdG9wOjdweCI+Jyt4LnN0YXR1cysnPHNwYW4gY2xhc3M9ImJhZGdlIj4nK2VzY2FwZUh0bWwoZXhhbVRleHQpKyc8L3NwYW4+PC9kaXY+PGRpdiBjbGFzcz0iYmFyIiBzdHlsZT0ibWFyZ2luOjhweCAwIj48ZGl2IHN0eWxlPSJ3aWR0aDonK01hdGgucm91bmQoeC5wLnRvdGFsL21heCoxMDApKyclIj48L2Rpdj48L2Rpdj48c3BhbiBjbGFzcz0ibXV0ZWQgc21hbGwiPuWtpue/kuaXpSAnK3gucC5kYXlzKyfml6UnKyh4LnAuc3RhcnQ/JyDjg7sg6ZaL5aeLICcrZm10RGF0ZSh4LnAuc3RhcnQpOicnKSsnPC9zcGFuPjwvZGl2Pic7CiAgICB9KS5qb2luKCcnKTonPGRpdiBjbGFzcz0iaXRlbSI+44G+44Gg5YuJ5by36KiY6Yyy44GM44GC44KK44G+44Gb44KT44CCPC9kaXY+JzsKICAgIHJldHVybiAnPGRpdiBjbGFzcz0ic2Qtd3JhcCI+JytjYXJkcysnPC9kaXY+JzsKICB9CiAgZnVuY3Rpb24gcmVuZGVyUXVhbGlmaWNhdGlvbihzdCxxKXs=') .decode('utf-8')
+              ns, n = re.subn(pattern, replacement, s, count=1, flags=re.S)
               if n != 1:
                   raise SystemExit('qualification overview patch target not found')
               p.write_text(ns, encoding='utf-8')
