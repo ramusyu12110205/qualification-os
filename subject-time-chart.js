@@ -68,6 +68,6 @@
   if(window.__qosProblemSortLoading)return;
   window.__qosProblemSortLoading=true;
   var s=document.createElement('script');
-  s.src='subject-problem-sort.js?v=20260929-2';
+  s.src='subject-problem-sort.js?v=20260929-3';
   document.head.appendChild(s);
 })();
