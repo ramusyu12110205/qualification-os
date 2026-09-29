@@ -1,6 +1,6 @@
 (function(){
   function mt(m){m=Math.round(Number(m)||0);var h=Math.floor(m/60),n=m%60;return h?(n?h+'時間'+n+'分':h+'時間'):n+'分'}
-  function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]})}
+  function esc(v){return String(v==null?'':v).replace(/[&<>\"']/g,function(c){return({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'})[c]})}
   function getVisibleSubjectIds(box){
     var ids=[];
     box.querySelectorAll('.item[onclick]').forEach(function(el){
@@ -61,4 +61,13 @@
   }
   function boot(){install();setTimeout(install,300);setTimeout(install,1000);setTimeout(install,2000);}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();
+})();
+
+// 科目詳細の問題並び順切替を読み込む
+(function(){
+  if(window.__qosProblemSortLoading)return;
+  window.__qosProblemSortLoading=true;
+  var s=document.createElement('script');
+  s.src='subject-problem-sort.js?v=20260929-1';
+  document.head.appendChild(s);
 })();
