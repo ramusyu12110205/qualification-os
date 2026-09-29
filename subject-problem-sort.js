@@ -97,17 +97,56 @@
     applySort(subjectId,getSaved(subjectId),container);
   }
 
+  // 「今日の復習」も、科目詳細と同じ並び順設定を使う。
+  // 設定がない場合は数字順を初期値にする。
+  function sortDueReviewItems(){
+    const list=document.getElementById('reviewList');
+    if(!list)return;
+    list.querySelectorAll('details').forEach(function(details){
+      const items=[...details.querySelectorAll(':scope > div > .item')].filter(function(el){
+        return !!el.querySelector('.dueCheck');
+      });
+      if(!items.length)return;
+      const firstCheck=items[0].querySelector('.dueCheck');
+      const firstProblem=firstCheck&&typeof problems!=='undefined'&&Array.isArray(problems)
+        ? problems.find(function(p){return p.id===firstCheck.dataset.id})
+        : null;
+      const subjectId=firstProblem?.subject_id;
+      if(!subjectId)return;
+      const mode=getSaved(subjectId);
+      const sorted=items.slice().sort(function(a,b){
+        const ca=a.querySelector('.dueCheck'),cb=b.querySelector('.dueCheck');
+        const pa=ca&&problems.find(function(p){return p.id===ca.dataset.id}),pb=cb&&problems.find(function(p){return p.id===cb.dataset.id});
+        if(mode==='review'){
+          const da=reviewTime(pa),db=reviewTime(pb);
+          if(da!==db)return da-db;
+        }else if(mode==='master'){
+          const ra=masterRank(pa),rb=masterRank(pb);
+          if(ra!==rb)return rb-ra;
+        }
+        const na=numberOf(pa),nb=numberOf(pb);
+        if(na!==nb)return na-nb;
+        return String(pa?.name||'').localeCompare(String(pb?.name||''),'ja');
+      });
+      const container=details.querySelector(':scope > div');
+      if(container)sorted.forEach(function(el){container.appendChild(el)});
+    });
+  }
+
+  window.__qosSortDueReviewItems=sortDueReviewItems;
+
   const originalShowUnit=window.showUnit;
   window.showUnit=function(id){
     window.__qosCurrentSubjectId=id;
     const result=originalShowUnit?originalShowUnit.apply(this,arguments):undefined;
     setTimeout(installForCurrentUnit,30);
     setTimeout(installForCurrentUnit,150);
+    setTimeout(sortDueReviewItems,150);
     return result;
   };
 
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){setTimeout(installForCurrentUnit,100)});
-  else setTimeout(installForCurrentUnit,100);
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){setTimeout(installForCurrentUnit,100);setTimeout(sortDueReviewItems,100)});
+  else {setTimeout(installForCurrentUnit,100);setTimeout(sortDueReviewItems,100)}
 
   const style=document.createElement('style');
   style.textContent='.qos-problem-sort select{min-width:190px}.qos-problem-sort{background:linear-gradient(145deg,#10182a,#0c1220)}@media(max-width:700px){.qos-problem-sort .row>div:last-child{width:100%;min-width:0}.qos-problem-sort select{width:100%}}';
