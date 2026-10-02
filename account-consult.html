@@ -24,6 +24,10 @@ input,textarea,select{width:100%;padding:13px;border:1px solid #394563;border-ra
 .inline-panel{margin-top:12px;padding:14px;border:1px solid #33405f;border-radius:15px;background:#0c1322}.check-row{display:grid;grid-template-columns:auto 1fr auto;gap:9px;align-items:center;padding:9px 0;border-bottom:1px solid #26314d}.check-row:last-child{border-bottom:0}.check-row input{width:auto;min-height:auto}.check-row select{width:130px;min-height:38px;padding:7px;font-size:13px}
 .auth{min-height:70vh;display:flex;align-items:center;justify-content:center}.authbox{max-width:480px;width:100%;text-align:center}
 .hidden{display:none!important}
+.tabs{position:sticky;top:10px;z-index:20;display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:0 0 14px;padding:7px;background:rgba(8,12,23,.88);backdrop-filter:blur(12px);border:1px solid var(--line);border-radius:16px;box-shadow:0 10px 28px rgba(0,0,0,.22)}
+.tab-button{width:100%;background:#11182a;color:#aeb8d3;border:1px solid #2b3550;border-radius:11px;padding:11px 12px;min-height:44px;font-weight:900}
+.tab-button.active{background:linear-gradient(145deg,#30205f,#21183e);color:#fff;border-color:#7257c8;box-shadow:0 0 0 1px rgba(139,92,246,.2)}
+.tab-panel.hidden{display:none!important}
 .ai-panel{margin-top:16px;padding:16px;border:1px solid #4a3d78;border-radius:16px;background:linear-gradient(145deg,#15132a,#0c1220)}
 .ai-label{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#c7b8ff;font-weight:900;margin-bottom:5px}
 .ai-answer{white-space:pre-wrap;line-height:1.75}
@@ -31,7 +35,7 @@ input,textarea,select{width:100%;padding:13px;border:1px solid #394563;border-ra
 .ai-candidate-name{font-weight:900}.ai-reason{color:#b6c0d8;font-size:13px;margin-top:3px;line-height:1.6}
 .ai-caution{margin-top:12px;padding:11px 12px;border-radius:12px;background:#1b1b29;border:1px solid #45405a;color:#d7d0e8;font-size:13px;line-height:1.6}
 .ai-chip{display:inline-block;background:#241c45;border:1px solid #493b78;color:#d9d0ff;border-radius:999px;padding:4px 9px;font-size:12px;font-weight:800;margin:3px 4px 0 0}.tax-chip{display:inline-flex;align-items:center;gap:5px;background:#172c36;border:1px solid #315968;border-radius:999px;padding:4px 9px;font-size:12px;font-weight:800;margin:3px 4px 0 0;color:#c9eef5}.consult-target{display:inline-block;background:#1d2038;border:1px solid #3b4267;color:#cbd3ef;border-radius:999px;padding:3px 8px;font-size:11px;font-weight:800;margin-left:6px}
-@media(max-width:700px){body{padding:12px 12px 80px}.box-grid{grid-template-columns:1fr 1fr}.hero-title{font-size:24px}.consult-head{gap:8px}.toolbar{align-items:stretch}.toolbar input{min-width:100%}}
+@media(max-width:700px){body{padding:12px 12px 80px}.tabs{top:6px;gap:5px;padding:5px}.tab-button{padding:10px 6px;font-size:13px}.box-grid{grid-template-columns:1fr 1fr}.hero-title{font-size:24px}.consult-head{gap:8px}.toolbar{align-items:stretch}.toolbar input{min-width:100%}}
 @media(max-width:430px){.box-grid{grid-template-columns:1fr}.top h1{font-size:25px}.consult-row{flex-direction:column}.consult-card .actions{width:100%}.consult-card .actions button{flex:1}}
 </style>
 </head>
@@ -60,41 +64,53 @@ input,textarea,select{width:100%;padding:13px;border:1px solid #394563;border-ra
   </div>
 </header>
 
-<section class="card">
-  <div class="consult-head">
-    <div>
-      <div class="kicker">NEW CONSULTATION</div>
-      <h2 class="hero-title">新しく相談する</h2>
-      <p class="muted">AIに相談すると、回答・候補科目まで自動で相談履歴に保存されます。</p>
-  <div class="notice small">⚠ 顧客名・個人情報・口座情報など、機密情報は入力しないでください。AIの回答は最終的な税務・会計判断ではありません。</div>
+<nav class="tabs" aria-label="勘定科目相談メニュー">
+  <button id="tab-consult" class="tab-button active" onclick="switchTab('consult')">相談する</button>
+  <button id="tab-history" class="tab-button" onclick="switchTab('history')">過去の相談</button>
+  <button id="tab-box" class="tab-button" onclick="switchTab('box')">勘定科目BOX</button>
+</nav>
+
+<section id="panel-consult" class="tab-panel">
+  <div class="card">
+    <div class="consult-head">
+      <div>
+        <div class="kicker">NEW CONSULTATION</div>
+        <h2 class="hero-title">新しく相談する</h2>
+        <p class="muted">AIに相談すると、回答・候補科目・課税区分まで自動で相談履歴に保存されます。</p>
+        <div class="notice small">⚠ 顧客名・個人情報・口座情報など、機密情報は入力しないでください。AIの回答は最終的な税務・会計判断ではありません。</div>
+      </div>
+      <div class="icon">💬</div>
     </div>
-    <div class="icon">💬</div>
+    <label for="question">何について困っていますか？</label>
+    <input id="question" maxlength="300" placeholder="例：SDカード、駐車場代、道路使用許可申請書">
+    <div class="actions"><button class="primary" onclick="askAI()" id="aiButton">🤖 AIに相談する</button><button class="light" onclick="saveConsultation()" id="manualSaveButton">相談だけ保存</button></div>
+    <div id="consultStatus" class="notice hidden"></div>
+    <div id="aiResult" class="ai-panel hidden"></div>
   </div>
-  <label for="question">何について困っていますか？</label>
-  <input id="question" maxlength="300" placeholder="例：SDカード、駐車場代、道路使用許可申請書">
-  <div class="actions"><button class="primary" onclick="askAI()" id="aiButton">🤖 AIに相談する</button><button class="light" onclick="saveConsultation()" id="manualSaveButton">相談だけ保存</button></div>
-  <div id="consultStatus" class="notice hidden"></div>
-  <div id="aiResult" class="ai-panel hidden"></div>
 </section>
 
-<section class="card">
-  <div class="consult-head">
-    <div><div class="kicker">CONSULTATION HISTORY</div><h2>過去の相談</h2></div>
-    <span class="badge" id="historyCount">0件</span>
+<section id="panel-history" class="tab-panel hidden">
+  <div class="card">
+    <div class="consult-head">
+      <div><div class="kicker">CONSULTATION HISTORY</div><h2>過去の相談</h2></div>
+      <span class="badge" id="historyCount">0件</span>
+    </div>
+    <div class="toolbar">
+      <input id="searchInput" placeholder="過去の相談を検索（例：SD・消耗品費・課税仕入10%）" oninput="renderHistory()">
+      <button class="light" onclick="clearSearch()">検索をクリア</button>
+    </div>
+    <div id="history"></div>
   </div>
-  <div class="toolbar">
-    <input id="searchInput" placeholder="過去の相談を検索（例：SD）" oninput="renderHistory()">
-    <button class="light" onclick="clearSearch()">検索をクリア</button>
-  </div>
-  <div id="history"></div>
 </section>
 
-<section class="card">
-  <div class="kicker">ACCOUNT TITLE BOX</div>
-  <h2>勘定科目BOX</h2>
-  <p class="muted small">勘定科目もユーザーごとのDBデータです。将来、AIから新しいBOXを追加できます。</p>
-  <div id="boxGrid" class="box-grid"></div>
-  <div id="boxDetail" class="inline-panel hidden"></div>
+<section id="panel-box" class="tab-panel hidden">
+  <div class="card">
+    <div class="kicker">ACCOUNT TITLE BOX</div>
+    <h2>勘定科目BOX</h2>
+    <p class="muted small">勘定科目もユーザーごとのDBデータです。BOXを選ぶと、その科目に紐付いた相談だけを表示します。</p>
+    <div id="boxGrid" class="box-grid"></div>
+    <div id="boxDetail" class="inline-panel hidden"></div>
+  </div>
 </section>
 </div>
 
@@ -138,7 +154,7 @@ async function loginWithGoogle(){
 async function logout(){await sb.auth.signOut()}
 async function boot(user){
   currentUser=user;showApp();document.getElementById('userLabel').textContent=user.email?'・'+user.email:'';
-  try{await ensureDefaultAccounts();await loadData()}catch(e){console.error(e);showStatus('データの読み込みに失敗しました：'+esc(e.message),true)}
+  try{await ensureDefaultAccounts();await loadData();switchTab('consult')}catch(e){console.error(e);showStatus('データの読み込みに失敗しました：'+esc(e.message),true)}
 }
 async function ensureDefaultAccounts(){
   const rows=DEFAULT_ACCOUNTS.map(([name,sort_order])=>({user_id:currentUser.id,name,sort_order,archived:false}));
@@ -156,6 +172,16 @@ async function loadData(){
   renderAll();
 }
 function renderAll(){renderHistory();renderBoxes();if(selectedBoxId)renderBoxDetail(selectedBoxId)}
+function switchTab(tab){
+  const tabs=['consult','history','box'];
+  if(!tabs.includes(tab)) tab='consult';
+  tabs.forEach(name=>{
+    document.getElementById('panel-'+name)?.classList.toggle('hidden',name!==tab);
+    document.getElementById('tab-'+name)?.classList.toggle('active',name===tab);
+  });
+  if(tab==='history') renderHistory();
+  if(tab==='box'){renderBoxes();if(selectedBoxId)renderBoxDetail(selectedBoxId);}
+}
 function clearSearch(){document.getElementById('searchInput').value='';renderHistory()}
 function aiSummary(text){
   const value=String(text??'').replace(/\s+/g,' ').trim();
@@ -231,7 +257,7 @@ function renderBoxes(){
   const counts={};relations.forEach(r=>counts[r.account_id]=(counts[r.account_id]||0)+1);
   document.getElementById('boxGrid').innerHTML=accounts.map(a=>'<div class="box '+(selectedBoxId===a.id?'active':'')+'" onclick="openAccountBox(\''+a.id+'\')"><strong>'+esc(a.name)+'</strong><span class="muted small">相談 '+(counts[a.id]||0)+'件</span></div>').join('');
 }
-function openAccountBox(id){selectedBoxId=id;renderBoxes();renderBoxDetail(id)}
+function openAccountBox(id){selectedBoxId=id;switchTab('box');renderBoxes();renderBoxDetail(id)}
 function renderBoxDetail(id){
   const account=accounts.find(a=>a.id===id);if(!account)return;
   const ids=new Set(relations.filter(r=>r.account_id===id).map(r=>r.consultation_id));
@@ -323,7 +349,7 @@ async function saveConsultation(){
   const input=document.getElementById('question');const question=input.value.trim();
   if(!question){showStatus('相談内容を入力してください。',true);return}
   clearStatus();
-  const payload={user_id:currentUser.id,question};
+  const payload={user_id:currentUser.id,question,consultation_type:'general',ai_tax_category_candidates:[]};
   const {data,error}=await sb.from('accounting_consultations').insert(payload).select().single();
   if(error){showStatus('保存に失敗しました：'+esc(error.message),true);return}
   consultations=[data,...consultations];input.value='';renderHistory();renderBoxes();
