@@ -4,35 +4,53 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>勘定科目相談 | 資格勉強OS</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
-:root{--bg:#080c17;--card:#12182a;--card2:#0e1422;--text:#f5f7ff;--muted:#98a3bf;--accent:#8b5cf6;--cyan:#22d3ee;--good:#34d399;--line:#26314d}
+:root{--bg:#080c17;--card:#12182a;--card2:#0e1422;--text:#f5f7ff;--muted:#98a3bf;--accent:#8b5cf6;--cyan:#22d3ee;--good:#34d399;--danger:#fb7185;--line:#26314d}
 *{box-sizing:border-box}
 body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;max-width:980px;margin:auto;padding:18px 18px 90px;background:radial-gradient(circle at top left,#1a1640 0,#090e1a 42%,#050812 100%);color:var(--text)}
 h1,h2,h3{margin:0}h1{font-size:30px}h2{font-size:22px}.muted{color:var(--muted)}.small{font-size:13px}
 .card{background:linear-gradient(145deg,rgba(18,24,42,.96),rgba(10,15,28,.98));border:1px solid var(--line);border-radius:22px;padding:20px;margin:14px 0;box-shadow:0 15px 45px rgba(0,0,0,.22)}
-.top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px}.brand{font-weight:900}.kicker{font-size:11px;letter-spacing:.13em;text-transform:uppercase;color:#b6c0dd;font-weight:900}
-button{border:0;border-radius:11px;padding:10px 15px;font-weight:850;cursor:pointer;min-height:42px}
-.primary{background:var(--accent);color:#fff}.light{background:#222b43;color:#e8ecff;border:1px solid #33405f}
-input,textarea{width:100%;padding:13px;border:1px solid #394563;border-radius:12px;background:#0c1322;color:#f4f6ff;font-size:16px;min-height:48px}
-textarea{min-height:110px;resize:vertical}label{display:block;font-weight:850;margin:0 0 7px}
-.consult-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}.icon{font-size:42px}.hero-title{font-size:28px;margin-top:3px}.notice{margin-top:14px;padding:12px 14px;border-radius:13px;background:#151d32;border:1px solid #33405f;color:#cbd4ea}
-.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px}.kicker{font-size:11px;letter-spacing:.13em;text-transform:uppercase;color:#b6c0dd;font-weight:900}
+button{border:0;border-radius:11px;padding:10px 15px;font-weight:850;cursor:pointer;min-height:42px}.primary{background:var(--accent);color:#fff}.light{background:#222b43;color:#e8ecff;border:1px solid #33405f}.danger{background:#3d1725;color:#ffc1cf;border:1px solid #6b2941}
+input,textarea,select{width:100%;padding:13px;border:1px solid #394563;border-radius:12px;background:#0c1322;color:#f4f6ff;font-size:16px;min-height:48px}textarea{min-height:110px;resize:vertical}label{display:block;font-weight:850;margin:0 0 7px}
+.consult-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}.icon{font-size:42px}.hero-title{font-size:28px;margin-top:3px}
+.notice{margin-top:14px;padding:12px 14px;border-radius:13px;background:#151d32;border:1px solid #33405f;color:#cbd4ea}.notice.error{border-color:#6b2941;color:#ffc1cf}
+.actions,.toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.toolbar{align-items:center}.toolbar input{flex:1;min-width:220px}
 .empty{text-align:center;padding:34px 16px;border:1px dashed #33405f;border-radius:15px;color:var(--muted)}
-.consult-card{border:1px solid var(--line);border-radius:16px;padding:15px;margin-top:10px;background:#0f1627}.consult-row{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}.badge{display:inline-block;background:#261b50;color:#d7ceff;border:1px solid #45337c;border-radius:999px;padding:4px 9px;font-size:12px;font-weight:800}
-.box-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.box{border:1px solid #33405f;border-radius:15px;padding:15px;background:#0f1627;min-height:100px}.box strong{display:block;font-size:17px;margin-bottom:6px}
-.future{opacity:.9}
-@media(max-width:700px){body{padding:12px 12px 80px}.top{align-items:flex-start}.box-grid{grid-template-columns:1fr 1fr}.hero-title{font-size:24px}.consult-head{gap:8px}}
-@media(max-width:430px){.box-grid{grid-template-columns:1fr}.top h1{font-size:25px}}
+.consult-card{border:1px solid var(--line);border-radius:16px;padding:15px;margin-top:10px;background:#0f1627}.consult-row{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}.badge{display:inline-block;background:#261b50;color:#d7ceff;border:1px solid #45337c;border-radius:999px;padding:4px 9px;font-size:12px;font-weight:800;margin:3px 4px 0 0}
+.account-chip{display:inline-flex;align-items:center;gap:5px;background:#17243a;border:1px solid #334b72;border-radius:999px;padding:4px 9px;font-size:12px}
+.box-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.box{border:1px solid #33405f;border-radius:15px;padding:15px;background:#0f1627;min-height:100px;cursor:pointer;transition:.15s}.box:hover{border-color:#53638f;box-shadow:0 8px 24px rgba(0,0,0,.2)}.box.active{border-color:#7c5bd6;box-shadow:0 0 0 1px rgba(139,92,246,.25)}.box strong{display:block;font-size:17px;margin-bottom:6px}
+.inline-panel{margin-top:12px;padding:14px;border:1px solid #33405f;border-radius:15px;background:#0c1322}.check-row{display:grid;grid-template-columns:auto 1fr auto;gap:9px;align-items:center;padding:9px 0;border-bottom:1px solid #26314d}.check-row:last-child{border-bottom:0}.check-row input{width:auto;min-height:auto}.check-row select{width:130px;min-height:38px;padding:7px;font-size:13px}
+.auth{min-height:70vh;display:flex;align-items:center;justify-content:center}.authbox{max-width:480px;width:100%;text-align:center}
+.hidden{display:none!important}
+@media(max-width:700px){body{padding:12px 12px 80px}.box-grid{grid-template-columns:1fr 1fr}.hero-title{font-size:24px}.consult-head{gap:8px}.toolbar{align-items:stretch}.toolbar input{min-width:100%}}
+@media(max-width:430px){.box-grid{grid-template-columns:1fr}.top h1{font-size:25px}.consult-row{flex-direction:column}}
 </style>
 </head>
 <body>
+<div id="authScreen" class="auth">
+  <div class="card authbox">
+    <div style="font-size:48px">🧾</div>
+    <div class="kicker">ACCOUNTING CONSULT</div>
+    <h1 style="margin-top:4px">勘定科目相談</h1>
+    <p class="muted">資格OSと同じアカウントでログインしてください。</p>
+    <button class="primary" style="width:100%;margin-top:12px" onclick="loginWithGoogle()">Googleでログイン</button>
+    <p id="authError" class="small" style="color:#ff9aad;margin-top:12px"></p>
+  </div>
+</div>
+
+<div id="app" class="hidden">
 <header class="top">
   <div>
     <div class="kicker">ACCOUNTING CONSULT</div>
     <h1>🧾 勘定科目相談</h1>
-    <div class="muted small">仕訳入力で迷ったときの、自分専用の相談部屋</div>
+    <div class="muted small">仕訳入力で迷ったときの、自分専用の相談部屋 <span id="userLabel"></span></div>
   </div>
-  <button class="light" onclick="location.href='index.html'">← 資格OS</button>
+  <div class="actions" style="margin-top:0">
+    <button class="light" onclick="location.href='index.html'">← 資格OS</button>
+    <button class="light" onclick="logout()">ログアウト</button>
+  </div>
 </header>
 
 <section class="card">
@@ -40,16 +58,14 @@ textarea{min-height:110px;resize:vertical}label{display:block;font-weight:850;ma
     <div>
       <div class="kicker">NEW CONSULTATION</div>
       <h2 class="hero-title">新しく相談する</h2>
-      <p class="muted">まずは「何について困っているか」だけ入力できます。</p>
+      <p class="muted">まずは質問だけ保存できます。AI回答欄は将来の連携用に確保しています。</p>
     </div>
     <div class="icon">💬</div>
   </div>
   <label for="question">何について困っていますか？</label>
   <input id="question" maxlength="300" placeholder="例：SDカード、駐車場代、道路使用許可申請書">
-  <div class="actions">
-    <button class="primary" onclick="startConsult()">相談する</button>
-  </div>
-  <div id="consultStatus" class="notice" style="display:none"></div>
+  <div class="actions"><button class="primary" onclick="saveConsultation()">相談を保存</button></div>
+  <div id="consultStatus" class="notice hidden"></div>
 </section>
 
 <section class="card">
@@ -57,38 +73,172 @@ textarea{min-height:110px;resize:vertical}label{display:block;font-weight:850;ma
     <div><div class="kicker">CONSULTATION HISTORY</div><h2>過去の相談</h2></div>
     <span class="badge" id="historyCount">0件</span>
   </div>
-  <p class="muted small">将来、AIの回答と相談内容をここへ保存し、勘定科目BOXからも参照できるようにします。</p>
-  <div id="history">
-    <div class="empty">まだ保存された相談はありません。<br>AI連携後、ここに相談カードが蓄積されます。</div>
+  <div class="toolbar">
+    <input id="searchInput" placeholder="過去の相談を検索（例：SD）" oninput="renderHistory()">
+    <button class="light" onclick="clearSearch()">検索をクリア</button>
   </div>
+  <div id="history"></div>
 </section>
 
 <section class="card">
   <div class="kicker">ACCOUNT TITLE BOX</div>
   <h2>勘定科目BOX</h2>
-  <p class="muted small">将来、相談カードを勘定科目ごとにまとめて参照するための入口です。</p>
-  <div class="box-grid">
-    <div class="box"><strong>消耗品費</strong><span class="muted small">相談 0件</span></div>
-    <div class="box"><strong>通信費</strong><span class="muted small">相談 0件</span></div>
-    <div class="box"><strong>車両費</strong><span class="muted small">相談 0件</span></div>
-    <div class="box"><strong>広告宣伝費</strong><span class="muted small">相談 0件</span></div>
-    <div class="box"><strong>旅費交通費</strong><span class="muted small">相談 0件</span></div>
-    <div class="box"><strong>租税公課</strong><span class="muted small">相談 0件</span></div>
-  </div>
-  <div class="notice future">※ 現段階ではBOXへの保存・検索はまだ行いません。将来、1つの相談に複数の勘定科目候補を紐付けられる構造へ拡張します。</div>
+  <p class="muted small">勘定科目もユーザーごとのDBデータです。将来、AIから新しいBOXを追加できます。</p>
+  <div id="boxGrid" class="box-grid"></div>
+  <div id="boxDetail" class="inline-panel hidden"></div>
 </section>
+</div>
 
 <script>
-function startConsult(){
-  const q=document.getElementById('question').value.trim();
-  const box=document.getElementById('consultStatus');
-  if(!q){box.style.display='block';box.textContent='相談内容を入力してください。';return}
-  box.style.display='block';
-  box.innerHTML='<strong>相談を受け付けました。</strong><br><span class="muted small">現在はAI連携前のため回答はまだありません。次の段階で、この場所にAIの回答と相談カード保存機能を追加できます。</span>';
+const SUPABASE_URL='https://txprypfzdsfaupguhybl.supabase.co';
+const SUPABASE_PUBLISHABLE_KEY='sb_publishable_qiCaP0cBNhms5-usSDzKlQ_nywzlU36';
+const sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
+
+const DEFAULT_ACCOUNTS=[
+  ['消耗品費',10],['通信費',20],['車両費',30],['広告宣伝費',40],['旅費交通費',50],['租税公課',60]
+];
+let currentUser=null;
+let consultations=[];
+let accounts=[];
+let relations=[];
+let selectedBoxId=null;
+let editingId=null;
+
+function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))}
+function formatDate(s){const d=new Date(s);return isNaN(d)?'—':d.toLocaleString('ja-JP',{year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'})}
+function showStatus(msg,error=false){const el=document.getElementById('consultStatus');el.classList.remove('hidden','error');el.classList.toggle('error',error);el.innerHTML=msg}
+function clearStatus(){document.getElementById('consultStatus').classList.add('hidden')}
+function toast(msg){showStatus(esc(msg));setTimeout(clearStatus,2200)}
+
+async function init(){
+  const {data:{session}}=await sb.auth.getSession();
+  if(session) await boot(session.user); else showAuth();
+  sb.auth.onAuthStateChange(async(event,session)=>{
+    if(event==='SIGNED_IN'&&session) await boot(session.user);
+    if(event==='SIGNED_OUT') showAuth();
+  });
 }
-document.getElementById('question').addEventListener('keydown',function(e){
-  if(e.key==='Enter' && !e.shiftKey){e.preventDefault();startConsult()}
-});
+function showAuth(){document.getElementById('authScreen').classList.remove('hidden');document.getElementById('app').classList.add('hidden')}
+function showApp(){document.getElementById('authScreen').classList.add('hidden');document.getElementById('app').classList.remove('hidden')}
+async function loginWithGoogle(){
+  document.getElementById('authError').textContent='';
+  const redirectTo=window.location.origin+window.location.pathname;
+  const {error}=await sb.auth.signInWithOAuth({provider:'google',options:{redirectTo}});
+  if(error)document.getElementById('authError').textContent=error.message;
+}
+async function logout(){await sb.auth.signOut()}
+async function boot(user){
+  currentUser=user;showApp();document.getElementById('userLabel').textContent=user.email?'・'+user.email:'';
+  try{await ensureDefaultAccounts();await loadData()}catch(e){console.error(e);showStatus('データの読み込みに失敗しました：'+esc(e.message),true)}
+}
+async function ensureDefaultAccounts(){
+  const rows=DEFAULT_ACCOUNTS.map(([name,sort_order])=>({user_id:currentUser.id,name,sort_order,archived:false}));
+  const {error}=await sb.from('accounting_accounts').upsert(rows,{onConflict:'user_id,name'});
+  if(error)throw error;
+}
+async function loadData(){
+  const [c,a,r]=await Promise.all([
+    sb.from('accounting_consultations').select('*').eq('user_id',currentUser.id).order('created_at',{ascending:false}),
+    sb.from('accounting_accounts').select('*').eq('user_id',currentUser.id).eq('archived',false).order('sort_order').order('name'),
+    sb.from('accounting_consultation_accounts').select('*').eq('user_id',currentUser.id)
+  ]);
+  for(const x of [c,a,r])if(x.error)throw x.error;
+  consultations=c.data||[];accounts=a.data||[];relations=r.data||[];
+  renderAll();
+}
+function renderAll(){renderHistory();renderBoxes();if(selectedBoxId)renderBoxDetail(selectedBoxId)}
+function clearSearch(){document.getElementById('searchInput').value='';renderHistory()}
+function renderHistory(){
+  const q=document.getElementById('searchInput').value.trim().toLowerCase();
+  const rows=consultations.filter(c=>!q||c.question.toLowerCase().includes(q));
+  document.getElementById('historyCount').textContent=rows.length+'件';
+  if(!rows.length){document.getElementById('history').innerHTML='<div class="empty">該当する相談はありません。</div>';return}
+  document.getElementById('history').innerHTML=rows.map(renderConsultationCard).join('');
+}
+function linkedAccounts(consultationId){return relations.filter(r=>r.consultation_id===consultationId).map(r=>({...r,account:accounts.find(a=>a.id===r.account_id)})).filter(r=>r.account)}
+function renderConsultationCard(c){
+  const linked=linkedAccounts(c.id);
+  const chips=linked.length?linked.map(r=>'<span class="account-chip">'+esc(r.account.name)+' ・ '+(r.relation_type==='confirmed'?'確定':'候補')+'</span>').join(''):'<span class="muted small">勘定科目未紐付け</span>';
+  return '<article class="consult-card"><div class="consult-row"><div style="flex:1"><div class="kicker">相談</div><h3>'+esc(c.question)+'</h3><div class="muted small" style="margin-top:5px">'+formatDate(c.created_at)+'</div><div style="margin-top:7px">'+chips+'</div></div><div class="actions" style="margin-top:0"><button class="light" onclick="openBindPanel(\''+c.id+'\')">科目を紐付け</button><button class="light" onclick="editConsultation(\''+c.id+'\')">編集</button><button class="danger" onclick="deleteConsultation(\''+c.id+'\')">削除</button></div></div><div id="bind-'+c.id+'"></div></article>';
+}
+function renderBoxes(){
+  const counts={};relations.forEach(r=>counts[r.account_id]=(counts[r.account_id]||0)+1);
+  document.getElementById('boxGrid').innerHTML=accounts.map(a=>'<div class="box '+(selectedBoxId===a.id?'active':'')+'" onclick="openAccountBox(\''+a.id+'\')"><strong>'+esc(a.name)+'</strong><span class="muted small">相談 '+(counts[a.id]||0)+'件</span></div>').join('');
+}
+function openAccountBox(id){selectedBoxId=id;renderBoxes();renderBoxDetail(id)}
+function renderBoxDetail(id){
+  const account=accounts.find(a=>a.id===id);if(!account)return;
+  const ids=new Set(relations.filter(r=>r.account_id===id).map(r=>r.consultation_id));
+  const rows=consultations.filter(c=>ids.has(c.id));
+  const el=document.getElementById('boxDetail');el.classList.remove('hidden');
+  el.innerHTML='<div class="consult-head"><div><div class="kicker">BOX DETAIL</div><h3>'+esc(account.name)+'</h3></div><button class="light" onclick="closeBoxDetail()">閉じる</button></div>'+(
+    rows.length?rows.map(c=>'<div class="consult-card"><div><b>'+esc(c.question)+'</b><div class="muted small">'+formatDate(c.created_at)+'</div></div><div class="actions"><button class="light" onclick="openBindPanel(\''+c.id+'\')">紐付けを編集</button><button class="light" onclick="editConsultation(\''+c.id+'\')">相談を編集</button></div></div>').join('')
+    :'<div class="empty" style="margin-top:10px">このBOXに紐付いた相談はありません。</div>');
+  el.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+function closeBoxDetail(){selectedBoxId=null;document.getElementById('boxDetail').classList.add('hidden');renderBoxes()}
+async function saveConsultation(){
+  const input=document.getElementById('question');const question=input.value.trim();
+  if(!question){showStatus('相談内容を入力してください。',true);return}
+  clearStatus();
+  const payload={user_id:currentUser.id,question};
+  const {data,error}=await sb.from('accounting_consultations').insert(payload).select().single();
+  if(error){showStatus('保存に失敗しました：'+esc(error.message),true);return}
+  consultations=[data,...consultations];input.value='';renderHistory();renderBoxes();
+  showStatus('<strong>相談を保存しました。</strong><br><span class="muted small">次に「科目を紐付け」から勘定科目BOXへ登録できます。</span>');
+}
+function editConsultation(id){
+  const c=consultations.find(x=>x.id===id);if(!c)return;
+  editingId=id;
+  const el=document.getElementById('bind-'+id);
+  el.innerHTML='<div class="inline-panel"><label for="edit-'+id+'">相談内容</label><input id="edit-'+id+'" maxlength="300" value="'+esc(c.question)+'"><div class="actions"><button class="primary" onclick="saveEdit(\''+id+'\')">保存</button><button class="light" onclick="cancelInline(\''+id+'\')">キャンセル</button></div></div>';
+  document.getElementById('edit-'+id).focus();
+}
+async function saveEdit(id){
+  const input=document.getElementById('edit-'+id);const question=input.value.trim();if(!question)return;
+  const {data,error}=await sb.from('accounting_consultations').update({question,updated_at:new Date().toISOString()}).eq('id',id).eq('user_id',currentUser.id).select().single();
+  if(error){showStatus('編集に失敗しました：'+esc(error.message),true);return}
+  consultations=consultations.map(c=>c.id===id?data:c);renderHistory();renderBoxes();toast('相談内容を更新しました');
+}
+function cancelInline(id){const el=document.getElementById('bind-'+id);if(el)el.innerHTML=''}
+async function deleteConsultation(id){
+  const c=consultations.find(x=>x.id===id);if(!c)return;
+  if(!confirm('「'+c.question+'」を削除しますか？'))return;
+  const {error}=await sb.from('accounting_consultations').delete().eq('id',id).eq('user_id',currentUser.id);
+  if(error){showStatus('削除に失敗しました：'+esc(error.message),true);return}
+  consultations=consultations.filter(x=>x.id!==id);relations=relations.filter(r=>r.consultation_id!==id);renderAll();toast('相談を削除しました');
+}
+function openBindPanel(id){
+  const el=document.getElementById('bind-'+id);if(!el)return;
+  const linked=linkedAccounts(id);const linkedMap=new Map(linked.map(r=>[r.account_id,r]));
+  const confirmed=linked.find(r=>r.relation_type==='confirmed')?.account_id||'';
+  el.innerHTML='<div class="inline-panel"><div class="kicker">ACCOUNT LINK</div><h3>勘定科目を紐付け</h3><p class="muted small">複数の候補を選択できます。確定科目は1つだけ指定できます。</p>'+accounts.map(a=>{
+    const r=linkedMap.get(a.id);return '<div class="check-row"><input type="checkbox" id="chk-'+id+'-'+a.id+'" '+(r?'checked':'')+' onchange="syncConfirmOptions(\''+id+'\')"><label for="chk-'+id+'-'+a.id+'" style="margin:0">'+esc(a.name)+'</label><span></span></div>';
+  }).join('')+'<label style="margin-top:12px">確定した勘定科目（任意）</label><select id="confirmed-'+id+'"><option value="">確定なし</option>'+accounts.map(a=>'<option value="'+a.id+'" '+(confirmed===a.id?'selected':'')+'>'+esc(a.name)+'</option>').join('')+'</select><div class="actions"><button class="primary" onclick="saveBindings(\''+id+'\')">紐付けを保存</button><button class="light" onclick="cancelInline(\''+id+'\')">キャンセル</button></div></div>';
+  syncConfirmOptions(id);
+}
+function syncConfirmOptions(id){
+  const select=document.getElementById('confirmed-'+id);if(!select)return;
+  const selected=[...document.querySelectorAll('#bind-'+id+' .check-row input:checked')].map(x=>x.id.split('-').slice(2).join('-'));
+  [...select.options].forEach(o=>{if(o.value)o.disabled=!selected.includes(o.value)});
+  if(select.value&&!selected.includes(select.value))select.value='';
+}
+async function saveBindings(id){
+  const checked=[...document.querySelectorAll('#bind-'+id+' .check-row input:checked')].map(x=>x.id.split('-').slice(2).join('-'));
+  const confirmed=document.getElementById('confirmed-'+id)?.value||'';
+  if(confirmed&&!checked.includes(confirmed)){showStatus('確定科目は選択した科目の中から指定してください。',true);return}
+  const {error:delError}=await sb.from('accounting_consultation_accounts').delete().eq('consultation_id',id).eq('user_id',currentUser.id);
+  if(delError){showStatus('紐付け解除に失敗しました：'+esc(delError.message),true);return}
+  const rows=checked.map(account_id=>({user_id:currentUser.id,consultation_id:id,account_id,relation_type:account_id===confirmed?'confirmed':'candidate'}));
+  if(rows.length){
+    const {error}=await sb.from('accounting_consultation_accounts').insert(rows);
+    if(error){showStatus('紐付け保存に失敗しました：'+esc(error.message),true);return}
+  }
+  relations=relations.filter(r=>r.consultation_id!==id).concat(rows.map((r,i)=>({...r,id:'local-'+Date.now()+'-'+i})));
+  renderHistory();renderBoxes();if(selectedBoxId)renderBoxDetail(selectedBoxId);toast('勘定科目の紐付けを更新しました');
+}
+document.getElementById('question').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();saveConsultation()}});
+init();
 </script>
 </body>
 </html>
