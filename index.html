@@ -191,9 +191,10 @@ textarea{min-height:120px} label{display:block;font-weight:800;margin:11px 0 6px
 </div>
 <div id="timeModal" class="modal">
   <div class="modal-box">
-    <h2>今回の復習時間</h2>
-    <p class="muted small">今回選択した問題の復習に使った時間を入力してください。</p>
-    <input id="reviewMinutes" type="number" min="1" placeholder="例：25">
+    <h2>今回の復習を記録</h2>
+    <p class="muted small">実際に復習した日と、今回選択した問題の復習時間を入力してください。</p>
+    <label>実施日</label><input id="reviewDate" type="date" max="${today()}">
+    <label>復習時間（分）</label><input id="reviewMinutes" type="number" min="1" placeholder="例：25">
     <label>メモ（任意）</label><input id="reviewMemo" placeholder="消費税の復習">
     <div class="row" style="margin-top:12px"><button class="primary" onclick="finishReviewSession()">復習を保存</button><button class="light" onclick="cancelReviewTime()">キャンセル</button></div>
   </div>
@@ -329,7 +330,10 @@ function selectAllDue(v){document.querySelectorAll('.dueCheck').forEach(x=>x.che
 function startReview(){
   reviewQueue=[...document.querySelectorAll('.dueCheck:checked')].map(x=>problems.find(p=>p.id===x.dataset.id)).filter(Boolean);
   if(!reviewQueue.length){alert('復習する問題を選択してください');return}
-  reviewIndex=0;reviewAnswers=[];document.getElementById('reviewModal').classList.add('open');showReviewQuestion();
+  reviewIndex=0;reviewAnswers=[];
+  document.getElementById('reviewDate').value=today();
+  document.getElementById('reviewModal').classList.add('open');
+  showReviewQuestion();
 }
 function showReviewQuestion(){
   if(reviewIndex>=reviewQueue.length){document.getElementById('reviewModal').classList.remove('open');document.getElementById('timeModal').classList.add('open');return}
@@ -341,15 +345,19 @@ function answerReview(result){reviewAnswers.push({problemId:reviewQueue[reviewIn
 function closeReview(){document.getElementById('reviewModal').classList.remove('open');reviewQueue=[];reviewAnswers=[]}
 function cancelReviewTime(){document.getElementById('timeModal').classList.remove('open');reviewQueue=[];reviewAnswers=[]}
 async function finishReviewSession(){
+  const studyDate=document.getElementById('reviewDate').value;
   const minutes=Number(document.getElementById('reviewMinutes').value||0),memo=document.getElementById('reviewMemo').value.trim();
+  if(!studyDate){alert('復習日を入力してください');return}
+  if(studyDate>today()){alert('復習日は未来の日付にできません');return}
   if(!minutes){alert('復習時間を入力してください');return}
   const first=reviewQueue[0],sub=subjects.find(s=>s.id===first.subject_id),qid=sub?.qualification_id;
   if(!qid){alert('科目情報が見つかりません');return}
-  const {data:sessionId,error}=await sb.rpc('record_review_session',{
-    p_qualification_id:qid,p_subject_id:first.subject_id,p_minutes:minutes,p_memo:memo,
+  const {data:sessionId,error}=await sb.rpc('record_review_session_on_date',{
+    p_qualification_id:qid,p_subject_id:first.subject_id,p_study_date:studyDate,p_minutes:minutes,p_memo:memo,
     p_items:reviewAnswers.map(x=>({problem_id:x.problemId,result:x.result}))
   });
   if(error){alert('復習の保存に失敗しました: '+error.message);return}
+  document.getElementById('reviewDate').value=today();
   document.getElementById('reviewMinutes').value='';document.getElementById('reviewMemo').value='';
   document.getElementById('timeModal').classList.remove('open');reviewQueue=[];reviewAnswers=[];
   await loadAll();toast('復習を記録しました');
@@ -399,6 +407,7 @@ function addRetroReviewRow(defaultDate=''){
   retroReviewRows.push({
     stage:retroReviewRows.length+1,
     date,
+    minutes:0,
     problemNames:[...selectedNames],
     selected:Object.fromEntries(allNames.map(n=>[n,selectedNames.includes(n)])),
     results:Object.fromEntries(selectedNames.map(n=>[n,'correct']))
@@ -463,7 +472,10 @@ function renderRetroReviewPanel(){
     <p class="muted small">復習回は任意で追加できます。前回不正解だった問題は次回の候補として自動選択されますが、他の問題も自由に追加できます。</p>
     ${retroReviewRows.map((r,i)=>`<div class="item">
       <div class="row" style="justify-content:space-between"><b>復習${i+1}</b><button class="danger" type="button" onclick="removeRetroReviewRow(${i})">削除</button></div>
-      <label>実施日</label><input type="date" value="${r.date}" max="${today()}" min="${addDays(date,1)}" onchange="updateRetroReviewRow(${i},'date',this.value)">
+      <div class="grid" style="margin-top:8px">
+        <div><label>実施日</label><input type="date" value="${r.date}" max="${today()}" min="${addDays(date,1)}" onchange="updateRetroReviewRow(${i},'date',this.value)"></div>
+        <div><label>勉強時間（分）</label><input type="number" min="1" value="${Number(r.minutes)||''}" placeholder="例：25" onchange="updateRetroReviewRow(${i},'minutes',Number(this.value)||0)"></div>
+      </div>
       <div style="margin-top:10px">
         ${names.map(n=>`<div class="row" style="margin:8px 0;align-items:center">
           <label style="flex:1;min-width:180px;margin:0;display:flex;gap:8px;align-items:center;font-weight:700"><input type="checkbox" data-retro-row="${i}" data-retro-problem="${n.replace(/\"/g,'&quot;')}" ${r.selected?.[n]?'checked':''} onchange="updateRetroReviewSelection(${i},${JSON.stringify(n)},this.checked)" style="width:auto">${esc(n)}</label>
@@ -480,18 +492,25 @@ function renderRetroReviewPanel(){
 async function saveRetroReviewHistory(problemMap){
   syncRetroReviewStateFromDOM();
   if(!retroReviewRows.length)return;
-  const items=[];
+  const rows=[];
   for(const row of retroReviewRows){
     if(!row.date||row.date>today())throw new Error('過去の復習の日付が不正です');
+    if(!row.minutes||Number(row.minutes)<=0)throw new Error(`復習${row.stage}の勉強時間を入力してください`);
+    const items=[];
     for(const problemName of (row.problemNames||[])){
       const problemId=problemMap[problemName];
       const result=row.results?.[problemName];
       if(!problemId)throw new Error(`復習${row.stage}の「${problemName}」が見つかりません`);
       if(!result)throw new Error(`復習${row.stage}の「${problemName}」の結果が未設定です`);
-      items.push({problem_id:problemId,review_date:row.date,result});
+      items.push({problem_id:problemId,result});
     }
+    rows.push({study_date:row.date,minutes:Number(row.minutes),memo:null,items});
   }
-  const {error}=await sb.rpc('backfill_review_history',{p_items:items});
+  const {error}=await sb.rpc('backfill_review_sessions',{
+    p_qualification_id:document.getElementById('recordQualification').value,
+    p_subject_id:document.getElementById('recordSubject').value,
+    p_rows:rows
+  });
   if(error)throw error;
 }
 
@@ -503,7 +522,7 @@ async function saveStudyRecord(){
   if(!qid||!date||!minutes){alert('資格・日付・勉強時間は必須です');return}
   if(['new_problems','review'].includes(type)&&!sid){alert('科目を設定してください');return}
   if(type==='new_problems'&&!raw){alert('新規問題の場合は問題を入力してください');return}
-  if(type==='new_problems'&&retroReviewRows.some(r=>!r.date||r.date>today()||r.date<=date)){alert('過去の復習の日付を確認してください');return}
+  if(type==='new_problems'&&retroReviewRows.some(r=>!r.date||r.date>today()||r.date<=date||!r.minutes||Number(r.minutes)<=0)){alert('過去の復習の日付と勉強時間を確認してください');return}
 
   const {data:session,error:se}=await sb.from('study_sessions').insert({
     user_id:currentUser.id,qualification_id:qid,subject_id:sid||null,study_date:date,activity_type:type,minutes,memo:memo||null
