@@ -24,6 +24,13 @@ input,textarea,select{width:100%;padding:13px;border:1px solid #394563;border-ra
 .inline-panel{margin-top:12px;padding:14px;border:1px solid #33405f;border-radius:15px;background:#0c1322}.check-row{display:grid;grid-template-columns:auto 1fr auto;gap:9px;align-items:center;padding:9px 0;border-bottom:1px solid #26314d}.check-row:last-child{border-bottom:0}.check-row input{width:auto;min-height:auto}.check-row select{width:130px;min-height:38px;padding:7px;font-size:13px}
 .auth{min-height:70vh;display:flex;align-items:center;justify-content:center}.authbox{max-width:480px;width:100%;text-align:center}
 .hidden{display:none!important}
+.ai-panel{margin-top:16px;padding:16px;border:1px solid #4a3d78;border-radius:16px;background:linear-gradient(145deg,#15132a,#0c1220)}
+.ai-label{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#c7b8ff;font-weight:900;margin-bottom:5px}
+.ai-answer{white-space:pre-wrap;line-height:1.75}
+.ai-candidate{padding:11px 0;border-bottom:1px solid #2b3450}.ai-candidate:last-child{border-bottom:0}
+.ai-candidate-name{font-weight:900}.ai-reason{color:#b6c0d8;font-size:13px;margin-top:3px;line-height:1.6}
+.ai-caution{margin-top:12px;padding:11px 12px;border-radius:12px;background:#1b1b29;border:1px solid #45405a;color:#d7d0e8;font-size:13px;line-height:1.6}
+.ai-chip{display:inline-block;background:#241c45;border:1px solid #493b78;color:#d9d0ff;border-radius:999px;padding:4px 9px;font-size:12px;font-weight:800;margin:3px 4px 0 0}
 @media(max-width:700px){body{padding:12px 12px 80px}.box-grid{grid-template-columns:1fr 1fr}.hero-title{font-size:24px}.consult-head{gap:8px}.toolbar{align-items:stretch}.toolbar input{min-width:100%}}
 @media(max-width:430px){.box-grid{grid-template-columns:1fr}.top h1{font-size:25px}.consult-row{flex-direction:column}}
 </style>
@@ -58,14 +65,16 @@ input,textarea,select{width:100%;padding:13px;border:1px solid #394563;border-ra
     <div>
       <div class="kicker">NEW CONSULTATION</div>
       <h2 class="hero-title">新しく相談する</h2>
-      <p class="muted">まずは質問だけ保存できます。AI回答欄は将来の連携用に確保しています。</p>
+      <p class="muted">AIに相談すると、回答・候補科目まで自動で相談履歴に保存されます。</p>
+  <div class="notice small">⚠ 顧客名・個人情報・口座情報など、機密情報は入力しないでください。AIの回答は最終的な税務・会計判断ではありません。</div>
     </div>
     <div class="icon">💬</div>
   </div>
   <label for="question">何について困っていますか？</label>
   <input id="question" maxlength="300" placeholder="例：SDカード、駐車場代、道路使用許可申請書">
-  <div class="actions"><button class="primary" onclick="saveConsultation()">相談を保存</button></div>
+  <div class="actions"><button class="primary" onclick="askAI()" id="aiButton">🤖 AIに相談する</button><button class="light" onclick="saveConsultation()" id="manualSaveButton">相談だけ保存</button></div>
   <div id="consultStatus" class="notice hidden"></div>
+  <div id="aiResult" class="ai-panel hidden"></div>
 </section>
 
 <section class="card">
@@ -159,7 +168,8 @@ function linkedAccounts(consultationId){return relations.filter(r=>r.consultatio
 function renderConsultationCard(c){
   const linked=linkedAccounts(c.id);
   const chips=linked.length?linked.map(r=>'<span class="account-chip">'+esc(r.account.name)+' ・ '+(r.relation_type==='confirmed'?'確定':'候補')+'</span>').join(''):'<span class="muted small">勘定科目未紐付け</span>';
-  return '<article class="consult-card"><div class="consult-row"><div style="flex:1"><div class="kicker">相談</div><h3>'+esc(c.question)+'</h3><div class="muted small" style="margin-top:5px">'+formatDate(c.created_at)+'</div><div style="margin-top:7px">'+chips+'</div></div><div class="actions" style="margin-top:0"><button class="light" onclick="openBindPanel(\''+c.id+'\')">科目を紐付け</button><button class="light" onclick="editConsultation(\''+c.id+'\')">編集</button><button class="danger" onclick="deleteConsultation(\''+c.id+'\')">削除</button></div></div><div id="bind-'+c.id+'"></div></article>';
+  const ai=c.ai_answer?'<div class="ai-panel" style="margin-top:12px"><div class="ai-label">AI回答</div><div class="ai-answer">'+esc(c.ai_answer)+'</div>'+(c.ai_caution?'<div class="ai-caution"><b>注意事項：</b>'+esc(c.ai_caution)+'</div>':'')+'</div>':'';
+  return '<article class="consult-card"><div class="consult-row"><div style="flex:1"><div class="kicker">相談</div><h3>'+esc(c.question)+'</h3><div class="muted small" style="margin-top:5px">'+formatDate(c.created_at)+'</div><div style="margin-top:7px">'+chips+'</div></div><div class="actions" style="margin-top:0"><button class="light" onclick="openBindPanel(\''+c.id+'\')">科目を紐付け</button><button class="light" onclick="editConsultation(\''+c.id+'\')">編集</button><button class="danger" onclick="deleteConsultation(\''+c.id+'\')">削除</button></div></div>'+ai+'<div id="bind-'+c.id+'"></div></article>';
 }
 function renderBoxes(){
   const counts={};relations.forEach(r=>counts[r.account_id]=(counts[r.account_id]||0)+1);
@@ -177,6 +187,73 @@ function renderBoxDetail(id){
   el.scrollIntoView({behavior:'smooth',block:'nearest'});
 }
 function closeBoxDetail(){selectedBoxId=null;document.getElementById('boxDetail').classList.add('hidden');renderBoxes()}
+function setAiBusy(busy){
+  const ai=document.getElementById('aiButton'), manual=document.getElementById('manualSaveButton');
+  ai.disabled=busy; manual.disabled=busy;
+  ai.textContent=busy?'🤖 AIに相談中…':'🤖 AIに相談する';
+}
+function renderAIResult(result){
+  const el=document.getElementById('aiResult'); el.classList.remove('hidden');
+  const candidates=Array.isArray(result.account_candidates)?result.account_candidates:[];
+  el.innerHTML='<div class="ai-label">AI回答</div><div class="ai-answer">'+esc(result.answer||'')+'</div>'+
+    '<div style="margin-top:16px"><div class="ai-label">AI候補</div>'+
+    (candidates.length?candidates.map(x=>'<div class="ai-candidate"><div class="ai-candidate-name">'+esc(x.name)+'</div><div class="ai-reason">'+esc(x.reason||'理由なし')+'</div></div>').join(''):'<div class="muted small">AIから候補勘定科目は返されませんでした。</div>')+
+    '</div>'+
+    (result.caution?'<div class="ai-caution"><b>注意事項：</b>'+esc(result.caution)+'</div>':'');
+}
+async function askAI(){
+  if(!currentUser){showStatus('ログインが必要です。',true);return}
+  const input=document.getElementById('question'), question=input.value.trim();
+  if(!question){showStatus('相談内容を入力してください。',true);return}
+  clearStatus(); document.getElementById('aiResult').classList.add('hidden'); setAiBusy(true);
+  try{
+    const {data,error}=await sb.functions.invoke('accounting-consult-ai',{body:{question}});
+    if(error) throw new Error(error.message||'Edge Functionの呼び出しに失敗しました。');
+    if(!data||data.error) throw new Error(data?.error||'AIから回答を取得できませんでした。');
+    renderAIResult(data);
+
+    const {data:consultation,error:saveError}=await sb.from('accounting_consultations').insert({
+      user_id:currentUser.id, question, ai_answer:data.answer||null, ai_caution:data.caution||null, ai_model:data.model||null
+    }).select().single();
+    if(saveError){
+      showStatus('AI回答は取得できましたが、相談カードの保存に失敗しました：'+esc(saveError.message),true);
+      return;
+    }
+
+    consultations=[consultation,...consultations];
+    const candidates=Array.isArray(data.account_candidates)?data.account_candidates:[];
+    let linkedRows=[];
+    if(candidates.length){
+      const accountRows=candidates.map((x,i)=>({user_id:currentUser.id,name:String(x.name||'').trim().slice(0,100),sort_order:1000+i,archived:false})).filter(x=>x.name);
+      if(accountRows.length){
+        const {data:upserted,error:accountError}=await sb.from('accounting_accounts').upsert(accountRows,{onConflict:'user_id,name'}).select('*');
+        if(accountError){
+          renderHistory();renderBoxes();
+          showStatus('相談カードは保存できましたが、候補勘定科目のBOX作成・取得に失敗しました：'+esc(accountError.message),true);
+          return;
+        }
+        const byName=new Map((upserted||[]).map(a=>[a.name,a]));
+        linkedRows=candidates.map(x=>{
+          const a=byName.get(String(x.name||'').trim().slice(0,100));
+          return a?{user_id:currentUser.id,consultation_id:consultation.id,account_id:a.id,relation_type:'candidate',reason:String(x.reason||'').trim().slice(0,1000)}:null;
+        }).filter(Boolean);
+        if(linkedRows.length){
+          const {error:linkError}=await sb.from('accounting_consultation_accounts').insert(linkedRows);
+          if(linkError){
+            renderHistory();renderBoxes();
+            showStatus('相談カードとAI回答は保存できましたが、候補科目の紐付けに失敗しました：'+esc(linkError.message),true);
+            return;
+          }
+        }
+      }
+    }
+    relations=[...relations,...linkedRows.map((r,i)=>({...r,id:'ai-local-'+Date.now()+'-'+i}))];
+    input.value=''; await loadData(); renderAIResult(data);
+    showStatus('<strong>AI相談を保存しました。</strong><br><span class="muted small">AI候補は「候補」として登録されています。確定はユーザー自身で行ってください。</span>');
+  }catch(e){
+    console.error(e); showStatus('AI相談に失敗しました：'+esc(e.message||e),true);
+  }finally{setAiBusy(false)}
+}
 async function saveConsultation(){
   const input=document.getElementById('question');const question=input.value.trim();
   if(!question){showStatus('相談内容を入力してください。',true);return}
