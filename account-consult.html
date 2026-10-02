@@ -30,7 +30,7 @@ input,textarea,select{width:100%;padding:13px;border:1px solid #394563;border-ra
 .ai-candidate{padding:11px 0;border-bottom:1px solid #2b3450}.ai-candidate:last-child{border-bottom:0}
 .ai-candidate-name{font-weight:900}.ai-reason{color:#b6c0d8;font-size:13px;margin-top:3px;line-height:1.6}
 .ai-caution{margin-top:12px;padding:11px 12px;border-radius:12px;background:#1b1b29;border:1px solid #45405a;color:#d7d0e8;font-size:13px;line-height:1.6}
-.ai-chip{display:inline-block;background:#241c45;border:1px solid #493b78;color:#d9d0ff;border-radius:999px;padding:4px 9px;font-size:12px;font-weight:800;margin:3px 4px 0 0}
+.ai-chip{display:inline-block;background:#241c45;border:1px solid #493b78;color:#d9d0ff;border-radius:999px;padding:4px 9px;font-size:12px;font-weight:800;margin:3px 4px 0 0}.tax-chip{display:inline-flex;align-items:center;gap:5px;background:#172c36;border:1px solid #315968;border-radius:999px;padding:4px 9px;font-size:12px;font-weight:800;margin:3px 4px 0 0;color:#c9eef5}.consult-target{display:inline-block;background:#1d2038;border:1px solid #3b4267;color:#cbd3ef;border-radius:999px;padding:3px 8px;font-size:11px;font-weight:800;margin-left:6px}
 @media(max-width:700px){body{padding:12px 12px 80px}.box-grid{grid-template-columns:1fr 1fr}.hero-title{font-size:24px}.consult-head{gap:8px}.toolbar{align-items:stretch}.toolbar input{min-width:100%}}
 @media(max-width:430px){.box-grid{grid-template-columns:1fr}.top h1{font-size:25px}.consult-row{flex-direction:column}.consult-card .actions{width:100%}.consult-card .actions button{flex:1}}
 </style>
@@ -163,12 +163,18 @@ function aiSummary(text){
   const first=value.split(/(?<=[。！？])/)[0]||value;
   return first.length>90?first.slice(0,90)+'…':first;
 }
+function consultationTypeLabel(type){
+  return ({accounting:'勘定科目',tax_category:'課税区分',both:'勘定科目＋課税区分',general:'一般'})[type]||'未判定';
+}
 function searchTextForConsultation(c){
   const linked=linkedAccounts(c.id);
+  const taxes=Array.isArray(c.ai_tax_category_candidates)?c.ai_tax_category_candidates:[];
   return [
     c.question||'',
     c.ai_answer||'',
-    ...linked.map(r=>r.account?.name||'')
+    c.consultation_type||'',
+    ...linked.map(r=>r.account?.name||''),
+    ...taxes.map(x=>x?.name||'')
   ].join(' ').toLowerCase();
 }
 function renderHistory(){
@@ -179,24 +185,37 @@ function renderHistory(){
   document.getElementById('history').innerHTML=rows.map(renderConsultationCard).join('');
 }
 function linkedAccounts(consultationId){return relations.filter(r=>r.consultation_id===consultationId).map(r=>({...r,account:accounts.find(a=>a.id===r.account_id)})).filter(r=>r.account)}
+function renderTaxCandidates(candidates,detail=false){
+  if(!Array.isArray(candidates)||!candidates.length)return '';
+  return '<div style="margin-top:12px"><div class="ai-label">課税区分</div>'+candidates.map(x=>detail
+    ? '<div class="ai-candidate"><div class="ai-candidate-name">'+esc(x?.name||'')+'</div>'+(x?.reason?'<div class="ai-reason">'+esc(x.reason)+'</div>':'')+'</div>'
+    : '<span class="tax-chip">'+esc(x?.name||'')+' ・ 候補</span>'
+  ).join('')+'</div>';
+}
 function renderConsultationCard(c){
   const linked=linkedAccounts(c.id);
-  const chips=linked.length?linked.map(r=>'<span class="account-chip">'+esc(r.account.name)+' ・ '+(r.relation_type==='confirmed'?'確定':'候補')+'</span>').join(''):'<span class="muted small">勘定科目未紐付け</span>';
+  const chips=linked.length?linked.map(r=>'<span class="account-chip">'+esc(r.account.name)+' ・ '+(r.relation_type==='confirmed'?'確定':'候補')+'</span>').join(''):'';
+  const taxes=Array.isArray(c.ai_tax_category_candidates)?c.ai_tax_category_candidates:[];
+  const accountSection=linked.length?'<div style="margin-top:7px"><div class="ai-label">勘定科目</div>'+chips+'</div>':'';
+  const taxSection=renderTaxCandidates(taxes);
+  const noLinked=!linked.length&&!taxes.length?'<span class="muted small">候補・紐付けなし</span>':'';
   const summary=c.ai_answer?'<div class="consult-summary">AI要約：'+esc(aiSummary(c.ai_answer))+'</div>':'<div class="consult-summary muted">AI回答なし</div>';
   const candidates=linked.filter(r=>r.relation_type==='candidate');
   const confirmed=linked.filter(r=>r.relation_type==='confirmed');
   const candidateDetails=candidates.length
-    ?'<div style="margin-top:12px"><div class="ai-label">候補科目</div>'+candidates.map(r=>'<div class="ai-candidate"><div class="ai-candidate-name">'+esc(r.account.name)+'</div>'+(r.reason?'<div class="ai-reason">'+esc(r.reason)+'</div>':'')+'</div>').join('')+'</div>'
+    ?'<div style="margin-top:12px"><div class="ai-label">勘定科目候補・現在の紐付け</div>'+candidates.map(r=>'<div class="ai-candidate"><div class="ai-candidate-name">'+esc(r.account.name)+'</div>'+(r.reason?'<div class="ai-reason">'+esc(r.reason)+'</div>':'')+'</div>').join('')+'</div>'
     :'';
   const confirmedDetails=confirmed.length
     ?'<div style="margin-top:12px"><div class="ai-label">確定科目</div>'+confirmed.map(r=>'<span class="account-chip">'+esc(r.account.name)+' ・ 確定</span>').join('')+'</div>'
     :'';
+  const taxDetails=renderTaxCandidates(taxes,true);
   const aiDetails=c.ai_answer
-    ?'<div class="ai-panel consult-details hidden" id="details-'+c.id+'"><div class="ai-label">AI回答</div><div class="ai-answer">'+esc(c.ai_answer)+'</div>'+candidateDetails+confirmedDetails+(c.ai_caution?'<div class="ai-caution"><b>注意事項：</b>'+esc(c.ai_caution)+'</div>':'')+'</div>'
+    ?'<div class="ai-panel consult-details hidden" id="details-'+c.id+'"><div class="ai-label">相談対象</div><div class="consult-target">'+esc(consultationTypeLabel(c.consultation_type))+'</div><div class="ai-label" style="margin-top:14px">AI回答</div><div class="ai-answer">'+esc(c.ai_answer)+'</div>'+candidateDetails+confirmedDetails+taxDetails+(c.ai_caution?'<div class="ai-caution"><b>注意事項：</b>'+esc(c.ai_caution)+'</div>':'')+'</div>'
     :'';
-  const detailButton=c.ai_answer?'<button class="light consult-detail-toggle" onclick="toggleConsultationDetails(\''+c.id+'\',this)">詳細を見る</button>':'';
-  return '<article class="consult-card"><div class="consult-row"><div class="consult-main" style="flex:1"><div class="kicker">相談</div><h3>'+esc(c.question)+'</h3><div class="muted small" style="margin-top:5px">'+formatDate(c.created_at)+'</div><div style="margin-top:7px">'+chips+'</div>'+summary+'</div><div class="actions" style="margin-top:0">'+detailButton+'<button class="light" onclick="openBindPanel(\''+c.id+'\')">科目を紐付け</button><button class="light" onclick="editConsultation(\''+c.id+'\')">編集</button><button class="danger" onclick="deleteConsultation(\''+c.id+'\')">削除</button></div></div>'+aiDetails+'<div id="bind-'+c.id+'"></div></article>';
+  const detailButton=c.ai_answer?'<button class="light consult-detail-toggle" onclick="toggleConsultationDetails(\\''+c.id+'\\',this)">詳細を見る</button>':'';
+  return '<article class="consult-card"><div class="consult-row"><div class="consult-main" style="flex:1"><div class="kicker">相談 <span class="consult-target">'+esc(consultationTypeLabel(c.consultation_type))+'</span></div><h3>'+esc(c.question)+'</h3><div class="muted small" style="margin-top:5px">'+formatDate(c.created_at)+'</div>'+accountSection+taxSection+noLinked+summary+'</div><div class="actions" style="margin-top:0">'+detailButton+'<button class="light" onclick="openBindPanel(\\''+c.id+'\\')">科目を紐付け</button><button class="light" onclick="editConsultation(\\''+c.id+'\\')">編集</button><button class="danger" onclick="deleteConsultation(\\''+c.id+'\\')">削除</button></div></div>'+aiDetails+'<div id="bind-'+c.id+'"></div></article>';
 }
+
 function toggleConsultationDetails(id,button){
   const el=document.getElementById('details-'+id);
   if(!el)return;
@@ -229,12 +248,14 @@ function setAiBusy(busy){
 function renderAIResult(result){
   const el=document.getElementById('aiResult'); el.classList.remove('hidden');
   const candidates=Array.isArray(result.account_candidates)?result.account_candidates:[];
-  el.innerHTML='<div class="ai-label">AI回答</div><div class="ai-answer">'+esc(result.answer||'')+'</div>'+
-    '<div style="margin-top:16px"><div class="ai-label">AI候補</div>'+
-    (candidates.length?candidates.map(x=>'<div class="ai-candidate"><div class="ai-candidate-name">'+esc(x.name)+'</div><div class="ai-reason">'+esc(x.reason||'理由なし')+'</div></div>').join(''):'<div class="muted small">AIから候補勘定科目は返されませんでした。</div>')+
-    '</div>'+
+  const taxes=Array.isArray(result.tax_category_candidates)?result.tax_category_candidates:[];
+  el.innerHTML='<div class="ai-label">相談対象</div><div class="consult-target">'+esc(consultationTypeLabel(result.consultation_type))+'</div>'+
+    '<div class="ai-label" style="margin-top:14px">AI回答</div><div class="ai-answer">'+esc(result.answer||'')+'</div>'+
+    (candidates.length?'<div style="margin-top:16px"><div class="ai-label">勘定科目候補</div>'+candidates.map(x=>'<div class="ai-candidate"><div class="ai-candidate-name">'+esc(x.name)+'</div><div class="ai-reason">'+esc(x.reason||'理由なし')+'</div></div>').join('')+'</div>':'')+
+    renderTaxCandidates(taxes,true)+
     (result.caution?'<div class="ai-caution"><b>注意事項：</b>'+esc(result.caution)+'</div>':'');
 }
+
 async function askAI(){
   if(!currentUser){showStatus('ログインが必要です。',true);return}
   const input=document.getElementById('question'), question=input.value.trim();
@@ -247,7 +268,13 @@ async function askAI(){
     renderAIResult(data);
 
     const {data:consultation,error:saveError}=await sb.from('accounting_consultations').insert({
-      user_id:currentUser.id, question, ai_answer:data.answer||null, ai_caution:data.caution||null, ai_model:data.model||null
+      user_id:currentUser.id,
+      question,
+      ai_answer:data.answer||null,
+      ai_caution:data.caution||null,
+      ai_model:data.model||null,
+      consultation_type:data.consultation_type||'accounting',
+      ai_tax_category_candidates:Array.isArray(data.tax_category_candidates)?data.tax_category_candidates:[]
     }).select().single();
     if(saveError){
       showStatus('AI回答は取得できましたが、相談カードの保存に失敗しました：'+esc(saveError.message),true);
@@ -256,8 +283,9 @@ async function askAI(){
 
     consultations=[consultation,...consultations];
     const candidates=Array.isArray(data.account_candidates)?data.account_candidates:[];
+    const consultationType=data.consultation_type||'accounting';
     let linkedRows=[];
-    if(candidates.length){
+    if((consultationType==='accounting'||consultationType==='both')&&candidates.length){
       const accountRows=candidates.map((x,i)=>({user_id:currentUser.id,name:String(x.name||'').trim().slice(0,100),sort_order:1000+i,archived:false})).filter(x=>x.name);
       if(accountRows.length){
         const {data:upserted,error:accountError}=await sb.from('accounting_accounts').upsert(accountRows,{onConflict:'user_id,name'}).select('*');
