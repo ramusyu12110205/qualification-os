@@ -18,7 +18,7 @@ input,textarea,select{width:100%;padding:13px;border:1px solid #394563;border-ra
 .notice{margin-top:14px;padding:12px 14px;border-radius:13px;background:#151d32;border:1px solid #33405f;color:#cbd4ea}.notice.error{border-color:#6b2941;color:#ffc1cf}
 .actions,.toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.toolbar{align-items:center}.toolbar input{flex:1;min-width:220px}
 .empty{text-align:center;padding:34px 16px;border:1px dashed #33405f;border-radius:15px;color:var(--muted)}
-.consult-card{border:1px solid var(--line);border-radius:16px;padding:15px;margin-top:10px;background:#0f1627}.consult-row{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}.badge{display:inline-block;background:#261b50;color:#d7ceff;border:1px solid #45337c;border-radius:999px;padding:4px 9px;font-size:12px;font-weight:800;margin:3px 4px 0 0}
+.consult-card{border:1px solid var(--line);border-radius:16px;padding:14px 15px;margin-top:10px;background:#0f1627}.consult-row{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}.consult-main{min-width:0}.consult-summary{margin-top:7px;color:#c4cce0;font-size:13px;line-height:1.55;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.consult-details{margin-top:12px}.consult-detail-toggle{white-space:nowrap}.badge{display:inline-block;background:#261b50;color:#d7ceff;border:1px solid #45337c;border-radius:999px;padding:4px 9px;font-size:12px;font-weight:800;margin:3px 4px 0 0}
 .account-chip{display:inline-flex;align-items:center;gap:5px;background:#17243a;border:1px solid #334b72;border-radius:999px;padding:4px 9px;font-size:12px}
 .box-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.box{border:1px solid #33405f;border-radius:15px;padding:15px;background:#0f1627;min-height:100px;cursor:pointer;transition:.15s}.box:hover{border-color:#53638f;box-shadow:0 8px 24px rgba(0,0,0,.2)}.box.active{border-color:#7c5bd6;box-shadow:0 0 0 1px rgba(139,92,246,.25)}.box strong{display:block;font-size:17px;margin-bottom:6px}
 .inline-panel{margin-top:12px;padding:14px;border:1px solid #33405f;border-radius:15px;background:#0c1322}.check-row{display:grid;grid-template-columns:auto 1fr auto;gap:9px;align-items:center;padding:9px 0;border-bottom:1px solid #26314d}.check-row:last-child{border-bottom:0}.check-row input{width:auto;min-height:auto}.check-row select{width:130px;min-height:38px;padding:7px;font-size:13px}
@@ -32,7 +32,7 @@ input,textarea,select{width:100%;padding:13px;border:1px solid #394563;border-ra
 .ai-caution{margin-top:12px;padding:11px 12px;border-radius:12px;background:#1b1b29;border:1px solid #45405a;color:#d7d0e8;font-size:13px;line-height:1.6}
 .ai-chip{display:inline-block;background:#241c45;border:1px solid #493b78;color:#d9d0ff;border-radius:999px;padding:4px 9px;font-size:12px;font-weight:800;margin:3px 4px 0 0}
 @media(max-width:700px){body{padding:12px 12px 80px}.box-grid{grid-template-columns:1fr 1fr}.hero-title{font-size:24px}.consult-head{gap:8px}.toolbar{align-items:stretch}.toolbar input{min-width:100%}}
-@media(max-width:430px){.box-grid{grid-template-columns:1fr}.top h1{font-size:25px}.consult-row{flex-direction:column}}
+@media(max-width:430px){.box-grid{grid-template-columns:1fr}.top h1{font-size:25px}.consult-row{flex-direction:column}.consult-card .actions{width:100%}.consult-card .actions button{flex:1}}
 </style>
 </head>
 <body>
@@ -157,9 +157,23 @@ async function loadData(){
 }
 function renderAll(){renderHistory();renderBoxes();if(selectedBoxId)renderBoxDetail(selectedBoxId)}
 function clearSearch(){document.getElementById('searchInput').value='';renderHistory()}
+function aiSummary(text){
+  const value=String(text??'').replace(/\s+/g,' ').trim();
+  if(!value)return '';
+  const first=value.split(/(?<=[。！？])/)[0]||value;
+  return first.length>90?first.slice(0,90)+'…':first;
+}
+function searchTextForConsultation(c){
+  const linked=linkedAccounts(c.id);
+  return [
+    c.question||'',
+    c.ai_answer||'',
+    ...linked.map(r=>r.account?.name||'')
+  ].join(' ').toLowerCase();
+}
 function renderHistory(){
   const q=document.getElementById('searchInput').value.trim().toLowerCase();
-  const rows=consultations.filter(c=>!q||c.question.toLowerCase().includes(q));
+  const rows=consultations.filter(c=>!q||searchTextForConsultation(c).includes(q));
   document.getElementById('historyCount').textContent=rows.length+'件';
   if(!rows.length){document.getElementById('history').innerHTML='<div class="empty">該当する相談はありません。</div>';return}
   document.getElementById('history').innerHTML=rows.map(renderConsultationCard).join('');
@@ -168,9 +182,29 @@ function linkedAccounts(consultationId){return relations.filter(r=>r.consultatio
 function renderConsultationCard(c){
   const linked=linkedAccounts(c.id);
   const chips=linked.length?linked.map(r=>'<span class="account-chip">'+esc(r.account.name)+' ・ '+(r.relation_type==='confirmed'?'確定':'候補')+'</span>').join(''):'<span class="muted small">勘定科目未紐付け</span>';
-  const ai=c.ai_answer?'<div class="ai-panel" style="margin-top:12px"><div class="ai-label">AI回答</div><div class="ai-answer">'+esc(c.ai_answer)+'</div>'+(c.ai_caution?'<div class="ai-caution"><b>注意事項：</b>'+esc(c.ai_caution)+'</div>':'')+'</div>':'';
-  return '<article class="consult-card"><div class="consult-row"><div style="flex:1"><div class="kicker">相談</div><h3>'+esc(c.question)+'</h3><div class="muted small" style="margin-top:5px">'+formatDate(c.created_at)+'</div><div style="margin-top:7px">'+chips+'</div></div><div class="actions" style="margin-top:0"><button class="light" onclick="openBindPanel(\''+c.id+'\')">科目を紐付け</button><button class="light" onclick="editConsultation(\''+c.id+'\')">編集</button><button class="danger" onclick="deleteConsultation(\''+c.id+'\')">削除</button></div></div>'+ai+'<div id="bind-'+c.id+'"></div></article>';
+  const summary=c.ai_answer?'<div class="consult-summary">AI要約：'+esc(aiSummary(c.ai_answer))+'</div>':'<div class="consult-summary muted">AI回答なし</div>';
+  const candidates=linked.filter(r=>r.relation_type==='candidate');
+  const confirmed=linked.filter(r=>r.relation_type==='confirmed');
+  const candidateDetails=candidates.length
+    ?'<div style="margin-top:12px"><div class="ai-label">候補科目</div>'+candidates.map(r=>'<div class="ai-candidate"><div class="ai-candidate-name">'+esc(r.account.name)+'</div>'+(r.reason?'<div class="ai-reason">'+esc(r.reason)+'</div>':'')+'</div>').join('')+'</div>'
+    :'';
+  const confirmedDetails=confirmed.length
+    ?'<div style="margin-top:12px"><div class="ai-label">確定科目</div>'+confirmed.map(r=>'<span class="account-chip">'+esc(r.account.name)+' ・ 確定</span>').join('')+'</div>'
+    :'';
+  const aiDetails=c.ai_answer
+    ?'<div class="ai-panel consult-details hidden" id="details-'+c.id+'"><div class="ai-label">AI回答</div><div class="ai-answer">'+esc(c.ai_answer)+'</div>'+candidateDetails+confirmedDetails+(c.ai_caution?'<div class="ai-caution"><b>注意事項：</b>'+esc(c.ai_caution)+'</div>':'')+'</div>'
+    :'';
+  const detailButton=c.ai_answer?'<button class="light consult-detail-toggle" onclick="toggleConsultationDetails(\\''+c.id+'\\',this)">詳細を見る</button>':'';
+  return '<article class="consult-card"><div class="consult-row"><div class="consult-main" style="flex:1"><div class="kicker">相談</div><h3>'+esc(c.question)+'</h3><div class="muted small" style="margin-top:5px">'+formatDate(c.created_at)+'</div><div style="margin-top:7px">'+chips+'</div>'+summary+'</div><div class="actions" style="margin-top:0">'+detailButton+'<button class="light" onclick="openBindPanel(\\''+c.id+'\\')">科目を紐付け</button><button class="light" onclick="editConsultation(\\''+c.id+'\\')">編集</button><button class="danger" onclick="deleteConsultation(\\''+c.id+'\\')">削除</button></div></div>'+aiDetails+'<div id="bind-'+c.id+'"></div></article>';
 }
+function toggleConsultationDetails(id,button){
+  const el=document.getElementById('details-'+id);
+  if(!el)return;
+  const open=!el.classList.contains('hidden');
+  el.classList.toggle('hidden',open);
+  button.textContent=open?'詳細を見る':'詳細を閉じる';
+}
+
 function renderBoxes(){
   const counts={};relations.forEach(r=>counts[r.account_id]=(counts[r.account_id]||0)+1);
   document.getElementById('boxGrid').innerHTML=accounts.map(a=>'<div class="box '+(selectedBoxId===a.id?'active':'')+'" onclick="openAccountBox(\''+a.id+'\')"><strong>'+esc(a.name)+'</strong><span class="muted small">相談 '+(counts[a.id]||0)+'件</span></div>').join('');
