@@ -11,7 +11,7 @@
   function ensureHome(){
     if(document.getElementById('minimalHome'))return;const el=document.createElement('div');el.id='minimalHome';
     el.innerHTML=`<aside class="mh-sidebar"><div class="mh-brand">資格勉強OS<span>QUALIFICATION OS</span></div><nav class="mh-nav">
-      <button data-mh="home">⌂　ホーム</button><button data-mh="review">▣　復習スケジュール</button><button data-mh="record">＋　勉強記録</button><button data-mh="status">◫　学習状況</button><button data-mh="flash">▤　暗記カード</button><button data-mh="status">▤　問題集</button><button data-mh="settings">◉　資格・科目</button><button data-mh="settings">⚙　設定</button></nav></aside>
+      <button data-mh="home">⌂　ホーム</button><button data-mh="review">▣　復習スケジュール</button><button data-mh="record">＋　勉強記録</button><button data-mh="status">◫　学習状況</button><button data-mh="flash">▤　暗記カード</button><button data-mh="account">🧾　勘定科目相談</button><button data-mh="status">▤　問題集</button><button data-mh="settings">◉　資格・科目</button><button data-mh="settings">⚙　設定</button></nav></aside>
       <div class="mh-main"><header class="mh-topbar"><span id="mhDate"></span><button title="通知" onclick="alert('現在、新しい通知はありません。')">♢</button><button title="プロフィール" onclick="openTab('settings')">◯</button><button title="メニュー" onclick="openTab('settings')">☰</button></header>
       <main class="mh-content"><div class="mh-welcome"><div><h1>今日の学習</h1><p id="mhWelcomeSub">今日も少しずつ進めよう。</p></div></div>
       <div class="mh-grid3"><section class="mh-card"><div class="mh-kicker">NEXT EXAM</div><div class="mh-exam-days" id="mhExamDays">—</div><div class="mh-exam-name" id="mhExamName">試験日を設定してください</div><div class="mh-exam-date" id="mhExamDate">資格・科目から設定できます</div></section>
@@ -23,7 +23,7 @@
   }
   function hideOriginal(){const app=document.getElementById('app');if(!app)return;[...app.children].forEach(ch=>{if(ch.id!=='minimalHome')ch.style.display='none'});const home=document.getElementById('minimalHome');if(home)home.style.display='block';document.querySelectorAll('.mh-nav button').forEach(b=>b.classList.toggle('active',b.dataset.mh==='home'));window.scrollTo({top:0,behavior:'smooth'})}
   function showOriginal(){const app=document.getElementById('app');if(!app)return;const home=document.getElementById('minimalHome');if(home)home.style.display='none';[...app.children].forEach(ch=>{if(ch.id!=='minimalHome')ch.style.display=''})}
-  function mhNavigate(name){if(name==='home'){showHome();return}if(name==='flash'){location.href='flashcards.html';return}showOriginal();if(originalOpenTab)originalOpenTab(name==='record'?'record':name==='status'?'status':name==='settings'?'settings':'review');document.querySelectorAll('.mh-nav button').forEach(b=>b.classList.toggle('active',b.dataset.mh===name))}
+  function mhNavigate(name){if(name==='home'){showHome();return}if(name==='flash'){location.href='flashcards.html';return}if(name==='account'){location.href='account-consult.html';return}showOriginal();if(originalOpenTab)originalOpenTab(name==='record'?'record':name==='status'?'status':name==='settings'?'settings':'review');document.querySelectorAll('.mh-nav button').forEach(b=>b.classList.toggle('active',b.dataset.mh===name))}
   function showHome(){hideOriginal();renderHome()}
   function renderHome(){
     ensureHome();const {q,s,p,st}=getData(),today=todayM();document.getElementById('mhDate').textContent=new Intl.DateTimeFormat('ja-JP',{year:'numeric',month:'long',day:'numeric',weekday:'short'}).format(new Date());
