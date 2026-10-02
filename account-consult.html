@@ -213,7 +213,7 @@ function openBindPanel(id){
   const linked=linkedAccounts(id);const linkedMap=new Map(linked.map(r=>[r.account_id,r]));
   const confirmed=linked.find(r=>r.relation_type==='confirmed')?.account_id||'';
   el.innerHTML='<div class="inline-panel"><div class="kicker">ACCOUNT LINK</div><h3>勘定科目を紐付け</h3><p class="muted small">複数の候補を選択できます。確定科目は1つだけ指定できます。</p>'+accounts.map(a=>{
-    const r=linkedMap.get(a.id);return '<div class="check-row"><input type="checkbox" id="chk-'+id+'-'+a.id+'" '+(r?'checked':'')+' onchange="syncConfirmOptions(\''+id+'\')"><label for="chk-'+id+'-'+a.id+'" style="margin:0">'+esc(a.name)+'</label><span></span></div>';
+    const r=linkedMap.get(a.id);return '<div class="check-row"><input type="checkbox" id="chk-'+id+'-'+a.id+'" data-account-id="'+a.id+'" '+(r?'checked':'')+' onchange="syncConfirmOptions(\''+id+'\')"><label for="chk-'+id+'-'+a.id+'" style="margin:0">'+esc(a.name)+'</label><span></span></div>';
   }).join('')+'<label style="margin-top:12px">確定した勘定科目（任意）</label><select id="confirmed-'+id+'"><option value="">確定なし</option>'+accounts.map(a=>'<option value="'+a.id+'" '+(confirmed===a.id?'selected':'')+'>'+esc(a.name)+'</option>').join('')+'</select><div class="actions"><button class="primary" onclick="saveBindings(\''+id+'\')">紐付けを保存</button><button class="light" onclick="cancelInline(\''+id+'\')">キャンセル</button></div></div>';
   syncConfirmOptions(id);
 }
@@ -224,7 +224,7 @@ function syncConfirmOptions(id){
   if(select.value&&!selected.includes(select.value))select.value='';
 }
 async function saveBindings(id){
-  const checked=[...document.querySelectorAll('#bind-'+id+' .check-row input:checked')].map(x=>x.id.split('-').slice(2).join('-'));
+  const checked=[...document.querySelectorAll('#bind-'+id+' .check-row input:checked')].map(x=>x.dataset.accountId);
   const confirmed=document.getElementById('confirmed-'+id)?.value||'';
   if(confirmed&&!checked.includes(confirmed)){showStatus('確定科目は選択した科目の中から指定してください。',true);return}
   const {error:delError}=await sb.from('accounting_consultation_accounts').delete().eq('consultation_id',id).eq('user_id',currentUser.id);
