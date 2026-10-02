@@ -194,8 +194,8 @@ function renderConsultationCard(c){
   const aiDetails=c.ai_answer
     ?'<div class="ai-panel consult-details hidden" id="details-'+c.id+'"><div class="ai-label">AI回答</div><div class="ai-answer">'+esc(c.ai_answer)+'</div>'+candidateDetails+confirmedDetails+(c.ai_caution?'<div class="ai-caution"><b>注意事項：</b>'+esc(c.ai_caution)+'</div>':'')+'</div>'
     :'';
-  const detailButton=c.ai_answer?'<button class="light consult-detail-toggle" onclick="toggleConsultationDetails(\\''+c.id+'\\',this)">詳細を見る</button>':'';
-  return '<article class="consult-card"><div class="consult-row"><div class="consult-main" style="flex:1"><div class="kicker">相談</div><h3>'+esc(c.question)+'</h3><div class="muted small" style="margin-top:5px">'+formatDate(c.created_at)+'</div><div style="margin-top:7px">'+chips+'</div>'+summary+'</div><div class="actions" style="margin-top:0">'+detailButton+'<button class="light" onclick="openBindPanel(\\''+c.id+'\\')">科目を紐付け</button><button class="light" onclick="editConsultation(\\''+c.id+'\\')">編集</button><button class="danger" onclick="deleteConsultation(\\''+c.id+'\\')">削除</button></div></div>'+aiDetails+'<div id="bind-'+c.id+'"></div></article>';
+  const detailButton=c.ai_answer?'<button class="light consult-detail-toggle" onclick="toggleConsultationDetails(\''+c.id+'\',this)">詳細を見る</button>':'';
+  return '<article class="consult-card"><div class="consult-row"><div class="consult-main" style="flex:1"><div class="kicker">相談</div><h3>'+esc(c.question)+'</h3><div class="muted small" style="margin-top:5px">'+formatDate(c.created_at)+'</div><div style="margin-top:7px">'+chips+'</div>'+summary+'</div><div class="actions" style="margin-top:0">'+detailButton+'<button class="light" onclick="openBindPanel(\''+c.id+'\')">科目を紐付け</button><button class="light" onclick="editConsultation(\''+c.id+'\')">編集</button><button class="danger" onclick="deleteConsultation(\''+c.id+'\')">削除</button></div></div>'+aiDetails+'<div id="bind-'+c.id+'"></div></article>';
 }
 function toggleConsultationDetails(id,button){
   const el=document.getElementById('details-'+id);
