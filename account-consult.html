@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>勘定科目相談 | 資格勉強OS</title>
+<style>
+:root{--bg:#080c17;--card:#12182a;--card2:#0e1422;--text:#f5f7ff;--muted:#98a3bf;--accent:#8b5cf6;--cyan:#22d3ee;--good:#34d399;--line:#26314d}
+*{box-sizing:border-box}
+body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;max-width:980px;margin:auto;padding:18px 18px 90px;background:radial-gradient(circle at top left,#1a1640 0,#090e1a 42%,#050812 100%);color:var(--text)}
+h1,h2,h3{margin:0}h1{font-size:30px}h2{font-size:22px}.muted{color:var(--muted)}.small{font-size:13px}
+.card{background:linear-gradient(145deg,rgba(18,24,42,.96),rgba(10,15,28,.98));border:1px solid var(--line);border-radius:22px;padding:20px;margin:14px 0;box-shadow:0 15px 45px rgba(0,0,0,.22)}
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px}.brand{font-weight:900}.kicker{font-size:11px;letter-spacing:.13em;text-transform:uppercase;color:#b6c0dd;font-weight:900}
+button{border:0;border-radius:11px;padding:10px 15px;font-weight:850;cursor:pointer;min-height:42px}
+.primary{background:var(--accent);color:#fff}.light{background:#222b43;color:#e8ecff;border:1px solid #33405f}
+input,textarea{width:100%;padding:13px;border:1px solid #394563;border-radius:12px;background:#0c1322;color:#f4f6ff;font-size:16px;min-height:48px}
+textarea{min-height:110px;resize:vertical}label{display:block;font-weight:850;margin:0 0 7px}
+.consult-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}.icon{font-size:42px}.hero-title{font-size:28px;margin-top:3px}.notice{margin-top:14px;padding:12px 14px;border-radius:13px;background:#151d32;border:1px solid #33405f;color:#cbd4ea}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.empty{text-align:center;padding:34px 16px;border:1px dashed #33405f;border-radius:15px;color:var(--muted)}
+.consult-card{border:1px solid var(--line);border-radius:16px;padding:15px;margin-top:10px;background:#0f1627}.consult-row{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}.badge{display:inline-block;background:#261b50;color:#d7ceff;border:1px solid #45337c;border-radius:999px;padding:4px 9px;font-size:12px;font-weight:800}
+.box-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.box{border:1px solid #33405f;border-radius:15px;padding:15px;background:#0f1627;min-height:100px}.box strong{display:block;font-size:17px;margin-bottom:6px}
+.future{opacity:.9}
+@media(max-width:700px){body{padding:12px 12px 80px}.top{align-items:flex-start}.box-grid{grid-template-columns:1fr 1fr}.hero-title{font-size:24px}.consult-head{gap:8px}}
+@media(max-width:430px){.box-grid{grid-template-columns:1fr}.top h1{font-size:25px}}
+</style>
+</head>
+<body>
+<header class="top">
+  <div>
+    <div class="kicker">ACCOUNTING CONSULT</div>
+    <h1>🧾 勘定科目相談</h1>
+    <div class="muted small">仕訳入力で迷ったときの、自分専用の相談部屋</div>
+  </div>
+  <button class="light" onclick="location.href='index.html'">← 資格OS</button>
+</header>
+
+<section class="card">
+  <div class="consult-head">
+    <div>
+      <div class="kicker">NEW CONSULTATION</div>
+      <h2 class="hero-title">新しく相談する</h2>
+      <p class="muted">まずは「何について困っているか」だけ入力できます。</p>
+    </div>
+    <div class="icon">💬</div>
+  </div>
+  <label for="question">何について困っていますか？</label>
+  <input id="question" maxlength="300" placeholder="例：SDカード、駐車場代、道路使用許可申請書">
+  <div class="actions">
+    <button class="primary" onclick="startConsult()">相談する</button>
+  </div>
+  <div id="consultStatus" class="notice" style="display:none"></div>
+</section>
+
+<section class="card">
+  <div class="consult-head">
+    <div><div class="kicker">CONSULTATION HISTORY</div><h2>過去の相談</h2></div>
+    <span class="badge" id="historyCount">0件</span>
+  </div>
+  <p class="muted small">将来、AIの回答と相談内容をここへ保存し、勘定科目BOXからも参照できるようにします。</p>
+  <div id="history">
+    <div class="empty">まだ保存された相談はありません。<br>AI連携後、ここに相談カードが蓄積されます。</div>
+  </div>
+</section>
+
+<section class="card">
+  <div class="kicker">ACCOUNT TITLE BOX</div>
+  <h2>勘定科目BOX</h2>
+  <p class="muted small">将来、相談カードを勘定科目ごとにまとめて参照するための入口です。</p>
+  <div class="box-grid">
+    <div class="box"><strong>消耗品費</strong><span class="muted small">相談 0件</span></div>
+    <div class="box"><strong>通信費</strong><span class="muted small">相談 0件</span></div>
+    <div class="box"><strong>車両費</strong><span class="muted small">相談 0件</span></div>
+    <div class="box"><strong>広告宣伝費</strong><span class="muted small">相談 0件</span></div>
+    <div class="box"><strong>旅費交通費</strong><span class="muted small">相談 0件</span></div>
+    <div class="box"><strong>租税公課</strong><span class="muted small">相談 0件</span></div>
+  </div>
+  <div class="notice future">※ 現段階ではBOXへの保存・検索はまだ行いません。将来、1つの相談に複数の勘定科目候補を紐付けられる構造へ拡張します。</div>
+</section>
+
+<script>
+function startConsult(){
+  const q=document.getElementById('question').value.trim();
+  const box=document.getElementById('consultStatus');
+  if(!q){box.style.display='block';box.textContent='相談内容を入力してください。';return}
+  box.style.display='block';
+  box.innerHTML='<strong>相談を受け付けました。</strong><br><span class="muted small">現在はAI連携前のため回答はまだありません。次の段階で、この場所にAIの回答と相談カード保存機能を追加できます。</span>';
+}
+document.getElementById('question').addEventListener('keydown',function(e){
+  if(e.key==='Enter' && !e.shiftKey){e.preventDefault();startConsult()}
+});
+</script>
+</body>
+</html>
