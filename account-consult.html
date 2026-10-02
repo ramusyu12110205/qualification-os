@@ -219,7 +219,7 @@ function openBindPanel(id){
 }
 function syncConfirmOptions(id){
   const select=document.getElementById('confirmed-'+id);if(!select)return;
-  const selected=[...document.querySelectorAll('#bind-'+id+' .check-row input:checked')].map(x=>x.id.split('-').slice(2).join('-'));
+  const selected=[...document.querySelectorAll('#bind-'+id+' .check-row input:checked')].map(x=>x.dataset.accountId);
   [...select.options].forEach(o=>{if(o.value)o.disabled=!selected.includes(o.value)});
   if(select.value&&!selected.includes(select.value))select.value='';
 }
