@@ -16,7 +16,7 @@ h1{font-size:30px;margin:0 0 4px} h2{margin:0} h3{margin:0 0 10px} .muted{color:
 .mini{background:rgba(5,9,20,.38);border:1px solid rgba(255,255,255,.09);border-radius:15px;padding:13px}
 .mini b{display:block;font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:#b4bdd5} .mini strong{font-size:22px}
 .big{font-size:42px;font-weight:950;letter-spacing:-1px} .kicker{font-size:11px;letter-spacing:.13em;text-transform:uppercase;color:#b6c0dd;font-weight:900}
-.levelrow{display:flex;gap:12px;align-items:center} .level{font-size:35px;font-weight:950} .xpbar{flex:1}
+.levelrow{display:flex;gap:12px;align-items:center} .hero-study-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.hero-study-card{background:rgba(5,9,20,.28);border:1px solid rgba(255,255,255,.09);border-radius:17px;padding:15px}.hero-current-name{font-size:22px;font-weight:950;margin:5px 0 2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.hero-current-time{font-size:29px;font-weight:950;letter-spacing:-.5px} .level{font-size:35px;font-weight:950} .xpbar{flex:1}
 .bar{height:10px;background:#252e47;border-radius:99px;overflow:hidden} .bar>div{height:100%;background:linear-gradient(90deg,var(--accent),var(--cyan));border-radius:99px}
 .quest{background:linear-gradient(135deg,#171c35,#11182b);border:1px solid #39466b;border-radius:17px;padding:16px;margin-top:12px}
 .quest-title{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#aab5d5;font-weight:900} .quest-main{font-size:23px;font-weight:950;margin:4px 0}
@@ -46,7 +46,7 @@ textarea{min-height:120px} label{display:block;font-weight:800;margin:11px 0 6px
   .tabnav{display:none}
   .bottom-nav{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;position:fixed;left:9px;right:9px;bottom:9px;z-index:90;background:rgba(13,19,35,.97);border:1px solid #303a59;border-radius:18px;padding:7px;box-shadow:0 15px 40px rgba(0,0,0,.45)}
   .bottom-nav button{background:transparent;color:#9fa9c7;border:0;padding:8px 4px;font-size:12px}
-  .bottom-nav button.active{background:#6d43d9;color:#fff} .hero .big{font-size:35px} .record-grid{grid-template-columns:1fr}
+  .bottom-nav button.active{background:#6d43d9;color:#fff} .hero .big{font-size:35px} .record-grid{grid-template-columns:1fr} .hero-study-grid{grid-template-columns:1fr 1fr}.hero-current-name{font-size:18px}.hero-current-time{font-size:24px}
 }
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -75,9 +75,19 @@ textarea{min-height:120px} label{display:block;font-weight:800;margin:11px 0 6px
   <div class="card hero">
     <div class="grid" style="grid-template-columns:1.2fr .8fr;align-items:stretch">
       <div>
-        <div class="kicker">TOTAL STUDY</div>
-        <div class="big" id="heroTotal">0時間0分</div>
-        <div class="muted">これまでの総勉強時間</div>
+        <div class="hero-study-grid">
+          <div class="hero-study-card">
+            <div class="kicker">TOTAL STUDY</div>
+            <div class="big" id="heroTotal">0時間0分</div>
+            <div class="muted">これまでの総勉強時間</div>
+          </div>
+          <div class="hero-study-card">
+            <div class="kicker">CURRENT QUALIFICATION</div>
+            <div class="hero-current-name" id="heroCurrentQualification">—</div>
+            <div class="hero-current-time" id="heroCurrentStudyTime">0時間0分</div>
+            <div class="muted small">この資格の総勉強時間</div>
+          </div>
+        </div>
         <div class="quest">
           <div class="quest-title">Today's Mission</div>
           <div class="quest-main" id="heroMission">今日の学習を始めよう</div>
@@ -565,6 +575,10 @@ function updateHero(){
   const xp=Math.floor(total)+problems.reduce((a,p)=>a+Number(p.attempts||0),0)*10,level=Math.max(1,Math.floor(xp/300)+1),base=(level-1)*300;
   document.getElementById('heroTotal').textContent=minutesText(total);document.getElementById('heroDue').textContent=due.length+'問';
   document.getElementById('heroQualifications').textContent=qualifications.length;document.getElementById('heroStreak').textContent=calcStreak()+'日 🔥';
+  const currentQ=upcoming[0]||qualifications.filter(q=>q.exam_date).sort((a,b)=>b.exam_date.localeCompare(a.exam_date))[0]||null;
+  const currentQMinutes=currentQ?sessions.filter(s=>s.qualification_id===currentQ.id).reduce((a,s)=>a+Number(s.minutes||0),0):0;
+  document.getElementById('heroCurrentQualification').textContent=currentQ?.name||'対象資格なし';
+  document.getElementById('heroCurrentStudyTime').textContent=minutesText(currentQMinutes);
   document.getElementById('heroLevel').textContent=level;document.getElementById('heroXpText').textContent=xp+' XP';
   document.getElementById('heroXpBar').style.width=Math.min(100,Math.round((xp-base)/300*100))+'%';
   document.getElementById('heroMission').textContent=due.length?`復習 ${due.length}問を攻略`:'今日の復習はクリア！';
