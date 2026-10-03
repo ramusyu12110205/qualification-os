@@ -575,16 +575,10 @@ function updateHero(){
   const xp=Math.floor(total)+problems.reduce((a,p)=>a+Number(p.attempts||0),0)*10,level=Math.max(1,Math.floor(xp/300)+1),base=(level-1)*300;
   document.getElementById('heroTotal').textContent=minutesText(total);document.getElementById('heroDue').textContent=due.length+'問';
   document.getElementById('heroQualifications').textContent=qualifications.length;document.getElementById('heroStreak').textContent=calcStreak()+'日 🔥';
-  const currentQ=upcoming[0]||qualifications.filter(q=>q.exam_date).sort((a,b)=>b.exam_date.localeCompare(a.exam_date))[0]||null;
+  const currentQ=next||null;
   const currentQMinutes=currentQ?sessions.filter(s=>s.qualification_id===currentQ.id).reduce((a,s)=>a+Number(s.minutes||0),0):0;
   document.getElementById('heroCurrentQualification').textContent=currentQ?.name||'対象資格なし';
   document.getElementById('heroCurrentStudyTime').textContent=minutesText(currentQMinutes);
-  document.getElementById('heroMission').textContent=due.length?`復習 ${due.length}問を攻略`:'今日の復習はクリア！';
-  document.getElementById('heroMissionSub').textContent=due.length?'選択して復習を開始':'新しい学習を記録しましょう';
-  // 試験日が過ぎた資格を「NEXT EXAM」に選ばない。複数資格がある場合は、最も近い今後の試験を現在の対象として表示する。
-  const todayDate=today();
-  const upcoming=qualifications.filter(q=>q.exam_date&&q.exam_date>=todayDate).sort((a,b)=>a.exam_date.localeCompare(b.exam_date));
-  const next=upcoming[0]||qualifications.filter(q=>q.exam_date).sort((a,b)=>b.exam_date.localeCompare(a.exam_date))[0];
   if(next){const diff=Math.ceil((parseDate(next.exam_date)-parseDate(todayDate))/86400000);document.getElementById('heroCountdown').textContent=diff>=0?`あと ${diff}日`:'試験済み';document.getElementById('heroExamName').textContent=`${next.name} / ${fmt(next.exam_date)}`}
   else{document.getElementById('heroCountdown').textContent='—';document.getElementById('heroExamName').textContent='資格マスタで設定';}
 }
