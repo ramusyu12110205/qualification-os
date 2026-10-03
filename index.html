@@ -347,6 +347,8 @@ function selectSubjectDue(subjectId,v){document.querySelectorAll(`.dueCheck[data
 function startReview(){
   reviewQueue=[...document.querySelectorAll('.dueCheck:checked')].map(x=>problems.find(p=>p.id===x.dataset.id)).filter(Boolean);
   if(!reviewQueue.length){alert('復習する問題を選択してください');return}
+  const subjectIds=[...new Set(reviewQueue.map(p=>p.subject_id))];
+  if(subjectIds.length>1){alert('復習時間を正しく記録するため、今回は同じ科目の問題だけ選択してください。');return}
   reviewIndex=0;
   reviewAnswers=reviewQueue.map(p=>({problemId:p.id,result:'correct'}));
   document.getElementById('reviewDate').value=today();
@@ -354,27 +356,22 @@ function startReview(){
   showReviewQuestion();
 }
 function showReviewQuestion(){
-  if(reviewIndex>=reviewQueue.length){
-    document.getElementById('reviewProgress').textContent=`${reviewQueue.length}問の判定`;
-    document.getElementById('reviewQuestion').innerHTML=`
-      <div class="item">
-        <p class="muted small" style="margin-top:0">復習した問題を一覧で確認してください。<b>チェックあり＝正解</b>、外す＝不正解です。</p>
-        <div style="max-height:55vh;overflow:auto">
-          ${reviewQueue.map((p,i)=>{const sub=subjects.find(s=>s.id===p.subject_id),q=qualifications.find(q=>q.id===sub?.qualification_id),a=reviewAnswers[i];return `<label class="item" style="display:flex;gap:10px;align-items:center;cursor:pointer;margin:8px 0">
-            <input type="checkbox" ${a?.result==='correct'?'checked':''} onchange="setReviewAnswer(${i},this.checked)" style="width:auto">
-            <span><b>${esc(p.name)}</b><br><span class="muted small">${esc(q?.name||'')} / ${esc(sub?.name||'')}</span></span>
-          </label>`}).join('')}
-        </div>
-        <div class="row" style="margin-top:14px">
-          <button class="light" onclick="setAllReviewAnswers('correct')">すべて正解</button>
-          <button class="light" onclick="setAllReviewAnswers('wrong')">すべて不正解</button>
-          <button class="primary" onclick="confirmReviewAnswers()">判定を確定</button>
-        </div>
-      </div>`;
-    return;
-  }
-  // ここでは問題ごとの正誤判定をせず、10問などをまとめて一覧で確認する。
-  showReviewQuestion();
+  document.getElementById('reviewProgress').textContent=`${reviewQueue.length}問の判定`;
+  document.getElementById('reviewQuestion').innerHTML=`
+    <div class="item">
+      <p class="muted small" style="margin-top:0">復習した問題を一覧で確認してください。<b>チェックあり＝正解</b>、外す＝不正解です。</p>
+      <div style="max-height:55vh;overflow:auto">
+        ${reviewQueue.map((p,i)=>{const sub=subjects.find(s=>s.id===p.subject_id),q=qualifications.find(q=>q.id===sub?.qualification_id),a=reviewAnswers[i];return `<label class="item" style="display:flex;gap:10px;align-items:center;cursor:pointer;margin:8px 0">
+          <input type="checkbox" ${a?.result==='correct'?'checked':''} onchange="setReviewAnswer(${i},this.checked)" style="width:auto">
+          <span><b>${esc(p.name)}</b><br><span class="muted small">${esc(q?.name||'')} / ${esc(sub?.name||'')}</span></span>
+        </label>`}).join('')}
+      </div>
+      <div class="row" style="margin-top:14px">
+        <button class="light" onclick="setAllReviewAnswers('correct')">すべて正解</button>
+        <button class="light" onclick="setAllReviewAnswers('wrong')">すべて不正解</button>
+        <button class="primary" onclick="confirmReviewAnswers()">判定を確定</button>
+      </div>
+    </div>`;
 }
 function setReviewAnswer(index,checked){if(reviewAnswers[index])reviewAnswers[index].result=checked?'correct':'wrong';}
 function setAllReviewAnswers(result){reviewAnswers.forEach(x=>x.result=result);showReviewQuestion()}
