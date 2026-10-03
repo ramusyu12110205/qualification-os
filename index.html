@@ -575,7 +575,10 @@ function updateHero(){
   const xp=Math.floor(total)+problems.reduce((a,p)=>a+Number(p.attempts||0),0)*10,level=Math.max(1,Math.floor(xp/300)+1),base=(level-1)*300;
   document.getElementById('heroTotal').textContent=minutesText(total);document.getElementById('heroDue').textContent=due.length+'問';
   document.getElementById('heroQualifications').textContent=qualifications.length;document.getElementById('heroStreak').textContent=calcStreak()+'日 🔥';
-  const currentQ=next||null;
+  const todayDate=today();
+  const upcoming=qualifications.filter(q=>q.exam_date&&q.exam_date>=todayDate).sort((a,b)=>a.exam_date.localeCompare(b.exam_date));
+  const next=upcoming[0]||qualifications.filter(q=>q.exam_date).sort((a,b)=>b.exam_date.localeCompare(a.exam_date))[0]||null;
+  const currentQ=next;
   const currentQMinutes=currentQ?sessions.filter(s=>s.qualification_id===currentQ.id).reduce((a,s)=>a+Number(s.minutes||0),0):0;
   document.getElementById('heroCurrentQualification').textContent=currentQ?.name||'対象資格なし';
   document.getElementById('heroCurrentStudyTime').textContent=minutesText(currentQMinutes);
