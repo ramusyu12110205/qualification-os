@@ -95,9 +95,9 @@ textarea{min-height:120px} label{display:block;font-weight:800;margin:11px 0 6px
         </div>
       </div>
       <div class="mini" style="display:flex;flex-direction:column;justify-content:center">
-        <div class="kicker">LEVEL</div>
-        <div class="levelrow"><div class="level" id="heroLevel">1</div><div class="xpbar"><div class="bar"><div id="heroXpBar" style="width:0%"></div></div><div class="muted small" id="heroXpText">0 XP</div></div></div>
-        <div style="margin-top:18px"><div class="countdown" id="heroCountdown">—</div><div class="kicker">NEXT EXAM</div><div class="muted small" id="heroExamName">試験日を設定してください</div></div>
+        <div class="kicker">NEXT EXAM</div>
+        <div class="countdown" id="heroCountdown">—</div>
+        <div class="muted small" id="heroExamName">試験日を設定してください</div>
       </div>
     </div>
     <div class="statgrid" style="margin-top:12px">
@@ -579,8 +579,6 @@ function updateHero(){
   const currentQMinutes=currentQ?sessions.filter(s=>s.qualification_id===currentQ.id).reduce((a,s)=>a+Number(s.minutes||0),0):0;
   document.getElementById('heroCurrentQualification').textContent=currentQ?.name||'対象資格なし';
   document.getElementById('heroCurrentStudyTime').textContent=minutesText(currentQMinutes);
-  document.getElementById('heroLevel').textContent=level;document.getElementById('heroXpText').textContent=xp+' XP';
-  document.getElementById('heroXpBar').style.width=Math.min(100,Math.round((xp-base)/300*100))+'%';
   document.getElementById('heroMission').textContent=due.length?`復習 ${due.length}問を攻略`:'今日の復習はクリア！';
   document.getElementById('heroMissionSub').textContent=due.length?'選択して復習を開始':'新しい学習を記録しましょう';
   // 試験日が過ぎた資格を「NEXT EXAM」に選ばない。複数資格がある場合は、最も近い今後の試験を現在の対象として表示する。
