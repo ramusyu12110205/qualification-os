@@ -49,7 +49,7 @@ textarea{min-height:120px} label{display:block;font-weight:800;margin:11px 0 6px
 .hero-v2-streak{display:grid;grid-template-columns:1fr 1fr;gap:9px;background:rgba(8,15,43,.55);border:1px solid rgba(126,143,231,.2);border-radius:22px;padding:12px}.hero-v2-streak-card{position:relative;padding:16px 14px;background:rgba(16,26,65,.66);border:1px solid rgba(126,143,231,.13);border-radius:16px}.hero-v2-fire,.hero-v2-trophy{font-size:29px;margin-bottom:8px}.hero-v2-streak-card strong{display:block;font-size:25px;line-height:1.15;white-space:nowrap}
 .review-v2{padding:26px 28px}.review-v2-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}.review-v2-title{display:flex;align-items:center;gap:15px}.review-v2-title h2{font-size:28px;margin:0 0 4px}.review-v2-title .muted{font-size:13px}.review-v2-target{width:50px;height:50px;border-radius:50%;display:grid;place-items:center;background:rgba(139,92,246,.22);color:#b98aff;font-size:33px;font-weight:900}.review-v2-count{font-size:14px;padding:7px 13px}
 .review-v2-body{display:grid;grid-template-columns:420px 1fr;gap:38px;margin-top:20px}.review-v2-total{padding:6px 8px 4px 4px}.review-v2-number{font-size:104px;line-height:.95;font-weight:950;letter-spacing:-5px;background:linear-gradient(135deg,#f0d9ff,#9b6dff 55%,#8acbff);-webkit-background-clip:text;background-clip:text;color:transparent}.review-v2-number span{font-size:32px;letter-spacing:-1px;margin-left:7px}.review-start-btn{display:block;width:100%;margin-top:18px;padding:15px 18px;border-radius:15px;background:linear-gradient(100deg,#8b42f4,#438df5);color:#fff;font-size:17px;box-shadow:0 12px 25px rgba(92,68,235,.25)}
-.review-breakdown{border-left:1px solid rgba(127,142,191,.24);padding-left:38px;display:flex;flex-direction:column;justify-content:center;gap:10px}.review-breakdown-title{font-size:17px;font-weight:900;margin-bottom:2px}.review-breakdown-title span{color:#8490b7;font-size:14px;margin-left:5px}.review-bar-row{display:grid;grid-template-columns:18px 150px minmax(100px,1fr) 52px;align-items:center;gap:9px;padding:9px 12px;border-radius:12px;background:rgba(25,35,61,.48)}.review-bar-row b{font-size:14px}.review-bar-row strong{text-align:right;font-size:14px}.review-dot{width:14px;height:14px;border-radius:50%;display:block}.review-dot.today{background:#fb7185}.review-dot.late1{background:#f59e0b}.review-dot.late2{background:#facc15}.review-dot.late3{background:#a7b4d9}.review-track{height:15px;background:#1c2946;border-radius:99px;overflow:hidden}.review-track i{display:block;height:100%;width:0;border-radius:99px;transition:width .25s}#reviewBarToday{background:#fb7185}#reviewBarLate1{background:#f59e0b}#reviewBarLate2{background:#facc15}#reviewBarLate3{background:#a7b4d9}.review-selection-panel{scroll-margin-top:15px}
+.review-breakdown{border-left:1px solid rgba(127,142,191,.24);padding-left:38px;display:flex;flex-direction:column;justify-content:center;gap:10px}.review-breakdown-title{font-size:17px;font-weight:900;margin-bottom:2px}.review-breakdown-title span{color:#8490b7;font-size:14px;margin-left:5px}.review-bar-row{display:grid;grid-template-columns:18px 150px minmax(100px,1fr) 52px 38px;align-items:center;gap:9px;padding:9px 12px;border-radius:12px;background:rgba(25,35,61,.48);cursor:pointer;transition:background .15s,transform .15s}.review-bar-row:hover{background:rgba(60,72,112,.58);transform:translateX(2px)}.review-filter-hint{font-size:11px;color:#aeb9dc;text-align:right;opacity:.8}.review-bar-row b{font-size:14px}.review-bar-row strong{text-align:right;font-size:14px}.review-dot{width:14px;height:14px;border-radius:50%;display:block}.review-dot.today{background:#fb7185}.review-dot.late1{background:#f59e0b}.review-dot.late2{background:#facc15}.review-dot.late3{background:#a7b4d9}.review-track{height:15px;background:#1c2946;border-radius:99px;overflow:hidden}.review-track i{display:block;height:100%;width:0;border-radius:99px;transition:width .25s}#reviewBarToday{background:#fb7185}#reviewBarLate1{background:#f59e0b}#reviewBarLate2{background:#facc15}#reviewBarLate3{background:#a7b4d9}.review-selection-panel{scroll-margin-top:15px}
 @media(max-width:700px){.hero-v2{padding:20px 16px;min-height:0}.hero-v2-title{font-size:32px;margin-bottom:18px}.hero-v2-stats{grid-template-columns:1fr}.hero-v2-mainstats{grid-template-columns:1fr;padding:14px}.hero-v2-divider{width:100%;height:1px;margin:4px 0}.hero-v2-stat strong{font-size:25px}.hero-v2-streak{grid-template-columns:1fr 1fr}.review-v2{padding:20px 16px}.review-v2-body{grid-template-columns:1fr;gap:20px}.review-breakdown{border-left:0;border-top:1px solid rgba(127,142,191,.24);padding:20px 0 0}.review-v2-number{font-size:78px}.review-bar-row{grid-template-columns:18px 105px minmax(70px,1fr) 45px;padding:8px}.review-v2-title h2{font-size:24px}}
 @media(max-width:700px){
   body{padding:12px 12px 86px} .grid{grid-template-columns:1fr} .statgrid{grid-template-columns:1fr}
@@ -121,14 +121,14 @@ textarea{min-height:120px} label{display:block;font-weight:800;margin:11px 0 6px
       <div class="review-v2-body">
         <div class="review-v2-total"><div class="review-v2-number" id="reviewBigCount">0<span>問</span></div><div class="muted">今日までに復習する予定の問題です。</div><button class="review-start-btn" onclick="openReviewSelection()">復習を始める →</button></div>
         <div class="review-breakdown"><div class="review-breakdown-title">期限別の内訳 <span title="今日を基準に、期限を過ぎている日数で分類しています。">ⓘ</span></div>
-          <div class="review-bar-row"><span class="review-dot today"></span><b>今日</b><div class="review-track"><i id="reviewBarToday"></i></div><strong id="reviewDueToday">0問</strong></div>
-          <div class="review-bar-row"><span class="review-dot late1"></span><b>1〜3日遅れ</b><div class="review-track"><i id="reviewBarLate1"></i></div><strong id="reviewDueLate1">0問</strong></div>
-          <div class="review-bar-row"><span class="review-dot late2"></span><b>4〜7日遅れ</b><div class="review-track"><i id="reviewBarLate2"></i></div><strong id="reviewDueLate2">0問</strong></div>
-          <div class="review-bar-row"><span class="review-dot late3"></span><b>8日以上</b><div class="review-track"><i id="reviewBarLate3"></i></div><strong id="reviewDueLate3">0問</strong></div>
+          <div class="review-bar-row" onclick="setReviewFilter('today')" title="今日の問題だけ表示"><span class="review-dot today"></span><b>今日</b><div class="review-track"><i id="reviewBarToday"></i></div><strong id="reviewDueToday">0問</strong><span class="review-filter-hint">選択</span></div>
+          <div class="review-bar-row" onclick="setReviewFilter('late1')" title="1〜3日遅れの問題だけ表示"><span class="review-dot late1"></span><b>1〜3日遅れ</b><div class="review-track"><i id="reviewBarLate1"></i></div><strong id="reviewDueLate1">0問</strong><span class="review-filter-hint">選択</span></div>
+          <div class="review-bar-row" onclick="setReviewFilter('late2')" title="4〜7日遅れの問題だけ表示"><span class="review-dot late2"></span><b>4〜7日遅れ</b><div class="review-track"><i id="reviewBarLate2"></i></div><strong id="reviewDueLate2">0問</strong><span class="review-filter-hint">選択</span></div>
+          <div class="review-bar-row" onclick="setReviewFilter('late3')" title="8日以上遅れの問題だけ表示"><span class="review-dot late3"></span><b>8日以上</b><div class="review-track"><i id="reviewBarLate3"></i></div><strong id="reviewDueLate3">0問</strong><span class="review-filter-hint">選択</span></div>
         </div>
       </div>
     </div>
-    <div id="reviewSelectionPanel" class="card review-selection-panel" style="display:none"><div class="sectiontitle"><div><h2>復習する問題を選ぶ</h2><div class="muted small">科目ごとに選択できます。同じ科目の問題を選んでください。</div></div><button class="light" onclick="closeReviewSelection()">閉じる</button></div><div class="row" style="margin:12px 0"><button class="light" onclick="selectAllDue(true)">すべて選択</button><button class="light" onclick="selectAllDue(false)">すべて解除</button><button class="primary" onclick="startReview()">選択した問題を復習</button></div><div id="reviewList"></div></div>
+    <div id="reviewSelectionPanel" class="card review-selection-panel" style="display:none"><div class="sectiontitle"><div><h2>復習する問題を選ぶ</h2><div id="reviewFilterLabel" class="muted small">すべての期限の問題を表示中</div></div><button class="light" onclick="closeReviewSelection()">閉じる</button></div><div class="row" style="margin:12px 0"><button class="light" onclick="setReviewFilter('all')">すべて表示</button><button class="light" onclick="selectAllDue(true)">表示中を全選択</button><button class="light" onclick="selectAllDue(false)">表示中を全解除</button><button class="primary" onclick="startReview()">選択した問題を復習</button></div><div id="reviewList"></div></div>
   </section>
 
   <section id="tab-record" style="display:none">
@@ -320,27 +320,63 @@ function dueItems(){
   // 期限を過ぎた復習も未消化として今日の復習対象に含める。
   return problems.filter(p=>p.status==='pending' && p.next_review_date && p.next_review_date<=t);
 }
+let reviewFilter='all';
+const reviewSelectedIds=new Set();
+
+function reviewBucket(p){
+  const d=Math.max(0,Math.floor((parseDate(today())-parseDate(p.next_review_date))/86400000));
+  if(d===0)return 'today';
+  if(d<=3)return 'late1';
+  if(d<=7)return 'late2';
+  return 'late3';
+}
+function reviewFilterLabel(filter){
+  return ({all:'すべての期限の問題を表示中',today:'「今日」の問題だけ表示中',late1:'「1〜3日遅れ」の問題だけ表示中',late2:'「4〜7日遅れ」の問題だけ表示中',late3:'「8日以上」の問題だけ表示中'})[filter]||'すべての期限の問題を表示中';
+}
 function renderReview(){
   const due=dueItems();document.getElementById("reviewCount").textContent=due.length+"問";document.getElementById("reviewBigCount").innerHTML=due.length+"<span>問</span>";
   const buckets=[0,0,0,0],t=parseDate(today());
   due.forEach(p=>{const d=Math.max(0,Math.floor((t-parseDate(p.next_review_date))/86400000));if(d===0)buckets[0]++;else if(d<=3)buckets[1]++;else if(d<=7)buckets[2]++;else buckets[3]++});
   const max=Math.max(...buckets,1);["Today","Late1","Late2","Late3"].forEach((key,i)=>{const count=buckets[i];document.getElementById("reviewDue"+key).textContent=count+"問";document.getElementById("reviewBar"+key).style.width=(count/max*100)+"%"});
-  if(!due.length){document.getElementById("reviewList").innerHTML="<div class=\"item\">🎉 今日の復習はありません。</div>";return}
-  const groups={};due.forEach(p=>{if(!groups[p.subject_id])groups[p.subject_id]=[];groups[p.subject_id].push(p)});
-  document.getElementById("reviewList").innerHTML=Object.entries(groups).map(([sid,arr])=>{
+  renderReviewList(due);
+}
+function renderReviewList(due=dueItems()){
+  const label=document.getElementById("reviewFilterLabel");if(label)label.textContent=reviewFilterLabel(reviewFilter);
+  const filtered=reviewFilter==='all'?due:due.filter(p=>reviewBucket(p)===reviewFilter);
+  const list=document.getElementById("reviewList");if(!list)return;
+  if(!filtered.length){list.innerHTML="<div class=\"item\">この期限の復習問題はありません。</div>";return}
+  const groups={};filtered.forEach(p=>{if(!groups[p.subject_id])groups[p.subject_id]=[];groups[p.subject_id].push(p)});
+  list.innerHTML=Object.entries(groups).map(([sid,arr])=>{
     const sub=subjects.find(s=>s.id===sid),q=qualifications.find(q=>q.id===sub?.qualification_id);
     return `<details style="margin:10px 0"><summary style="cursor:pointer;font-weight:900">${esc(q?.name||"資格")} / ${esc(sub?.name||"科目")} <span class="badge">${arr.length}問</span></summary>`+
       `<div style="padding-top:7px"><div class="row" style="margin-bottom:8px"><button class="light" data-subject="${sid}" onclick="selectSubjectDue(this.dataset.subject,true)">この科目を全選択</button><button class="light" data-subject="${sid}" onclick="selectSubjectDue(this.dataset.subject,false)">この科目を全解除</button></div>`+
-      arr.map(p=>`<label class="item" style="display:flex;gap:10px;align-items:center;cursor:pointer"><input class="dueCheck" type="checkbox" data-id="${p.id}" style="width:auto"><span><b>${esc(p.name)}</b><br><span class="muted small">実施 ${p.attempts}回 ・ ${p.last_result==="wrong"?"再復習":p.stage===0?"初回翌日":`${[1,3,7,14,30][p.stage]??"?"}日後`}</span></span></label>`).join("")+
+      arr.map(p=>`<label class="item" style="display:flex;gap:10px;align-items:center;cursor:pointer"><input class="dueCheck" type="checkbox" data-id="${p.id}" ${reviewSelectedIds.has(p.id)?'checked':''} onchange="toggleReviewSelection(this)" style="width:auto"><span><b>${esc(p.name)}</b><br><span class="muted small">実施 ${p.attempts}回 ・ ${p.last_result==="wrong"?"再復習":p.stage===0?"初回翌日":([1,3,7,14,30][p.stage]??"?")+"日後"}</span></span></label>`).join("")+
       `</div></details>`;
   }).join("");
 }
-function openReviewSelection(){const panel=document.getElementById("reviewSelectionPanel");if(!panel)return;panel.style.display="block";setTimeout(()=>panel.scrollIntoView({behavior:"smooth",block:"start"}),0)}
+function setReviewFilter(filter){
+  reviewFilter=filter;
+  openReviewSelection(false);
+  renderReviewList();
+}
+function openReviewSelection(scroll=true){
+  const panel=document.getElementById("reviewSelectionPanel");if(!panel)return;
+  panel.style.display="block";
+  renderReviewList();
+  if(scroll)setTimeout(()=>panel.scrollIntoView({behavior:"smooth",block:"start"}),0);
+}
 function closeReviewSelection(){const panel=document.getElementById("reviewSelectionPanel");if(panel)panel.style.display="none"}
-function selectAllDue(v){document.querySelectorAll('.dueCheck').forEach(x=>x.checked=v)}
-function selectSubjectDue(subjectId,v){document.querySelectorAll(`.dueCheck[data-id]`).forEach(x=>{const p=problems.find(p=>p.id===x.dataset.id);if(p?.subject_id===subjectId)x.checked=v})}
+function toggleReviewSelection(el){if(el.checked)reviewSelectedIds.add(el.dataset.id);else reviewSelectedIds.delete(el.dataset.id)}
+function selectAllDue(v){
+  dueItems().filter(p=>reviewFilter==='all'||reviewBucket(p)===reviewFilter).forEach(p=>v?reviewSelectedIds.add(p.id):reviewSelectedIds.delete(p.id));
+  renderReviewList();
+}
+function selectSubjectDue(subjectId,v){
+  dueItems().filter(p=>(reviewFilter==='all'||reviewBucket(p)===reviewFilter)&&p.subject_id===subjectId).forEach(p=>v?reviewSelectedIds.add(p.id):reviewSelectedIds.delete(p.id));
+  renderReviewList();
+}
 function startReview(){
-  reviewQueue=[...document.querySelectorAll('.dueCheck:checked')].map(x=>problems.find(p=>p.id===x.dataset.id)).filter(Boolean);
+  reviewQueue=[...reviewSelectedIds].map(id=>problems.find(p=>p.id===id)).filter(Boolean);
   if(!reviewQueue.length){alert('復習する問題を選択してください');return}
   const subjectIds=[...new Set(reviewQueue.map(p=>p.subject_id))];
   if(subjectIds.length>1){alert('復習時間を正しく記録するため、今回は同じ科目の問題だけ選択してください。');return}
