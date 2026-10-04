@@ -41,6 +41,16 @@ textarea{min-height:120px} label{display:block;font-weight:800;margin:11px 0 6px
 .toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:#101827;border:1px solid #354361;color:#fff;padding:11px 15px;border-radius:12px;z-index:200;display:none}
 .auth{min-height:55vh;display:flex;align-items:center;justify-content:center} .authbox{max-width:480px;text-align:center}
 .record-grid{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center} .record-meta{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px} .record-meta span{background:#1b2339;border:1px solid #2e3956;border-radius:999px;padding:4px 9px;font-size:12px;color:#c9d2e9}
+/* Home dashboard v2 */
+.hero-v2{position:relative;min-height:355px;padding:26px 28px;overflow:hidden;background:linear-gradient(135deg,#17123d 0%,#12245d 48%,#075b82 100%);border-color:#40358a}.hero-v2-bg{position:absolute;inset:0;overflow:hidden;pointer-events:none;opacity:.9}.hero-v2-bg:before,.hero-v2-bg:after,.hero-v2-bg span,.hero-v2-bg i,.hero-v2-bg b{content:"";position:absolute;bottom:-8%;width:70%;height:58%;clip-path:polygon(0 100%,0 72%,16% 48%,27% 65%,42% 24%,53% 51%,66% 18%,78% 58%,100% 34%,100% 100%)}
+.hero-v2-bg:before{left:-8%;background:linear-gradient(145deg,rgba(38,31,92,.9),rgba(18,28,66,.92))}.hero-v2-bg:after{right:-12%;background:linear-gradient(145deg,rgba(28,45,100,.82),rgba(6,65,91,.9));transform:scaleX(-1)}.hero-v2-bg span{left:18%;bottom:7%;width:62%;height:50%;background:linear-gradient(145deg,rgba(98,79,171,.8),rgba(22,37,83,.95));opacity:.72}.hero-v2-bg i{left:24%;bottom:18%;width:54%;height:42%;background:linear-gradient(145deg,rgba(185,133,228,.55),rgba(28,41,91,.92));opacity:.65}.hero-v2-bg b{right:3%;bottom:-4%;width:45%;height:38%;background:rgba(7,32,67,.72);opacity:.8}
+.hero-v2-content{position:relative;z-index:2}.hero-current-badge{display:inline-flex;padding:7px 15px;border-radius:999px;background:rgba(75,54,171,.62);border:1px solid rgba(158,137,255,.35);font-weight:900;font-size:15px}.hero-v2-title{font-size:42px;margin:12px 0 26px;letter-spacing:-1px;text-shadow:0 5px 20px rgba(0,0,0,.35)}.hero-v2-stats{display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:12px;align-items:stretch}
+.hero-v2-mainstats{display:grid;grid-template-columns:1fr auto 1fr auto 1fr;align-items:center;background:rgba(8,15,43,.62);border:1px solid rgba(126,143,231,.2);border-radius:22px;padding:24px 22px;backdrop-filter:blur(6px)}.hero-v2-stat{display:flex;gap:15px;align-items:center;min-width:0}.hero-v2-icon{width:54px;height:54px;display:grid;place-items:center;border-radius:16px;background:rgba(119,79,236,.26);border:1px solid rgba(151,125,255,.35);font-size:31px;color:#c4a9ff;flex:none}.hero-v2-label{font-size:13px;font-weight:900;color:#c6ccea;margin-bottom:4px}.hero-v2-stat strong{display:block;font-size:30px;line-height:1.15;letter-spacing:-.8px;white-space:nowrap}.hero-v2-stat span,.hero-v2-streak-card span{display:block;color:#9fa9c7;font-size:12px;margin-top:6px}.hero-v2-divider{width:1px;height:80px;background:rgba(170,183,255,.25);margin:0 7px}
+.hero-v2-streak{display:grid;grid-template-columns:1fr 1fr;gap:9px;background:rgba(8,15,43,.55);border:1px solid rgba(126,143,231,.2);border-radius:22px;padding:12px}.hero-v2-streak-card{position:relative;padding:16px 14px;background:rgba(16,26,65,.66);border:1px solid rgba(126,143,231,.13);border-radius:16px}.hero-v2-fire,.hero-v2-trophy{font-size:29px;margin-bottom:8px}.hero-v2-streak-card strong{display:block;font-size:25px;line-height:1.15;white-space:nowrap}
+.review-v2{padding:26px 28px}.review-v2-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}.review-v2-title{display:flex;align-items:center;gap:15px}.review-v2-title h2{font-size:28px;margin:0 0 4px}.review-v2-title .muted{font-size:13px}.review-v2-target{width:50px;height:50px;border-radius:50%;display:grid;place-items:center;background:rgba(139,92,246,.22);color:#b98aff;font-size:33px;font-weight:900}.review-v2-count{font-size:14px;padding:7px 13px}
+.review-v2-body{display:grid;grid-template-columns:420px 1fr;gap:38px;margin-top:20px}.review-v2-total{padding:6px 8px 4px 4px}.review-v2-number{font-size:104px;line-height:.95;font-weight:950;letter-spacing:-5px;background:linear-gradient(135deg,#f0d9ff,#9b6dff 55%,#8acbff);-webkit-background-clip:text;background-clip:text;color:transparent}.review-v2-number span{font-size:32px;letter-spacing:-1px;margin-left:7px}.review-start-btn{display:block;width:100%;margin-top:18px;padding:15px 18px;border-radius:15px;background:linear-gradient(100deg,#8b42f4,#438df5);color:#fff;font-size:17px;box-shadow:0 12px 25px rgba(92,68,235,.25)}
+.review-breakdown{border-left:1px solid rgba(127,142,191,.24);padding-left:38px;display:flex;flex-direction:column;justify-content:center;gap:10px}.review-breakdown-title{font-size:17px;font-weight:900;margin-bottom:2px}.review-breakdown-title span{color:#8490b7;font-size:14px;margin-left:5px}.review-bar-row{display:grid;grid-template-columns:18px 150px minmax(100px,1fr) 52px;align-items:center;gap:9px;padding:9px 12px;border-radius:12px;background:rgba(25,35,61,.48)}.review-bar-row b{font-size:14px}.review-bar-row strong{text-align:right;font-size:14px}.review-dot{width:14px;height:14px;border-radius:50%;display:block}.review-dot.today{background:#fb7185}.review-dot.late1{background:#f59e0b}.review-dot.late2{background:#facc15}.review-dot.late3{background:#a7b4d9}.review-track{height:15px;background:#1c2946;border-radius:99px;overflow:hidden}.review-track i{display:block;height:100%;width:0;border-radius:99px;transition:width .25s}#reviewBarToday{background:#fb7185}#reviewBarLate1{background:#f59e0b}#reviewBarLate2{background:#facc15}#reviewBarLate3{background:#a7b4d9}.review-selection-panel{scroll-margin-top:15px}
+@media(max-width:700px){.hero-v2{padding:20px 16px;min-height:0}.hero-v2-title{font-size:32px;margin-bottom:18px}.hero-v2-stats{grid-template-columns:1fr}.hero-v2-mainstats{grid-template-columns:1fr;padding:14px}.hero-v2-divider{width:100%;height:1px;margin:4px 0}.hero-v2-stat strong{font-size:25px}.hero-v2-streak{grid-template-columns:1fr 1fr}.review-v2{padding:20px 16px}.review-v2-body{grid-template-columns:1fr;gap:20px}.review-breakdown{border-left:0;border-top:1px solid rgba(127,142,191,.24);padding:20px 0 0}.review-v2-number{font-size:78px}.review-bar-row{grid-template-columns:18px 105px minmax(70px,1fr) 45px;padding:8px}.review-v2-title h2{font-size:24px}}
 @media(max-width:700px){
   body{padding:12px 12px 86px} .grid{grid-template-columns:1fr} .statgrid{grid-template-columns:1fr}
   .tabnav{display:none}
@@ -72,38 +82,20 @@ textarea{min-height:120px} label{display:block;font-weight:800;margin:11px 0 6px
     <button class="light" onclick="logout()">ログアウト</button>
   </div>
 
-  <div class="card hero">
-    <div class="grid" style="grid-template-columns:1.2fr .8fr;align-items:stretch">
-      <div>
-        <div class="hero-study-grid">
-          <div class="hero-study-card">
-            <div class="kicker">TOTAL STUDY</div>
-            <div class="big" id="heroTotal">0時間0分</div>
-            <div class="muted">これまでの総勉強時間</div>
-          </div>
-          <div class="hero-study-card">
-            <div class="kicker">CURRENT QUALIFICATION</div>
-            <div class="hero-current-name" id="heroCurrentQualification">—</div>
-            <div class="hero-current-time" id="heroCurrentStudyTime">0時間0分</div>
-            <div class="muted small">この資格の総勉強時間</div>
-          </div>
+  <div class="card hero hero-v2">
+    <div class="hero-v2-bg" aria-hidden="true"><span></span><i></i><b></b></div>
+    <div class="hero-v2-content">
+      <div class="hero-current-badge">現在の資格</div><h2 class="hero-v2-title" id="heroCurrentQualification">—</h2>
+      <div class="hero-v2-stats">
+        <div class="hero-v2-mainstats">
+          <div class="hero-v2-stat"><div class="hero-v2-icon">◷</div><div><div class="hero-v2-label">総学習時間</div><strong id="heroTotal">0時間0分</strong><span>これまでの総勉強時間</span></div></div>
+          <div class="hero-v2-divider"></div>
+          <div class="hero-v2-stat"><div class="hero-v2-icon">▤</div><div><div class="hero-v2-label">現在の資格の学習時間</div><strong id="heroCurrentStudyTime">0時間0分</strong><span id="heroCurrentQualificationSub">現在の資格の学習時間</span></div></div>
+          <div class="hero-v2-divider"></div>
+          <div class="hero-v2-stat"><div class="hero-v2-icon">▣</div><div><div class="hero-v2-label">試験まで</div><strong id="heroCountdown">—</strong><span id="heroExamName">試験日を設定してください</span></div></div>
         </div>
-        <div class="quest">
-          <div class="quest-title">Today's Mission</div>
-          <div class="quest-main" id="heroMission">今日の学習を始めよう</div>
-          <div class="muted small" id="heroMissionSub">今日の復習を確認</div>
-        </div>
+        <div class="hero-v2-streak"><div class="hero-v2-streak-card"><div class="hero-v2-fire">🔥</div><div class="hero-v2-label">現在の連続学習</div><strong id="heroStreak">0日 🔥</strong><span>今日までの連続学習</span></div><div class="hero-v2-streak-card"><div class="hero-v2-trophy">🏆</div><div class="hero-v2-label">最高連続記録</div><strong id="heroBestStreak">0日</strong><span>これまでの最高記録</span></div></div>
       </div>
-      <div class="mini" style="display:flex;flex-direction:column;justify-content:center">
-        <div class="kicker">NEXT EXAM</div>
-        <div class="countdown" id="heroCountdown">—</div>
-        <div class="muted small" id="heroExamName">試験日を設定してください</div>
-      </div>
-    </div>
-    <div class="statgrid" style="margin-top:12px">
-      <div class="mini"><b>今日の復習</b><strong id="heroDue">0問</strong><div class="muted small">今日やる問題</div></div>
-      <div class="mini"><b>連続学習</b><strong id="heroStreak">0日 🔥</strong></div>
-      <div class="mini"><b>資格</b><strong id="heroQualifications">0</strong></div>
     </div>
   </div>
 
@@ -124,16 +116,19 @@ textarea{min-height:120px} label{display:block;font-weight:800;margin:11px 0 6px
   </div>
 
   <section id="tab-review">
-    <div class="card">
-      <div class="sectiontitle"><h2>今日の復習</h2><span class="badge" id="reviewCount">0問</span></div>
-      <p class="muted small">今日までに復習する予定だった問題を表示します。期限を過ぎた復習も未消化として残ります。</p>
-      <div class="row" style="margin:12px 0">
-        <button class="light" onclick="selectAllDue(true)">すべて選択</button>
-        <button class="light" onclick="selectAllDue(false)">すべて解除</button>
-        <button class="primary" onclick="startReview()">選択した問題を復習</button>
+    <div class="card review-v2">
+      <div class="review-v2-head"><div class="review-v2-title"><div class="review-v2-target">◎</div><div><h2>今日の復習</h2><div class="muted">今日復習する予定の問題です。</div></div></div><span class="badge review-v2-count" id="reviewCount">0問</span></div>
+      <div class="review-v2-body">
+        <div class="review-v2-total"><div class="review-v2-number" id="reviewBigCount">0<span>問</span></div><div class="muted">今日までに復習する予定の問題です。</div><button class="review-start-btn" onclick="openReviewSelection()">復習を始める →</button></div>
+        <div class="review-breakdown"><div class="review-breakdown-title">期限別の内訳 <span title="今日を基準に、期限を過ぎている日数で分類しています。">ⓘ</span></div>
+          <div class="review-bar-row"><span class="review-dot today"></span><b>今日</b><div class="review-track"><i id="reviewBarToday"></i></div><strong id="reviewDueToday">0問</strong></div>
+          <div class="review-bar-row"><span class="review-dot late1"></span><b>1〜3日遅れ</b><div class="review-track"><i id="reviewBarLate1"></i></div><strong id="reviewDueLate1">0問</strong></div>
+          <div class="review-bar-row"><span class="review-dot late2"></span><b>4〜7日遅れ</b><div class="review-track"><i id="reviewBarLate2"></i></div><strong id="reviewDueLate2">0問</strong></div>
+          <div class="review-bar-row"><span class="review-dot late3"></span><b>8日以上</b><div class="review-track"><i id="reviewBarLate3"></i></div><strong id="reviewDueLate3">0問</strong></div>
+        </div>
       </div>
-      <div id="reviewList"></div>
     </div>
+    <div id="reviewSelectionPanel" class="card review-selection-panel" style="display:none"><div class="sectiontitle"><div><h2>復習する問題を選ぶ</h2><div class="muted small">科目ごとに選択できます。同じ科目の問題を選んでください。</div></div><button class="light" onclick="closeReviewSelection()">閉じる</button></div><div class="row" style="margin:12px 0"><button class="light" onclick="selectAllDue(true)">すべて選択</button><button class="light" onclick="selectAllDue(false)">すべて解除</button><button class="primary" onclick="startReview()">選択した問題を復習</button></div><div id="reviewList"></div></div>
   </section>
 
   <section id="tab-record" style="display:none">
@@ -325,23 +320,22 @@ function dueItems(){
   return problems.filter(p=>p.status==='pending' && p.next_review_date && p.next_review_date<=t);
 }
 function renderReview(){
-  const due=dueItems();
-  document.getElementById('reviewCount').textContent=due.length+'問';
-  if(!due.length){document.getElementById('reviewList').innerHTML='<div class="item">🎉 今日の復習はありません。</div>';return}
-  const groups={};
-  due.forEach(p=>{if(!groups[p.subject_id])groups[p.subject_id]=[];groups[p.subject_id].push(p)});
-  document.getElementById('reviewList').innerHTML=Object.entries(groups).map(([sid,arr])=>{
+  const due=dueItems();document.getElementById("reviewCount").textContent=due.length+"問";document.getElementById("reviewBigCount").innerHTML=due.length+"<span>問</span>";
+  const buckets=[0,0,0,0],t=parseDate(today());
+  due.forEach(p=>{const d=Math.max(0,Math.floor((t-parseDate(p.next_review_date))/86400000));if(d===0)buckets[0]++;else if(d<=3)buckets[1]++;else if(d<=7)buckets[2]++;else buckets[3]++});
+  const max=Math.max(...buckets,1);["Today","Late1","Late2","Late3"].forEach((key,i)=>{const count=buckets[i];document.getElementById("reviewDue"+key).textContent=count+"問";document.getElementById("reviewBar"+key).style.width=(count/max*100)+"%"});
+  if(!due.length){document.getElementById("reviewList").innerHTML="<div class=\"item\">🎉 今日の復習はありません。</div>";return}
+  const groups={};due.forEach(p=>{if(!groups[p.subject_id])groups[p.subject_id]=[];groups[p.subject_id].push(p)});
+  document.getElementById("reviewList").innerHTML=Object.entries(groups).map(([sid,arr])=>{
     const sub=subjects.find(s=>s.id===sid),q=qualifications.find(q=>q.id===sub?.qualification_id);
-    return `<details style="margin:10px 0"><summary style="cursor:pointer;font-weight:900">${esc(q?.name||'資格')} / ${esc(sub?.name||'科目')} <span class="badge">${arr.length}問</span></summary>
-      <div style="padding-top:7px">
-        <div class="row" style="margin-bottom:8px">
-          <button class="light" onclick="selectSubjectDue('${sid}',true)">この科目を全選択</button>
-          <button class="light" onclick="selectSubjectDue('${sid}',false)">この科目を全解除</button>
-        </div>
-        ${arr.map(p=>`<label class="item" style="display:flex;gap:10px;align-items:center;cursor:pointer"><input class="dueCheck" type="checkbox" data-id="${p.id}" style="width:auto"><span><b>${esc(p.name)}</b><br><span class="muted small">実施 ${p.attempts}回 ・ ${p.last_result==='wrong'?'再復習':p.stage===0?'初回翌日':`${[1,3,7,14,30][p.stage]??'?'}日後`}</span></span></label>`).join('')}
-      </div></details>`;
-  }).join('');
+    return `<details style="margin:10px 0"><summary style="cursor:pointer;font-weight:900">${esc(q?.name||"資格")} / ${esc(sub?.name||"科目")} <span class="badge">${arr.length}問</span></summary>`+
+      `<div style="padding-top:7px"><div class="row" style="margin-bottom:8px"><button class="light" data-subject="${sid}" onclick="selectSubjectDue(this.dataset.subject,true)">この科目を全選択</button><button class="light" data-subject="${sid}" onclick="selectSubjectDue(this.dataset.subject,false)">この科目を全解除</button></div>`+
+      arr.map(p=>`<label class="item" style="display:flex;gap:10px;align-items:center;cursor:pointer"><input class="dueCheck" type="checkbox" data-id="${p.id}" style="width:auto"><span><b>${esc(p.name)}</b><br><span class="muted small">実施 ${p.attempts}回 ・ ${p.last_result==="wrong"?"再復習":p.stage===0?"初回翌日":`${[1,3,7,14,30][p.stage]??"?"}日後`}</span></span></label>`).join("")+
+      `</div></details>`;
+  }).join("");
 }
+function openReviewSelection(){const panel=document.getElementById("reviewSelectionPanel");if(!panel)return;panel.style.display="block";setTimeout(()=>panel.scrollIntoView({behavior:"smooth",block:"start"}),0)}
+function closeReviewSelection(){const panel=document.getElementById("reviewSelectionPanel");if(panel)panel.style.display="none"}
 function selectAllDue(v){document.querySelectorAll('.dueCheck').forEach(x=>x.checked=v)}
 function selectSubjectDue(subjectId,v){document.querySelectorAll(`.dueCheck[data-id]`).forEach(x=>{const p=problems.find(p=>p.id===x.dataset.id);if(p?.subject_id===subjectId)x.checked=v})}
 function startReview(){
@@ -595,20 +589,20 @@ function calcStreak(){
   const days=[...new Set(sessions.map(s=>s.study_date))].sort().reverse(); if(!days.length||days[0]!==today())return 0;
   let n=0;for(let i=0;i<days.length;i++){if(days[i]===addDays(today(),-i))n++;else break}return n;
 }
+function calcBestStreak(){
+  const days=[...new Set(sessions.map(s=>s.study_date).filter(Boolean))].sort();
+  if(!days.length)return 0;let best=1,current=1;
+  for(let i=1;i<days.length;i++){if(days[i]===addDays(days[i-1],1)){current++;best=Math.max(best,current)}else current=1}return best;
+}
 function updateHero(){
-  const total=sessions.reduce((a,s)=>a+Number(s.minutes||0),0),due=dueItems();
-  const xp=Math.floor(total)+problems.reduce((a,p)=>a+Number(p.attempts||0),0)*10,level=Math.max(1,Math.floor(xp/300)+1),base=(level-1)*300;
-  document.getElementById('heroTotal').textContent=minutesText(total);document.getElementById('heroDue').textContent=due.length+'問';
-  document.getElementById('heroQualifications').textContent=qualifications.length;document.getElementById('heroStreak').textContent=calcStreak()+'日 🔥';
-  const todayDate=today();
+  const total=sessions.reduce((a,s)=>a+Number(s.minutes||0),0),todayDate=today();
   const upcoming=qualifications.filter(q=>q.exam_date&&q.exam_date>=todayDate).sort((a,b)=>a.exam_date.localeCompare(b.exam_date));
-  const next=upcoming[0]||qualifications.filter(q=>q.exam_date).sort((a,b)=>b.exam_date.localeCompare(a.exam_date))[0]||null;
-  const currentQ=next;
+  const next=upcoming[0]||qualifications.filter(q=>q.exam_date).sort((a,b)=>b.exam_date.localeCompare(a.exam_date))[0]||null,currentQ=next;
   const currentQMinutes=currentQ?sessions.filter(s=>s.qualification_id===currentQ.id).reduce((a,s)=>a+Number(s.minutes||0),0):0;
-  document.getElementById('heroCurrentQualification').textContent=currentQ?.name||'対象資格なし';
-  document.getElementById('heroCurrentStudyTime').textContent=minutesText(currentQMinutes);
-  if(next){const diff=Math.ceil((parseDate(next.exam_date)-parseDate(todayDate))/86400000);document.getElementById('heroCountdown').textContent=diff>=0?`あと ${diff}日`:'試験済み';document.getElementById('heroExamName').textContent=`${next.name} / ${fmt(next.exam_date)}`}
-  else{document.getElementById('heroCountdown').textContent='—';document.getElementById('heroExamName').textContent='資格マスタで設定';}
+  document.getElementById("heroTotal").textContent=minutesText(total);document.getElementById("heroCurrentQualification").textContent=currentQ?.name||"対象資格なし";document.getElementById("heroCurrentStudyTime").textContent=minutesText(currentQMinutes);
+  document.getElementById("heroStreak").textContent=calcStreak()+"日 🔥";document.getElementById("heroBestStreak").textContent=calcBestStreak()+"日";
+  if(next){const diff=Math.ceil((parseDate(next.exam_date)-parseDate(todayDate))/86400000);document.getElementById("heroCountdown").textContent=diff>=0?"あと "+diff+"日":"試験済み";document.getElementById("heroExamName").textContent=next.name+" / "+fmt(next.exam_date);document.getElementById("heroCurrentQualificationSub").textContent=next.name+"の学習時間"}
+  else{document.getElementById("heroCountdown").textContent="—";document.getElementById("heroExamName").textContent="試験日を設定してください";document.getElementById("heroCurrentQualificationSub").textContent="現在の資格の学習時間"}
 }
 
 function setStatusTab(type){
