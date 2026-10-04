@@ -207,6 +207,7 @@ textarea{min-height:120px} label{display:block;font-weight:800;margin:11px 0 6px
 <div id="toast" class="toast"></div>
 
 <script>
+history.scrollRestoration="manual";
 const SUPABASE_URL = 'https://txprypfzdsfaupguhybl.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_qiCaP0cBNhms5-usSDzKlQ_nywzlU36';
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
@@ -295,7 +296,7 @@ function openTab(name, updateHistory=true){
   if(name==='review') renderReview();
   if(name==='status') showDashboard();
   if(name==='record') refreshRecordSelects();
-  window.scrollTo({top:0,behavior:'smooth'});
+  requestAnimationFrame(()=>window.scrollTo(0,0));
 }
 function refreshRecordSelects(){
   const q=document.getElementById('recordQualification'),s=document.getElementById('recordSubject');
