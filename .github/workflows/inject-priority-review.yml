@@ -1,0 +1,37 @@
+name: Inject priority review script
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  inject:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Inject script tag once
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('index.html')
+          s=p.read_text(encoding='utf-8')
+          tag='<script src="review-priority.js"></script>'
+          if tag not in s:
+              marker='</body>'
+              if marker not in s:
+                  raise SystemExit('body marker not found')
+              s=s.replace(marker, tag+'\n'+marker, 1)
+              p.write_text(s,encoding='utf-8')
+          PY
+      - name: Commit injected tag
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html
+          git diff --cached --quiet && exit 0
+          git commit -m 'Load priority review feature'
+          git push
