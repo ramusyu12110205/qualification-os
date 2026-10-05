@@ -4,15 +4,39 @@
   let originalStartReview=null;
   let originalFinishReviewSession=null;
   const q=(s)=>document.querySelector(s);
-  const escP=(s)=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
+  const escP=(s)=>String(s??'').replace(/[&<>\"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#039;'}[m]));
   const subjectOf=(p)=>subjects.find(s=>s.id===p.subject_id);
   const qualOf=(s)=>qualifications.find(x=>x.id===s?.qualification_id);
 
+  function ensurePriorityPanel(){
+    const host=q('#tab-review'); if(!host)return null;
+    let panel=q('#priorityReviewPanel');
+    if(!panel){
+      panel=document.createElement('section');
+      panel.id='priorityReviewPanel';
+      panel.className='priority-card';
+      const reviewMain=host.querySelector('.review-v2') || host.firstElementChild;
+      if(reviewMain) reviewMain.parentNode.insertBefore(panel,reviewMain.nextSibling);
+      else host.prepend(panel);
+    }
+    return panel;
+  }
+
   async function loadPriority(){
-    if(!currentUser)return;
+    const panel=ensurePriorityPanel();
+    if(!panel)return;
+    if(!currentUser){
+      panel.innerHTML='<div class="priority-head"><div><div class="priority-title">⭐ 今日やる</div><div class="muted small">ログイン後に、先にやっておきたい問題をストックできます。</div></div></div>';
+      return;
+    }
     const {data,error}=await sb.from('review_priority_queue').select('id,problem_id,created_at').eq('user_id',currentUser.id).order('created_at',{ascending:false});
-    if(error){console.error(error);return}
-    priorityRows=data||[]; priorityIds=new Set(priorityRows.map(x=>x.problem_id));
+    if(error){
+      console.error('review_priority_queue load error',error);
+      panel.innerHTML='<div class="priority-head"><div><div class="priority-title">⭐ 今日やる</div><div class="muted small">優先復習を読み込めませんでした。ページを再読み込みしてください。</div></div></div>';
+      return;
+    }
+    priorityRows=data||[];
+    priorityIds=new Set(priorityRows.map(x=>x.problem_id));
     renderPriorityPanel();
   }
 
@@ -28,13 +52,7 @@
   }
 
   function renderPriorityPanel(){
-    const host=q('#tab-review'); if(!host)return;
-    let panel=q('#priorityReviewPanel');
-    if(!panel){
-      panel=document.createElement('section');panel.id='priorityReviewPanel';panel.className='priority-card';
-      const reviewMain=host.querySelector('.review-v2') || host.firstElementChild;
-      if(reviewMain) reviewMain.parentNode.insertBefore(panel,reviewMain.nextSibling); else host.prepend(panel);
-    }
+    const panel=ensurePriorityPanel(); if(!panel)return;
     const ps=priorityRows.map(r=>problems.find(p=>p.id===r.problem_id)).filter(Boolean);
     panel.innerHTML=`<div class="priority-head"><div><div class="priority-title">⭐ 今日やる</div><div class="muted small">先にやっておきたい問題をストック</div></div><span class="priority-count">${ps.length}問</span></div>
       <div class="priority-actions"><button class="primary" onclick="window.openPriorityPicker()">＋ 問題を追加</button>${ps.length?`<button class="light" onclick="window.startPriorityReview()">今日やる問題を復習</button><button class="light" onclick="window.clearPriorityQueue()">すべて解除</button>`:''}</div>
@@ -60,14 +78,16 @@
     const {error:delError}=await sb.from('review_priority_queue').delete().eq('user_id',currentUser.id);
     if(delError){alert(delError.message);return}
     if(selected.length){const {error:insError}=await sb.from('review_priority_queue').insert(selected.map(problem_id=>({user_id:currentUser.id,problem_id})));if(insError){alert(insError.message);return}}
-    await loadPriority();window.closePriorityPicker();toast('今日やる問題を更新しました');
+    await loadPriority();window.closePriorityPicker();if(typeof toast==='function')toast('今日やる問題を更新しました');
   };
   window.togglePriority=async(id,on)=>{
-    if(on)await sb.from('review_priority_queue').upsert({user_id:currentUser.id,problem_id:id},{onConflict:'user_id,problem_id'});
-    else await sb.from('review_priority_queue').delete().eq('user_id',currentUser.id).eq('problem_id',id);
+    const result=on
+      ? await sb.from('review_priority_queue').upsert({user_id:currentUser.id,problem_id:id},{onConflict:'user_id,problem_id'})
+      : await sb.from('review_priority_queue').delete().eq('user_id',currentUser.id).eq('problem_id',id);
+    if(result.error)alert(result.error.message);
     await loadPriority();
   };
-  window.clearPriorityQueue=async()=>{if(!confirm('今日やる問題をすべて解除しますか？'))return;await sb.from('review_priority_queue').delete().eq('user_id',currentUser.id);await loadPriority();};
+  window.clearPriorityQueue=async()=>{if(!confirm('今日やる問題をすべて解除しますか？'))return;const {error}=await sb.from('review_priority_queue').delete().eq('user_id',currentUser.id);if(error){alert(error.message);return}await loadPriority();};
 
   function openPrioritySubjectPicker(groups){
     let modal=q('#prioritySubjectPickerModal');
@@ -84,7 +104,7 @@
 
   window.startPriorityReview=()=>{
     const ids=priorityRows.map(r=>r.problem_id).filter(id=>problems.some(p=>p.id===id));
-    if(!ids.length){toast('今日やる問題がありません');return}
+    if(!ids.length){if(typeof toast==='function')toast('今日やる問題がありません');return}
     const groups=[];const by={};
     ids.forEach(id=>{const p=problems.find(x=>x.id===id),s=subjectOf(p),qf=qualOf(s);if(!by[p.subject_id])by[p.subject_id]={subjectId:p.subject_id,qualificationName:qf?.name||'資格',subjectName:s?.name||'科目',ids:[]};by[p.subject_id].ids.push(id)});
     groups.push(...Object.values(by));
@@ -111,6 +131,6 @@
       };
     }
   };
-  window.addEventListener('load',()=>{injectStyles();setTimeout(()=>loadPriority(),300);});
-  setInterval(()=>{wrap();if(currentUser&&!q('#priorityReviewPanel'))loadPriority();},500);
+  window.addEventListener('load',()=>{injectStyles();ensurePriorityPanel();loadPriority();});
+  setInterval(()=>{wrap();if(!q('#priorityReviewPanel')){injectStyles();loadPriority();}},500);
 })();
