@@ -2,6 +2,7 @@
   let priorityRows=[];
   let priorityIds=new Set();
   let originalStartReview=null;
+  let originalFinishReviewSession=null;
   const q=(s)=>document.querySelector(s);
   const escP=(s)=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
   const subjectOf=(p)=>subjects.find(s=>s.id===p.subject_id);
@@ -68,19 +69,48 @@
   };
   window.clearPriorityQueue=async()=>{if(!confirm('今日やる問題をすべて解除しますか？'))return;await sb.from('review_priority_queue').delete().eq('user_id',currentUser.id);await loadPriority();};
 
+  function openPrioritySubjectPicker(groups){
+    let modal=q('#prioritySubjectPickerModal');
+    if(!modal){modal=document.createElement('div');modal.id='prioritySubjectPickerModal';modal.className='modal';document.body.appendChild(modal);}
+    modal.innerHTML=`<div class="modal-box"><div class="sectiontitle"><div><h2>⭐ 今日やる問題</h2><div class="muted small">復習時間を正しく記録するため、今回は科目ごとに復習します。</div></div><button class="light" onclick="window.closePrioritySubjectPicker()">閉じる</button></div>${groups.map(g=>`<button class="item clickable" style="display:block;width:100%;text-align:left" onclick="window.startPrioritySubjectReview('${g.subjectId}')"><b>${escP(g.qualificationName)} / ${escP(g.subjectName)}</b><br><span class="muted small">${g.ids.length}問</span></button>`).join('')}</div>`;
+    modal.classList.add('open');
+    window._prioritySubjectGroups=groups;
+  }
+  window.closePrioritySubjectPicker=()=>q('#prioritySubjectPickerModal')?.classList.remove('open');
+  window.startPrioritySubjectReview=(subjectId)=>{
+    const g=(window._prioritySubjectGroups||[]).find(x=>x.subjectId===subjectId);if(!g)return;
+    window.closePrioritySubjectPicker();reviewSelectedIds.clear();g.ids.forEach(id=>reviewSelectedIds.add(id));originalStartReview();
+  };
+
   window.startPriorityReview=()=>{
     const ids=priorityRows.map(r=>r.problem_id).filter(id=>problems.some(p=>p.id===id));
     if(!ids.length){toast('今日やる問題がありません');return}
+    const groups=[];const by={};
+    ids.forEach(id=>{const p=problems.find(x=>x.id===id),s=subjectOf(p),qf=qualOf(s);if(!by[p.subject_id])by[p.subject_id]={subjectId:p.subject_id,qualificationName:qf?.name||'資格',subjectName:s?.name||'科目',ids:[]};by[p.subject_id].ids.push(id)});
+    groups.push(...Object.values(by));
+    if(groups.length>1){openPrioritySubjectPicker(groups);return}
     reviewSelectedIds.clear();ids.forEach(id=>reviewSelectedIds.add(id));
-    const subjectIds=[...new Set(ids.map(id=>problems.find(p=>p.id===id)?.subject_id).filter(Boolean))];
-    if(subjectIds.length>1){reviewFilter='all';openReviewSelection(true);renderReviewList();toast('科目を1つ選んで復習してください');return}
     originalStartReview();
   };
 
+  async function cleanupCompletedPriority(ids){
+    const done=[...new Set(ids||[])].filter(id=>priorityIds.has(id));
+    if(!done.length||!currentUser)return;
+    await sb.from('review_priority_queue').delete().eq('user_id',currentUser.id).in('problem_id',done);
+    await loadPriority();
+  }
+
+  const wrap=()=>{
+    if(window.startReview&&!originalStartReview)originalStartReview=window.startReview;
+    if(window.finishReviewSession&&!originalFinishReviewSession){
+      originalFinishReviewSession=window.finishReviewSession;
+      window.finishReviewSession=async function(){
+        const ids=(reviewQueue||[]).map(p=>p.id);
+        await originalFinishReviewSession();
+        if(!(q('#timeModal')?.classList.contains('open')) && !(reviewQueue||[]).length)await cleanupCompletedPriority(ids);
+      };
+    }
+  };
   window.addEventListener('load',()=>{injectStyles();setTimeout(()=>loadPriority(),300);});
-  const wrap=()=>{if(window.startReview&&!originalStartReview)originalStartReview=window.startReview;};
-  setInterval(()=>{
-    wrap();
-    if(currentUser && !q('#priorityReviewPanel')) loadPriority();
-  },500);
+  setInterval(()=>{wrap();if(currentUser&&!q('#priorityReviewPanel'))loadPriority();},500);
 })();
