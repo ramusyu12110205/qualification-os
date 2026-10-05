@@ -8,6 +8,7 @@
   const escP=(s)=>String(s??'').replace(/[&<>\"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#039;'}[m]));
   const subjectOf=(p)=>subjects.find(s=>s.id===p.subject_id);
   const qualOf=(s)=>qualifications.find(x=>x.id===s?.qualification_id);
+  const problemOrder=(p)=>{const i=problems.indexOf(p);return i<0?Number.MAX_SAFE_INTEGER:i};
 
   function ensurePriorityPanel(){
     const host=q('#tab-review'); if(!host)return null;
@@ -57,7 +58,8 @@
 
   function renderPriorityPanel(){
     const panel=ensurePriorityPanel(); if(!panel)return;
-    const ps=priorityRows.map(r=>problems.find(p=>p.id===r.problem_id)).filter(Boolean);
+    // 「今日やる」の表示順は、ストックした順ではなく問題マスタの登録順に固定する。
+    const ps=priorityRows.map(r=>problems.find(p=>p.id===r.problem_id)).filter(Boolean).sort((a,b)=>problemOrder(a)-problemOrder(b));
     panel.innerHTML=`<div class="priority-head"><div><div class="priority-title">⭐ 今日やる</div><div class="muted small">先にやっておきたい問題をストック</div></div><span class="priority-count">${ps.length}問</span></div>
       <div class="priority-actions"><button class="primary" onclick="window.openPriorityPicker()">＋ 問題を追加</button>${ps.length?`<button class="light" onclick="window.startPriorityReview()">今日やる問題を復習</button><button class="light" onclick="window.clearPriorityQueue()">すべて解除</button>`:''}</div>
       ${ps.length?`<div class="priority-list">${ps.map(p=>{const s=subjectOf(p),qf=qualOf(s);return `<div class="priority-item"><input type="checkbox" checked onchange="window.togglePriority('${p.id}',this.checked)"><div><b>${escP(p.name)}</b><div class="priority-meta">${escP(qf?.name||'資格')} / ${escP(s?.name||'科目')}</div></div></div>`}).join('')}</div>`:'<div class="priority-empty">まだありません。「＋ 問題を追加」から、今日やる問題を先に選んでおけます。</div>'}`;
@@ -77,9 +79,10 @@
   window.openPriorityPicker=()=>{
     let modal=q('#priorityPickerModal');
     if(!modal){modal=document.createElement('div');modal.id='priorityPickerModal';modal.className='modal';document.body.appendChild(modal);}
+    // 問題の配列順＝登録順をそのまま使う。名前の文字列順では並べ替えない。
     const pending=problems.filter(p=>p.status==='pending');
-    const grouped={};pending.forEach(p=>(grouped[p.subject_id]??=[]).push(p));
-    Object.values(grouped).forEach(arr=>arr.sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'ja',{numeric:true,sensitivity:'base'})));
+    const grouped={};
+    pending.forEach(p=>(grouped[p.subject_id]??=[]).push(p));
     modal.innerHTML=`<div class="modal-box"><div class="sectiontitle"><div><h2>⭐ 今日やる問題を選ぶ</h2><div class="muted small">期限に関係なく、先にやっておきたい問題をストックできます。</div></div><button class="light" onclick="window.closePriorityPicker()">閉じる</button></div>
       <div class="priority-actions"><button class="light" onclick="window.selectPriorityVisible(true)">表示中を全選択</button><button class="light" onclick="window.selectPriorityVisible(false)">表示中を全解除</button></div>
       <div class="priority-modal-list">${Object.entries(grouped).map(([sid,arr])=>{const s=subjectOf(arr[0]),qf=qualOf(s);return `<div class="priority-group"><h4>${escP(qf?.name||'資格')} / ${escP(s?.name||'科目')}（${arr.length}問）</h4>${arr.map(p=>`<label class="priority-modal-item"><input class="priorityPick" type="checkbox" data-id="${p.id}" ${priorityIds.has(p.id)?'checked':''}><span><b>${escP(p.name)}</b><span class="priority-meta">${p.next_review_date?'次回 '+escP(fmt(p.next_review_date)):'未設定'}</span></span></label>`).join('')}</div>`}).join('')||'<div class="item">登録済みの問題がありません。</div>'}</div>
