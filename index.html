@@ -345,9 +345,19 @@ function renderReviewList(due=dueItems()){
   const filtered=reviewFilter==='all'?due:due.filter(p=>reviewBucket(p)===reviewFilter);
   const list=document.getElementById("reviewList");if(!list)return;
   if(!filtered.length){list.innerHTML="<div class=\"item\">この期限の復習問題はありません。</div>";return}
-  const groups={};filtered.forEach(p=>{if(!groups[p.subject_id])groups[p.subject_id]=[];groups[p.subject_id].push(p)});
-  Object.values(groups).forEach(arr=>arr.sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'ja',{numeric:true,sensitivity:'base'})));
-  list.innerHTML=Object.entries(groups).map(([sid,arr])=>{
+  const groupMap={};
+  filtered.forEach(p=>{if(!groupMap[p.subject_id])groupMap[p.subject_id]=[];groupMap[p.subject_id].push(p)});
+  Object.values(groupMap).forEach(arr=>arr.sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'ja',{numeric:true,sensitivity:'base'})));
+  const orderedSubjectIds=subjects
+    .filter(s=>Object.prototype.hasOwnProperty.call(groupMap,s.id))
+    .sort((a,b)=>{
+      const aq=qualifications.find(q=>q.id===a.qualification_id)?.sort_order ?? 999999;
+      const bq=qualifications.find(q=>q.id===b.qualification_id)?.sort_order ?? 999999;
+      return aq-bq || (Number(a.sort_order ?? 999999)-Number(b.sort_order ?? 999999));
+    })
+    .map(s=>s.id);
+  list.innerHTML=orderedSubjectIds.map(sid=>{
+    const arr=groupMap[sid];
     const sub=subjects.find(s=>s.id===sid),q=qualifications.find(q=>q.id===sub?.qualification_id);
     return `<details style="margin:10px 0"><summary style="cursor:pointer;font-weight:900">${esc(q?.name||"資格")} / ${esc(sub?.name||"科目")} <span class="badge">${arr.length}問</span></summary>`+
       `<div style="padding-top:7px"><div class="row" style="margin-bottom:8px"><button class="light" data-subject="${sid}" onclick="selectSubjectDue(this.dataset.subject,true)">この科目を全選択</button><button class="light" data-subject="${sid}" onclick="selectSubjectDue(this.dataset.subject,false)">この科目を全解除</button></div>`+
