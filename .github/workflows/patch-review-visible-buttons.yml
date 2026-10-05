@@ -1,0 +1,38 @@
+name: patch-review-visible-buttons
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/patch-review-visible-buttons.yml'
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch visible selection buttons
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          p=Path('index.html'); s=p.read_text(encoding='utf-8')
+          s,n1=re.subn(r'(<button[^>]*onclick=")[^"]*("[^>]*>表示中を全選択</button>)', r'\1setVisibleReviewSelection(true)\2', s, count=1)
+          s,n2=re.subn(r'(<button[^>]*onclick=")[^"]*("[^>]*>表示中を全解除</button>)', r'\1setVisibleReviewSelection(false)\2', s, count=1)
+          if n1!=1 or n2!=1: raise SystemExit(f'button patch failed: select={n1}, clear={n2}')
+          marker='function setVisibleReviewSelection(v){'
+          if marker not in s:
+            helper="""function setVisibleReviewSelection(v){\n  document.querySelectorAll('.dueCheck').forEach(x=>{x.checked=v;toggleReviewSelection(x);});\n}\n"""
+            anchor='function startReview()'
+            if anchor not in s: raise SystemExit('startReview anchor not found')
+            s=s.replace(anchor,helper+anchor,1)
+          p.write_text(s,encoding='utf-8')
+          PY
+      - name: Commit
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html
+          git diff --cached --quiet && exit 0
+          git commit -m '復習の表示中全選択解除を安定化'
+          git push
