@@ -9,15 +9,27 @@
   const subjectOf=(p)=>subjects.find(s=>s.id===p.subject_id);
   const qualOf=(s)=>qualifications.find(x=>x.id===s?.qualification_id);
 
-  // 問題の「登録順」は problems 配列の順番ではなく、DBの created_at を基準にする。
-  // DBから取得する際に並び順が保証されない場合でも、常に同じ順序で表示できる。
+  // 表示順は「科目ごと」→「問題番号順」。
+  // 問題番号は名称の先頭にある数字を優先し、数字がない問題は登録順を補助キーにする。
+  const problemNumber=(p)=>{
+    const m=String(p?.name??'').match(/\d+/);
+    return m?Number(m[0]):Number.MAX_SAFE_INTEGER;
+  };
   const problemOrder=(p)=>{
     const t=p?.created_at?Date.parse(p.created_at):NaN;
     return Number.isNaN(t)?Number.MAX_SAFE_INTEGER:t;
   };
-  const sortProblemsByRegistration=(arr)=>[...arr].sort((a,b)=>{
-    const d=problemOrder(a)-problemOrder(b);
-    if(d!==0)return d;
+  const subjectOrder=(subjectId)=>{
+    const i=subjects.findIndex(s=>s.id===subjectId);
+    return i<0?Number.MAX_SAFE_INTEGER:i;
+  };
+  const sortProblemsBySubjectAndNumber=(arr)=>[...arr].sort((a,b)=>{
+    const sd=subjectOrder(a?.subject_id)-subjectOrder(b?.subject_id);
+    if(sd!==0)return sd;
+    const nd=problemNumber(a)-problemNumber(b);
+    if(nd!==0)return nd;
+    const ad=problemOrder(a)-problemOrder(b);
+    if(ad!==0)return ad;
     return String(a?.id||'').localeCompare(String(b?.id||''));
   });
 
@@ -62,18 +74,23 @@
       .priority-card{border:1px solid #3b3265;background:linear-gradient(145deg,rgba(38,24,70,.88),rgba(14,19,34,.98));border-radius:20px;padding:18px;margin:14px 0}
       .priority-head{display:flex;justify-content:space-between;align-items:center;gap:10px}.priority-title{font-size:19px;font-weight:950}.priority-count{font-size:13px;color:#d9ccff;background:#2a1d50;border:1px solid #513b86;border-radius:999px;padding:5px 10px}
       .priority-empty{padding:12px 0;color:#98a3bf}.priority-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:12px}.priority-item{display:flex;gap:10px;align-items:center;border:1px solid #303b59;border-radius:13px;padding:10px;background:#0d1424}.priority-item input{width:auto;min-height:0}.priority-meta{font-size:11px;color:#8f9ab7;margin-top:3px}
+      .priority-subject{margin-top:14px}.priority-subject:first-child{margin-top:12px}.priority-subject-title{font-size:14px;font-weight:900;color:#dce3fb;margin-bottom:7px}.priority-subject-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
       .priority-modal-list{max-height:55vh;overflow:auto;margin-top:10px}.priority-group{margin:10px 0}.priority-group h4{margin:0 0 7px;color:#dce3fb}.priority-modal-item{display:flex;gap:10px;align-items:center;padding:9px 10px;border:1px solid #293653;border-radius:11px;margin:6px 0;background:#0d1424}.priority-modal-item input{width:auto;min-height:0}.priority-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
-      @media(max-width:700px){.priority-list{grid-template-columns:1fr}.priority-card{padding:15px}}
+      @media(max-width:700px){.priority-list,.priority-subject-list{grid-template-columns:1fr}.priority-card{padding:15px}}
     `;document.head.appendChild(st);
   }
 
   function renderPriorityPanel(){
     const panel=ensurePriorityPanel(); if(!panel)return;
-    // ストックした日時ではなく、問題そのものの登録順(created_at)で表示する。
-    const ps=sortProblemsByRegistration(priorityRows.map(r=>problems.find(p=>p.id===r.problem_id)).filter(Boolean));
+    const ps=sortProblemsBySubjectAndNumber(priorityRows.map(r=>problems.find(p=>p.id===r.problem_id)).filter(Boolean));
+    const grouped=[];const by={};
+    ps.forEach(p=>{
+      if(!by[p.subject_id]){by[p.subject_id]={subjectId:p.subject_id,subject:subjectOf(p),qualification:qualOf(subjectOf(p)),items:[]};grouped.push(by[p.subject_id]);}
+      by[p.subject_id].items.push(p);
+    });
     panel.innerHTML=`<div class="priority-head"><div><div class="priority-title">⭐ 今日やる</div><div class="muted small">先にやっておきたい問題をストック</div></div><span class="priority-count">${ps.length}問</span></div>
       <div class="priority-actions"><button class="primary" onclick="window.openPriorityPicker()">＋ 問題を追加</button>${ps.length?`<button class="light" onclick="window.startPriorityReview()">今日やる問題を復習</button><button class="light" onclick="window.clearPriorityQueue()">すべて解除</button>`:''}</div>
-      ${ps.length?`<div class="priority-list">${ps.map(p=>{const s=subjectOf(p),qf=qualOf(s);return `<div class="priority-item"><input type="checkbox" checked onchange="window.togglePriority('${p.id}',this.checked)"><div><b>${escP(p.name)}</b><div class="priority-meta">${escP(qf?.name||'資格')} / ${escP(s?.name||'科目')}</div></div></div>`}).join('')}</div>`:'<div class="priority-empty">まだありません。「＋ 問題を追加」から、今日やる問題を先に選んでおけます。</div>'}`;
+      ${grouped.length?grouped.map(g=>`<div class="priority-subject"><div class="priority-subject-title">${escP(g.qualification?.name||'資格')} / ${escP(g.subject?.name||'科目')}（${g.items.length}問）</div><div class="priority-subject-list">${g.items.map(p=>`<div class="priority-item"><input type="checkbox" checked onchange="window.togglePriority('${p.id}',this.checked)"><div><b>${escP(p.name)}</b><div class="priority-meta">${p.next_review_date?'次回 '+escP(fmt(p.next_review_date)):'未設定'}</div></div></div>`).join('')}</div></div>`).join(''):'<div class="priority-empty">まだありません。「＋ 問題を追加」から、今日やる問題を先に選んでおけます。</div>'}`;
   }
 
   window.addSelectedToPriority=async()=>{
@@ -90,13 +107,15 @@
   window.openPriorityPicker=()=>{
     let modal=q('#priorityPickerModal');
     if(!modal){modal=document.createElement('div');modal.id='priorityPickerModal';modal.className='modal';document.body.appendChild(modal);}
-    // 全問題をDB登録順(created_at)に並べ、その順序を科目ごとの一覧にも維持する。
-    const pending=sortProblemsByRegistration(problems.filter(p=>p.status==='pending'));
-    const grouped={};
-    pending.forEach(p=>(grouped[p.subject_id]??=[]).push(p));
+    const pending=sortProblemsBySubjectAndNumber(problems.filter(p=>p.status==='pending'));
+    const grouped=[];const by={};
+    pending.forEach(p=>{
+      if(!by[p.subject_id]){by[p.subject_id]={subjectId:p.subject_id,subject:subjectOf(p),qualification:qualOf(subjectOf(p)),items:[]};grouped.push(by[p.subject_id]);}
+      by[p.subject_id].items.push(p);
+    });
     modal.innerHTML=`<div class="modal-box"><div class="sectiontitle"><div><h2>⭐ 今日やる問題を選ぶ</h2><div class="muted small">期限に関係なく、先にやっておきたい問題をストックできます。</div></div><button class="light" onclick="window.closePriorityPicker()">閉じる</button></div>
       <div class="priority-actions"><button class="light" onclick="window.selectPriorityVisible(true)">表示中を全選択</button><button class="light" onclick="window.selectPriorityVisible(false)">表示中を全解除</button></div>
-      <div class="priority-modal-list">${Object.entries(grouped).map(([sid,arr])=>{const s=subjectOf(arr[0]),qf=qualOf(s);return `<div class="priority-group"><h4>${escP(qf?.name||'資格')} / ${escP(s?.name||'科目')}（${arr.length}問）</h4>${arr.map(p=>`<label class="priority-modal-item"><input class="priorityPick" type="checkbox" data-id="${p.id}" ${priorityIds.has(p.id)?'checked':''}><span><b>${escP(p.name)}</b><span class="priority-meta">${p.next_review_date?'次回 '+escP(fmt(p.next_review_date)):'未設定'}</span></span></label>`).join('')}</div>`}).join('')||'<div class="item">登録済みの問題がありません。</div>'}</div>
+      <div class="priority-modal-list">${grouped.map(g=>`<div class="priority-group"><h4>${escP(g.qualification?.name||'資格')} / ${escP(g.subject?.name||'科目')}（${g.items.length}問）</h4>${g.items.map(p=>`<label class="priority-modal-item"><input class="priorityPick" type="checkbox" data-id="${p.id}" ${priorityIds.has(p.id)?'checked':''}><span><b>${escP(p.name)}</b><span class="priority-meta">${p.next_review_date?'次回 '+escP(fmt(p.next_review_date)):'未設定'}</span></span></label>`).join('')}</div>`).join('')||'<div class="item">登録済みの問題がありません。</div>'}</div>
       <div class="priority-actions"><button class="primary" onclick="window.savePriorityQueue()">この選択をストック</button><button class="light" onclick="window.closePriorityPicker()">キャンセル</button></div></div>`;
     modal.classList.add('open');
   };
@@ -134,11 +153,12 @@
   window.startPriorityReview=()=>{
     const ids=priorityRows.map(r=>r.problem_id).filter(id=>problems.some(p=>p.id===id));
     if(!ids.length){if(typeof toast==='function')toast('今日やる問題がありません');return}
+    const sorted=sortProblemsBySubjectAndNumber(ids.map(id=>problems.find(p=>p.id===id)).filter(Boolean));
     const groups=[];const by={};
-    ids.forEach(id=>{const p=problems.find(x=>x.id===id),s=subjectOf(p),qf=qualOf(s);if(!by[p.subject_id])by[p.subject_id]={subjectId:p.subject_id,qualificationName:qf?.name||'資格',subjectName:s?.name||'科目',ids:[]};by[p.subject_id].ids.push(id)});
+    sorted.forEach(p=>{const s=subjectOf(p),qf=qualOf(s);if(!by[p.subject_id])by[p.subject_id]={subjectId:p.subject_id,qualificationName:qf?.name||'資格',subjectName:s?.name||'科目',ids:[]};by[p.subject_id].ids.push(p.id)});
     groups.push(...Object.values(by));
     if(groups.length>1){openPrioritySubjectPicker(groups);return}
-    reviewSelectedIds.clear();ids.forEach(id=>reviewSelectedIds.add(id));
+    reviewSelectedIds.clear();sorted.forEach(p=>reviewSelectedIds.add(p.id));
     originalStartReview();
   };
 
