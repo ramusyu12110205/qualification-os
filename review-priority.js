@@ -79,5 +79,8 @@
 
   window.addEventListener('load',()=>{injectStyles();setTimeout(()=>loadPriority(),300);});
   const wrap=()=>{if(window.startReview&&!originalStartReview)originalStartReview=window.startReview;};
-  setInterval(wrap,100);
+  setInterval(()=>{
+    wrap();
+    if(currentUser && !q('#priorityReviewPanel')) loadPriority();
+  },500);
 })();
