@@ -128,7 +128,7 @@ textarea{min-height:120px} label{display:block;font-weight:800;margin:11px 0 6px
         </div>
       </div>
     </div>
-    <div id="reviewSelectionPanel" class="card review-selection-panel" style="display:none"><div class="sectiontitle"><div><h2>復習する問題を選ぶ</h2><div id="reviewFilterLabel" class="muted small">すべての期限の問題を表示中</div></div><button class="light" onclick="closeReviewSelection()">閉じる</button></div><div class="row" style="margin:12px 0"><button class="light" onclick="setReviewFilter('all')">すべて表示</button><button class="light" onclick="setVisibleReviewSelection(true)">表示中を全選択</button><button class="light" onclick="setVisibleReviewSelection(false)">表示中を全解除</button><button class="primary" onclick="startReview()">選択した問題を復習</button></div><div id="reviewList"></div></div>
+    <div id="reviewSelectionPanel" class="card review-selection-panel" style="display:none"><div class="sectiontitle"><div><h2>復習する問題を選ぶ</h2><div id="reviewFilterLabel" class="muted small">すべての期限の問題を表示中</div></div><button class="light" onclick="closeReviewSelection()">閉じる</button></div><div class="row" style="margin:12px 0"><button class="light" onclick="setReviewFilter('all')">すべて表示</button><button class="light" onclick="setVisibleReviewSelection(true)">表示中を全選択</button><button class="light" onclick="setVisibleReviewSelection(false)">表示中を全解除</button><button class="primary" onclick="startReview()">選択した問題を復習</button><button class="light" onclick="window.addSelectedToPriority()">⭐ 選択した問題を今日やる</button></div><div id="reviewList"></div></div>
   </section>
 
   <section id="tab-record" style="display:none">
