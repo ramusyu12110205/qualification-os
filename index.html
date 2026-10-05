@@ -119,7 +119,7 @@ textarea{min-height:120px} label{display:block;font-weight:800;margin:11px 0 6px
     <div class="card review-v2">
       <div class="review-v2-head"><div class="review-v2-title"><div class="review-v2-target">◎</div><div><h2>今日の復習</h2><div class="muted">今日復習する予定の問題です。</div></div></div><span class="badge review-v2-count" id="reviewCount">0問</span></div>
       <div class="review-v2-body">
-        <div class="review-v2-total"><div class="review-v2-number" id="reviewBigCount">0<span>問</span></div><div class="muted">今日までに復習する予定の問題です。</div><button class="review-start-btn" onclick="openReviewSelection()">復習を始める →</button></div>
+        <div class="review-v2-total"><div class="review-v2-number" id="reviewBigCount">0<span>問</span></div><div class="muted">今日までに復習する予定の問題です。</div><button class="review-start-btn" onclick="reviewFilter='all'; reviewSelectedIds.clear(); dueItems().forEach(p=>reviewSelectedIds.add(p.id)); openReviewSelection()">復習を始める →</button></div>
         <div class="review-breakdown"><div class="review-breakdown-title">期限別の内訳 <span title="今日を基準に、期限を過ぎている日数で分類しています。">ⓘ</span></div>
           <div class="review-bar-row" onclick="setReviewFilter('today')" title="今日の問題だけ表示"><span class="review-dot today"></span><b>今日</b><div class="review-track"><i id="reviewBarToday"></i></div><strong id="reviewDueToday">0問</strong><span class="review-filter-hint">選択</span></div>
           <div class="review-bar-row" onclick="setReviewFilter('late1')" title="1〜3日遅れの問題だけ表示"><span class="review-dot late1"></span><b>1〜3日遅れ</b><div class="review-track"><i id="reviewBarLate1"></i></div><strong id="reviewDueLate1">0問</strong><span class="review-filter-hint">選択</span></div>
