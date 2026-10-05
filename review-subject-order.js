@@ -2,7 +2,7 @@
   const URL='https://txprypfzdsfaupguhybl.supabase.co';
   const KEY='sb_publishable_qiCaP0cBNhms5-usSDzKlQ_nywzlU36';
   let subjectOrder=new Map();
-  let qualificationOrder=new Map();
+  let subjectNameOrder=new Map();
 
   async function loadOrder(){
     try{
@@ -10,14 +10,13 @@
       const {data:{session}}=await client.auth.getSession();
       if(!session?.user)return false;
       const uid=session.user.id;
-      const [qRes,sRes]=await Promise.all([
-        client.from('qualifications').select('id,created_at,sort_order').eq('user_id',uid).eq('archived',false).order('created_at',{ascending:true}),
-        client.from('subjects').select('id,qualification_id,name,created_at,sort_order').eq('user_id',uid).eq('archived',false).order('created_at',{ascending:true})
-      ]);
-      if(qRes.error||sRes.error)return false;
-
-      qualificationOrder=new Map((qRes.data||[]).map((q,i)=>[String(q.id),i]));
-      subjectOrder=new Map((sRes.data||[]).map((s,i)=>[String(s.id),i]));
+      const {data,error}=await client.from('subjects')
+        .select('id,name,created_at,sort_order')
+        .eq('user_id',uid).eq('archived',false)
+        .order('created_at',{ascending:true});
+      if(error)return false;
+      subjectOrder=new Map((data||[]).map((s,i)=>[String(s.id),i]));
+      subjectNameOrder=new Map((data||[]).map((s,i)=>[String(s.name||''),i]));
       return true;
     }catch(e){return false}
   }
@@ -33,9 +32,8 @@
       if(id&&subjectOrder.has(String(id)))return subjectOrder.get(String(id));
       const summary=el.querySelector('summary')?.textContent||'';
       let best=999999;
-      for(const [sid,idx] of subjectOrder){
-        const subjectName=window.__qualificationOsSubjectNames?.[sid];
-        if(subjectName&&summary.includes(subjectName))best=Math.min(best,idx);
+      for(const [name,idx] of subjectNameOrder){
+        if(name&&summary.includes(name)){best=Math.min(best,idx);}
       }
       return best;
     };
