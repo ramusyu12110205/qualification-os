@@ -8,7 +8,18 @@
   const escP=(s)=>String(s??'').replace(/[&<>\"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#039;'}[m]));
   const subjectOf=(p)=>subjects.find(s=>s.id===p.subject_id);
   const qualOf=(s)=>qualifications.find(x=>x.id===s?.qualification_id);
-  const problemOrder=(p)=>{const i=problems.indexOf(p);return i<0?Number.MAX_SAFE_INTEGER:i};
+
+  // 問題の「登録順」は problems 配列の順番ではなく、DBの created_at を基準にする。
+  // DBから取得する際に並び順が保証されない場合でも、常に同じ順序で表示できる。
+  const problemOrder=(p)=>{
+    const t=p?.created_at?Date.parse(p.created_at):NaN;
+    return Number.isNaN(t)?Number.MAX_SAFE_INTEGER:t;
+  };
+  const sortProblemsByRegistration=(arr)=>[...arr].sort((a,b)=>{
+    const d=problemOrder(a)-problemOrder(b);
+    if(d!==0)return d;
+    return String(a?.id||'').localeCompare(String(b?.id||''));
+  });
 
   function ensurePriorityPanel(){
     const host=q('#tab-review'); if(!host)return null;
@@ -58,8 +69,8 @@
 
   function renderPriorityPanel(){
     const panel=ensurePriorityPanel(); if(!panel)return;
-    // 「今日やる」の表示順は、ストックした順ではなく問題マスタの登録順に固定する。
-    const ps=priorityRows.map(r=>problems.find(p=>p.id===r.problem_id)).filter(Boolean).sort((a,b)=>problemOrder(a)-problemOrder(b));
+    // ストックした日時ではなく、問題そのものの登録順(created_at)で表示する。
+    const ps=sortProblemsByRegistration(priorityRows.map(r=>problems.find(p=>p.id===r.problem_id)).filter(Boolean));
     panel.innerHTML=`<div class="priority-head"><div><div class="priority-title">⭐ 今日やる</div><div class="muted small">先にやっておきたい問題をストック</div></div><span class="priority-count">${ps.length}問</span></div>
       <div class="priority-actions"><button class="primary" onclick="window.openPriorityPicker()">＋ 問題を追加</button>${ps.length?`<button class="light" onclick="window.startPriorityReview()">今日やる問題を復習</button><button class="light" onclick="window.clearPriorityQueue()">すべて解除</button>`:''}</div>
       ${ps.length?`<div class="priority-list">${ps.map(p=>{const s=subjectOf(p),qf=qualOf(s);return `<div class="priority-item"><input type="checkbox" checked onchange="window.togglePriority('${p.id}',this.checked)"><div><b>${escP(p.name)}</b><div class="priority-meta">${escP(qf?.name||'資格')} / ${escP(s?.name||'科目')}</div></div></div>`}).join('')}</div>`:'<div class="priority-empty">まだありません。「＋ 問題を追加」から、今日やる問題を先に選んでおけます。</div>'}`;
@@ -79,8 +90,8 @@
   window.openPriorityPicker=()=>{
     let modal=q('#priorityPickerModal');
     if(!modal){modal=document.createElement('div');modal.id='priorityPickerModal';modal.className='modal';document.body.appendChild(modal);}
-    // 問題の配列順＝登録順をそのまま使う。名前の文字列順では並べ替えない。
-    const pending=problems.filter(p=>p.status==='pending');
+    // 全問題をDB登録順(created_at)に並べ、その順序を科目ごとの一覧にも維持する。
+    const pending=sortProblemsByRegistration(problems.filter(p=>p.status==='pending'));
     const grouped={};
     pending.forEach(p=>(grouped[p.subject_id]??=[]).push(p));
     modal.innerHTML=`<div class="modal-box"><div class="sectiontitle"><div><h2>⭐ 今日やる問題を選ぶ</h2><div class="muted small">期限に関係なく、先にやっておきたい問題をストックできます。</div></div><button class="light" onclick="window.closePriorityPicker()">閉じる</button></div>
