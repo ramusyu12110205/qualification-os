@@ -63,6 +63,17 @@
       ${ps.length?`<div class="priority-list">${ps.map(p=>{const s=subjectOf(p),qf=qualOf(s);return `<div class="priority-item"><input type="checkbox" checked onchange="window.togglePriority('${p.id}',this.checked)"><div><b>${escP(p.name)}</b><div class="priority-meta">${escP(qf?.name||'資格')} / ${escP(s?.name||'科目')}</div></div></div>`}).join('')}</div>`:'<div class="priority-empty">まだありません。「＋ 問題を追加」から、今日やる問題を先に選んでおけます。</div>'}`;
   }
 
+  window.addSelectedToPriority=async()=>{
+    if(!currentUser){alert('ログインしてください。');return;}
+    const selected=[...document.querySelectorAll('.dueCheck:checked')].map(x=>x.dataset.id).filter(Boolean);
+    if(!selected.length){if(typeof toast==='function')toast('ストックする問題を選択してください');else alert('ストックする問題を選択してください');return;}
+    const rows=selected.map(problem_id=>({user_id:currentUser.id,problem_id}));
+    const {error}=await sb.from('review_priority_queue').upsert(rows,{onConflict:'user_id,problem_id'});
+    if(error){alert(error.message);return;}
+    await loadPriority();
+    if(typeof toast==='function')toast(`${selected.length}問を「今日やる」に追加しました`);else alert(`${selected.length}問を「今日やる」に追加しました`);
+  };
+
   window.openPriorityPicker=()=>{
     let modal=q('#priorityPickerModal');
     if(!modal){modal=document.createElement('div');modal.id='priorityPickerModal';modal.className='modal';document.body.appendChild(modal);}
