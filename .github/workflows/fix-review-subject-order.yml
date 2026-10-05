@@ -1,0 +1,38 @@
+name: Fix review subject order
+on:
+  push:
+    paths:
+      - '.github/workflows/fix-review-subject-order.yml'
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch review subject ordering
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('index.html')
+          s=p.read_text(encoding='utf-8')
+          old='''  const groups={};filtered.forEach(p=>{if(!groups[p.subject_id])groups[p.subject_id]=[];groups[p.subject_id].push(p)});\n  Object.values(groups).forEach(arr=>arr.sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'ja',{numeric:true,sensitivity:'base'})));\n  list.innerHTML=Object.entries(groups).map(([sid,arr])=>{\n    const sub=subjects.find(s=>s.id===sid),q=qualifications.find(q=>q.id===sub?.qualification_id);'''
+          new='''  const groupMap={};\n  filtered.forEach(p=>{if(!groupMap[p.subject_id])groupMap[p.subject_id]=[];groupMap[p.subject_id].push(p)});\n  Object.values(groupMap).forEach(arr=>arr.sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'ja',{numeric:true,sensitivity:'base'})));\n  const orderedSubjectIds=subjects\n    .filter(s=>Object.prototype.hasOwnProperty.call(groupMap,s.id))\n    .sort((a,b)=>{\n      const aq=qualifications.find(q=>q.id===a.qualification_id)?.sort_order ?? 999999;\n      const bq=qualifications.find(q=>q.id===b.qualification_id)?.sort_order ?? 999999;\n      return aq-bq || (Number(a.sort_order ?? 999999)-Number(b.sort_order ?? 999999));\n    })\n    .map(s=>s.id);\n  list.innerHTML=orderedSubjectIds.map(sid=>{\n    const arr=groupMap[sid];\n    const sub=subjects.find(s=>s.id===sid),q=qualifications.find(q=>q.id===sub?.qualification_id);'''
+          if old not in s:
+              raise SystemExit('target snippet not found')
+          p.write_text(s.replace(old,new,1),encoding='utf-8')
+          PY
+      - name: Commit patch
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html
+          git commit -m 'Fix review subject display order'
+          git push
+      - name: Remove this workflow
+        if: success()
+        run: |
+          rm .github/workflows/fix-review-subject-order.yml
+          git add .github/workflows/fix-review-subject-order.yml
+          git commit -m 'Remove one-time review order workflow'
+          git push
