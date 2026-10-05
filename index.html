@@ -374,7 +374,7 @@ function selectAllDue(v){
 }
 function selectSubjectDue(subjectId,v){
   dueItems().filter(p=>(reviewFilter==='all'||reviewBucket(p)===reviewFilter)&&p.subject_id===subjectId).forEach(p=>v?reviewSelectedIds.add(p.id):reviewSelectedIds.delete(p.id));
-  renderReviewList();
+  document.querySelectorAll('.dueCheck').forEach(x=>{const p=problems.find(p=>p.id===x.dataset.id);if(p?.subject_id===subjectId)x.checked=v;});
 }
 function startReview(){
   reviewQueue=[...reviewSelectedIds].map(id=>problems.find(p=>p.id===id)).filter(Boolean);
