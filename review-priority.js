@@ -1,6 +1,7 @@
 (function(){
   let priorityRows=[];
   let priorityIds=new Set();
+  let priorityLoadedUserId=null;
   let originalStartReview=null;
   let originalFinishReviewSession=null;
   const q=(s)=>document.querySelector(s);
@@ -26,17 +27,20 @@
     const panel=ensurePriorityPanel();
     if(!panel)return;
     if(!currentUser){
+      priorityLoadedUserId=null;
       panel.innerHTML='<div class="priority-head"><div><div class="priority-title">⭐ 今日やる</div><div class="muted small">ログイン後に、先にやっておきたい問題をストックできます。</div></div></div>';
       return;
     }
     const {data,error}=await sb.from('review_priority_queue').select('id,problem_id,created_at').eq('user_id',currentUser.id).order('created_at',{ascending:false});
     if(error){
+      priorityLoadedUserId=null;
       console.error('review_priority_queue load error',error);
       panel.innerHTML='<div class="priority-head"><div><div class="priority-title">⭐ 今日やる</div><div class="muted small">優先復習を読み込めませんでした。ページを再読み込みしてください。</div></div></div>';
       return;
     }
     priorityRows=data||[];
     priorityIds=new Set(priorityRows.map(x=>x.problem_id));
+    priorityLoadedUserId=currentUser.id;
     renderPriorityPanel();
   }
 
@@ -132,5 +136,5 @@
     }
   };
   window.addEventListener('load',()=>{injectStyles();ensurePriorityPanel();loadPriority();});
-  setInterval(()=>{wrap();if(!q('#priorityReviewPanel')){injectStyles();loadPriority();}},500);
+  setInterval(()=>{wrap();if(currentUser&&priorityLoadedUserId!==currentUser.id)loadPriority();else if(!q('#priorityReviewPanel')){injectStyles();loadPriority();}},500);
 })();
