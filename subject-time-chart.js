@@ -3,14 +3,38 @@
   function esc(v){return String(v==null?'':v).replace(/[&<>\"']/g,function(c){return({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'})[c]})}
   function getVisibleSubjectIds(box){
     var ids=[];
-    box.querySelectorAll('.item[onclick]').forEach(function(el){
-      var m=(el.getAttribute('onclick')||'').match(/showUnit(['\"]([^'\"]+)['\"])/);
+    box.querySelectorAll('[onclick]').forEach(function(el){
+      var m=(el.getAttribute('onclick')||'').match(/showUnit\(['\"]([^'\"]+)['\"]\)/);
       if(m&&m[1]&&!ids.includes(m[1]))ids.push(m[1]);
     });
     return ids;
   }
+  function getQualificationId(box,ids){
+    if(ids.length&&typeof subjects!=='undefined'&&Array.isArray(subjects)){
+      var first=subjects.find(function(s){return s.id===ids[0]});
+      if(first)return first.qualification_id;
+    }
+    if(typeof window.__stcQualificationId==='string')return window.__stcQualificationId;
+    var h=box.querySelector('.quest h2');
+    var name=(h?h.textContent:'').trim();
+    if(name&&typeof qualifications!=='undefined'&&Array.isArray(qualifications)){
+      var q=qualifications.find(function(x){return x.name===name});
+      if(q)return q.id;
+      // 旧データに「捕／補」の表記揺れがある場合も拾う。
+      var normalize=function(v){return String(v||'').replace(/捕/g,'補').replace(/\s/g,'')};
+      q=qualifications.find(function(x){return normalize(x.name)===normalize(name)});
+      if(q)return q.id;
+    }
+    return null;
+  }
+  function getRows(box){
+    var ids=getVisibleSubjectIds(box),qid=getQualificationId(box,ids),ss=(typeof subjects!=='undefined'&&Array.isArray(subjects))?subjects:[],st=(typeof sessions!=='undefined'&&Array.isArray(sessions))?sessions:[];
+    var target=ids.length?ss.filter(function(s){return ids.includes(s.id)}):qid?ss.filter(function(s){return s.qualification_id===qid}):[];
+    // DOMから拾えたIDでも0分になる場合は、資格ID単位で再集計する。
+    if(qid&&target.length){var hasTime=target.some(function(s){return st.some(function(x){return x.subject_id===s.id&&Number(x.minutes||0)>0})});if(!hasTime)target=ss.filter(function(s){return s.qualification_id===qid})}
+    return target.map(function(s){return {name:s.name,m:st.filter(function(x){return x.subject_id===s.id}).reduce(function(a,x){return a+Number(x.minutes||0)},0),order:Number(s.sort_order||0)}}).filter(function(x){return x.m>0}).sort(function(a,b){return a.order-b.order});
+  }
   function addCard(box){
-    // 資格詳細画面だけに表示する。科目詳細画面などには追加しない。
     var quest=box.querySelector('.quest');
     var stat=box.querySelector('.quest + .stat');
     if(!quest||!stat||box.querySelector('.stc-card'))return;
@@ -24,13 +48,7 @@
       panel.style.display=opening?'block':'none';
       btn.textContent=opening?'円グラフを閉じる':'円グラフを見る';
       if(!opening)return;
-      var ids=getVisibleSubjectIds(box);
-      var rows=ids.map(function(id){
-        var s=(typeof subjects!=='undefined'&&Array.isArray(subjects))?subjects.find(function(x){return x.id===id}):null;
-        var m=(typeof sessions!=='undefined'&&Array.isArray(sessions))?sessions.filter(function(x){return x.subject_id===id}).reduce(function(a,x){return a+Number(x.minutes||0)},0):0;
-        return s?{name:s.name,m:m}:null;
-      }).filter(function(x){return x&&x.m>0}).sort(function(a,b){return b.m-a.m});
-      var total=rows.reduce(function(a,x){return a+x.m},0);
+      var rows=getRows(box),total=rows.reduce(function(a,x){return a+x.m},0);
       if(!total){panel.innerHTML='<div class="muted small">まだ科目別の勉強記録がありません。</div>';return}
       var colors=['#8b5cf6','#22d3ee','#34d399','#fbbf24','#fb7185','#60a5fa','#a78bfa','#f472b6'],pos=0;
       var stops=rows.map(function(x,i){var e=pos+x.m/total*360,z=colors[i%colors.length]+' '+pos+'deg '+e+'deg';pos=e;return z}).join(',');
@@ -63,7 +81,6 @@
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();
 })();
 
-// 科目詳細の問題並び順切替を読み込む
 (function(){
   if(window.__qosProblemSortLoading)return;
   window.__qosProblemSortLoading=true;
