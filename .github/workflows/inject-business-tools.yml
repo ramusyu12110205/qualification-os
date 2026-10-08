@@ -1,6 +1,9 @@
 name: Inject business tools
 on:
-  workflow_dispatch:
+  push:
+    paths:
+      - 'business-tools.js'
+      - '.github/workflows/inject-business-tools.yml'
 permissions:
   contents: write
 jobs:
