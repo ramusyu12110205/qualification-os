@@ -1,145 +1,22 @@
 (()=>{
-  const PANEL_ID='panel-transport-expense';
-  const STORAGE_KEY='qualification-os-transport-expense-v1';
-  let ready=false;
-  let state={routes:[],usage:{}};
-
-  const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
-  const yen=n=>Math.round(Number(n)||0).toLocaleString('ja-JP');
-  const monthNow=()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`};
-  const load=()=>{try{const x=JSON.parse(localStorage.getItem(STORAGE_KEY)||'{}');state={routes:Array.isArray(x.routes)?x.routes:[],usage:x.usage&&typeof x.usage==='object'?x.usage:{}}}catch{state={routes:[],usage:{}}}};
-  const save=()=>localStorage.setItem(STORAGE_KEY,JSON.stringify(state));
-  const usageFor=month=>state.usage[month]||(state.usage[month]={});
-
-  function inject(){
-    if(ready)return;
-    const tools=document.getElementById('panel-tools');
-    const grid=tools?.querySelector('.tool-grid');
-    if(!tools||!grid)return;
-    ready=true;
-    load();
-
-    const card=document.createElement('button');
-    card.className='tool-card';
-    card.innerHTML='<span class="tool-icon">🚃</span><span><b>交通費精算</b><small>固定ルート×月の利用回数から交通費を計算</small></span>';
-    card.addEventListener('click',()=>transportExpenseTool.open());
-    grid.appendChild(card);
-
-    const panel=document.createElement('div');
-    panel.id=PANEL_ID;
-    panel.className='card tool-panel hidden';
-    panel.innerHTML=`
-      <div class="kicker">TRANSPORTATION EXPENSE</div>
-      <div class="transport-head"><div><h2>交通費精算</h2><p class="muted small">固定の訪問先・研修先を登録して、月ごとの利用回数から交通費を集計できます。</p></div><button class="light" id="transport-back">← 業務ツール</button></div>
-
-      <div class="tool-section">
-        <div class="tool-section-title">① 対象月</div>
-        <input id="transport-month" type="month" value="${monthNow()}">
-      </div>
-
-      <div class="tool-section">
-        <div class="tool-section-title">② 固定ルート</div>
-        <div class="transport-add-grid">
-          <input id="transport-name" placeholder="例：○○税理士法人・研修会場">
-          <input id="transport-oneway" type="number" min="0" step="1" inputmode="numeric" placeholder="片道運賃（円）">
-          <input id="transport-roundtrip" type="number" min="0" step="1" inputmode="numeric" placeholder="往復運賃（円）">
-          <button class="primary" id="transport-add">＋ ルート追加</button>
-        </div>
-        <div id="transport-routes" class="transport-routes"></div>
-      </div>
-
-      <div class="tool-section">
-        <div class="tool-section-title">③ ${monthNow()} の利用回数</div>
-        <div id="transport-usage"></div>
-      </div>
-
-      <div class="tool-section">
-        <div class="tool-section-title">④ 月間交通費</div>
-        <div class="transport-total"><span>合計</span><b id="transport-total">0円</b></div>
-        <div id="transport-breakdown" class="transport-breakdown"></div>
-      </div>`;
-    tools.appendChild(panel);
-
-    const style=document.createElement('style');
-    style.textContent=`
-      .transport-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}.transport-head h2{margin:0}.transport-head button{white-space:nowrap}
-      .transport-add-grid{display:grid;grid-template-columns:1.5fr .8fr .8fr auto;gap:8px}.transport-routes{margin-top:10px}
-      .transport-route{display:grid;grid-template-columns:1.5fr .7fr .7fr auto;gap:8px;align-items:center;padding:10px 0;border-bottom:1px solid #26314d}.transport-route:last-child{border-bottom:0}.transport-route strong{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-      .transport-usage-row{display:grid;grid-template-columns:1.5fr .7fr .7fr .8fr;gap:8px;align-items:center;padding:10px 0;border-bottom:1px solid #26314d}.transport-usage-row:last-child{border-bottom:0}.transport-usage-row input{min-height:42px;padding:9px}.transport-price{color:#b9c4df;font-size:13px}.transport-line-total{text-align:right;font-weight:900}
-      .transport-total{display:flex;justify-content:space-between;align-items:center;padding:18px;border-radius:15px;background:linear-gradient(145deg,#191735,#101627);border:1px solid #4a3d78}.transport-total span{color:#c5cce0}.transport-total b{font-size:28px;color:#fff}.transport-breakdown{margin-top:10px}
-      .transport-breakdown-row{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px solid #26314d;font-size:13px}.transport-empty{padding:16px;text-align:center;color:#98a3bf;border:1px dashed #33405f;border-radius:12px}
-      .transport-remove{min-height:38px;padding:7px 10px}
-      @media(max-width:700px){.transport-add-grid{grid-template-columns:1fr 1fr}.transport-add-grid input:first-child{grid-column:1/-1}.transport-add-grid button{grid-column:1/-1}.transport-route{grid-template-columns:1fr 1fr}.transport-route strong{grid-column:1/-1}.transport-usage-row{grid-template-columns:1fr 1fr}.transport-usage-row .transport-line-total{grid-column:1/-1;text-align:left}}
-      @media(max-width:600px){.transport-head{flex-direction:column}.transport-head button{width:100%}}
-    `;
-    document.head.appendChild(style);
-
-    document.getElementById('transport-back').onclick=()=>transportExpenseTool.close();
-    document.getElementById('transport-add').onclick=addRoute;
-    document.getElementById('transport-month').addEventListener('change',render);
-    render();
-  }
-
-  function addRoute(){
-    const name=document.getElementById('transport-name').value.trim();
-    const one=Math.max(0,Number(document.getElementById('transport-oneway').value)||0);
-    const round=Math.max(0,Number(document.getElementById('transport-roundtrip').value)||0);
-    if(!name){alert('訪問先・研修先の名前を入力してください。');return}
-    if(!one&&!round){alert('片道または往復の運賃を入力してください。');return}
-    state.routes.push({id:crypto.randomUUID(),name,oneWay:one,roundTrip:round});
-    save();
-    document.getElementById('transport-name').value='';document.getElementById('transport-oneway').value='';document.getElementById('transport-roundtrip').value='';
-    render();
-  }
-
-  function removeRoute(id){
-    if(!confirm('この固定ルートを削除しますか？'))return;
-    state.routes=state.routes.filter(r=>r.id!==id);
-    Object.keys(state.usage).forEach(m=>{delete state.usage[m][id]});
-    save();render();
-  }
-
-  function setCount(month,id,type,value){
-    const u=usageFor(month);u[id]=u[id]||{oneWay:0,roundTrip:0};u[id][type]=Math.max(0,Math.floor(Number(value)||0));save();render();
-  }
-
-  function render(){
-    if(!ready)return;
-    const month=document.getElementById('transport-month').value||monthNow();
-    document.querySelector('#panel-transport-expense .tool-section:nth-of-type(3) .tool-section-title').textContent=`③ ${month} の利用回数`;
-    renderRoutes();renderUsage(month);renderTotal(month);
-  }
-
-  function renderRoutes(){
-    const el=document.getElementById('transport-routes');
-    if(!state.routes.length){el.innerHTML='<div class="transport-empty">固定ルートがまだありません。上から訪問先・片道・往復運賃を登録してください。</div>';return}
-    el.innerHTML=state.routes.map(r=>`<div class="transport-route"><strong>${esc(r.name)}</strong><span class="transport-price">片道 ${yen(r.oneWay)}円</span><span class="transport-price">往復 ${yen(r.roundTrip)}円</span><button class="danger transport-remove" onclick="transportExpenseTool.remove('${r.id}')">削除</button></div>`).join('');
-  }
-
-  function renderUsage(month){
-    const el=document.getElementById('transport-usage');
-    if(!state.routes.length){el.innerHTML='';return}
-    const u=usageFor(month);
-    el.innerHTML=`<div class="transport-usage-row" style="color:#98a3bf;font-size:12px;font-weight:800"><span>訪問先・研修先</span><span>片道回数</span><span>往復回数</span><span>月額</span></div>`+state.routes.map(r=>{
-      const x=u[r.id]||{oneWay:0,roundTrip:0};
-      const total=(Number(x.oneWay)||0)*r.oneWay+(Number(x.roundTrip)||0)*r.roundTrip;
-      return `<div class="transport-usage-row"><strong>${esc(r.name)}</strong><input type="number" min="0" step="1" value="${x.oneWay||0}" aria-label="${esc(r.name)}の片道回数" onchange="transportExpenseTool.count('${month}','${r.id}','oneWay',this.value)"><input type="number" min="0" step="1" value="${x.roundTrip||0}" aria-label="${esc(r.name)}の往復回数" onchange="transportExpenseTool.count('${month}','${r.id}','roundTrip',this.value)"><span class="transport-line-total">${yen(total)}円</span></div>`
-    }).join('');
-  }
-
-  function renderTotal(month){
-    const u=usageFor(month);let total=0;
-    const rows=state.routes.map(r=>{const x=u[r.id]||{oneWay:0,roundTrip:0};const amount=(Number(x.oneWay)||0)*r.oneWay+(Number(x.roundTrip)||0)*r.roundTrip;total+=amount;return {name:r.name,amount,oneWay:x.oneWay||0,roundTrip:x.roundTrip||0}}).filter(x=>x.amount>0);
-    document.getElementById('transport-total').textContent=`${yen(total)}円`;
-    document.getElementById('transport-breakdown').innerHTML=rows.length?rows.map(x=>`<div class="transport-breakdown-row"><span>${esc(x.name)}（片道${x.oneWay}回・往復${x.roundTrip}回）</span><b>${yen(x.amount)}円</b></div>`).join(''):'<div class="transport-empty">利用回数を入力すると月間交通費が表示されます。</div>';
-  }
-
-  window.transportExpenseTool={
-    open(){inject();document.getElementById('tool-withholding')?.classList.add('hidden');document.getElementById('panel-interest')?.classList.add('hidden');document.getElementById(PANEL_ID)?.classList.remove('hidden');document.querySelectorAll('#panel-tools .tool-card').forEach(x=>x.classList.remove('active'));const cards=document.querySelectorAll('#panel-tools .tool-card');cards[cards.length-1]?.classList.add('active');render()},
-    close(){document.getElementById(PANEL_ID)?.classList.add('hidden');document.getElementById('tool-withholding')?.classList.remove('hidden');document.getElementById('panel-interest')?.classList.add('hidden');document.querySelector('#panel-tools .tool-card')?.classList.add('active')},
-    remove:removeRoute,
-    count:setCount
-  };
-
-  const timer=setInterval(()=>{inject();if(ready)clearInterval(timer)},300);
+const PANEL_ID='panel-transport-expense',KEY='qualification-os-transport-expense-v1';let ready=false,state={routes:[],usage:{}};
+const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
+const yen=n=>Math.round(Number(n)||0).toLocaleString('ja-JP');
+const nowMonth=()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`};
+function load(){try{const x=JSON.parse(localStorage.getItem(KEY)||'{}');state={routes:Array.isArray(x.routes)?x.routes:[],usage:x.usage&&typeof x.usage==='object'?x.usage:{}}}catch{state={routes:[],usage:{}}}}
+const save=()=>localStorage.setItem(KEY,JSON.stringify(state));const usage=m=>state.usage[m]||(state.usage[m]={});
+function inject(){if(ready)return;const tools=document.getElementById('panel-tools'),grid=tools?.querySelector('.tool-grid');if(!tools||!grid)return;ready=true;load();
+const card=document.createElement('button');card.className='tool-card';card.innerHTML='<span class="tool-icon">🚃</span><span><b>交通費精算</b><small>固定ルート×月の利用回数から交通費を計算</small></span>';card.onclick=()=>transportExpenseTool.open();grid.appendChild(card);
+const panel=document.createElement('div');panel.id=PANEL_ID;panel.className='card tool-panel hidden';panel.innerHTML=`<div class="kicker">TRANSPORTATION EXPENSE</div><div class="transport-head"><div><h2>交通費精算</h2><p class="muted small">固定の訪問先・研修先を登録して、月ごとの利用回数から交通費を集計できます。</p></div><button class="light" id="transport-back">← 業務ツール</button></div><div class="tool-section"><div class="tool-section-title">① 対象月</div><input id="transport-month" type="month" value="${nowMonth()}"></div><div class="tool-section"><div class="tool-section-title">② 固定ルート</div><div class="transport-add-grid"><input id="transport-name" placeholder="例：○○税理士法人・研修会場"><input id="transport-oneway" type="number" min="0" step="1" inputmode="numeric" placeholder="片道運賃（円）"><input id="transport-roundtrip" type="number" min="0" step="1" inputmode="numeric" placeholder="往復運賃（円）"><button class="primary" id="transport-add">＋ ルート追加</button></div><div id="transport-routes" class="transport-routes"></div></div><div class="tool-section"><div class="tool-section-title" id="transport-usage-title">③ ${nowMonth()} の利用回数</div><div id="transport-usage"></div></div><div class="tool-section"><div class="tool-section-title">④ 月間交通費</div><div class="transport-total"><span>合計</span><b id="transport-total">0円</b></div><div id="transport-breakdown" class="transport-breakdown"></div></div>`;tools.appendChild(panel);
+const style=document.createElement('style');style.textContent=`.transport-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}.transport-head h2{margin:0}.transport-head button{white-space:nowrap}.transport-add-grid{display:grid;grid-template-columns:1.5fr .8fr .8fr auto;gap:8px}.transport-routes{margin-top:10px}.transport-route{display:grid;grid-template-columns:1.5fr .7fr .7fr auto;gap:8px;align-items:center;padding:10px 0;border-bottom:1px solid #26314d}.transport-route strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.transport-usage-row{display:grid;grid-template-columns:1.5fr .7fr .7fr .8fr;gap:8px;align-items:center;padding:10px 0;border-bottom:1px solid #26314d}.transport-usage-row input{min-height:42px;padding:9px}.transport-price{color:#b9c4df;font-size:13px}.transport-line-total{text-align:right;font-weight:900}.transport-total{display:flex;justify-content:space-between;align-items:center;padding:18px;border-radius:15px;background:linear-gradient(145deg,#191735,#101627);border:1px solid #4a3d78}.transport-total b{font-size:28px}.transport-breakdown{margin-top:10px}.transport-breakdown-row{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px solid #26314d;font-size:13px}.transport-empty{padding:16px;text-align:center;color:#98a3bf;border:1px dashed #33405f;border-radius:12px}.transport-remove{min-height:38px;padding:7px 10px}@media(max-width:700px){.transport-add-grid{grid-template-columns:1fr 1fr}.transport-add-grid input:first-child,.transport-add-grid button{grid-column:1/-1}.transport-route{grid-template-columns:1fr 1fr}.transport-route strong{grid-column:1/-1}.transport-usage-row{grid-template-columns:1fr 1fr}.transport-usage-row .transport-line-total{grid-column:1/-1;text-align:left}}@media(max-width:600px){.transport-head{flex-direction:column}.transport-head button{width:100%}}`;document.head.appendChild(style);
+document.getElementById('transport-back').onclick=()=>transportExpenseTool.close();document.getElementById('transport-add').onclick=addRoute;document.getElementById('transport-month').onchange=render;render();}
+function addRoute(){const name=document.getElementById('transport-name').value.trim(),one=Math.max(0,Number(document.getElementById('transport-oneway').value)||0),round=Math.max(0,Number(document.getElementById('transport-roundtrip').value)||0);if(!name)return alert('訪問先・研修先の名前を入力してください。');if(!one&&!round)return alert('片道または往復の運賃を入力してください。');state.routes.push({id:crypto.randomUUID(),name,oneWay:one,roundTrip:round});save();['transport-name','transport-oneway','transport-roundtrip'].forEach(id=>document.getElementById(id).value='');render()}
+function removeRoute(id){if(!confirm('この固定ルートを削除しますか？'))return;state.routes=state.routes.filter(r=>r.id!==id);Object.keys(state.usage).forEach(m=>delete state.usage[m][id]);save();render()}
+function setCount(m,id,type,v){const u=usage(m);u[id]=u[id]||{oneWay:0,roundTrip:0};u[id][type]=Math.max(0,Math.floor(Number(v)||0));save();render()}
+function render(){if(!ready)return;const m=document.getElementById('transport-month').value||nowMonth();document.getElementById('transport-usage-title').textContent=`③ ${m} の利用回数`;renderRoutes();renderUsage(m);renderTotal(m)}
+function renderRoutes(){const el=document.getElementById('transport-routes');if(!state.routes.length){el.innerHTML='<div class="transport-empty">固定ルートがまだありません。上から訪問先・片道・往復運賃を登録してください。</div>';return}el.innerHTML=state.routes.map(r=>`<div class="transport-route"><strong>${esc(r.name)}</strong><span class="transport-price">片道 ${yen(r.oneWay)}円</span><span class="transport-price">往復 ${yen(r.roundTrip)}円</span><button class="danger transport-remove" onclick="transportExpenseTool.remove('${r.id}')">削除</button></div>`).join('')}
+function renderUsage(m){const el=document.getElementById('transport-usage');if(!state.routes.length){el.innerHTML='';return}const u=usage(m);el.innerHTML='<div class="transport-usage-row" style="color:#98a3bf;font-size:12px;font-weight:800"><span>訪問先・研修先</span><span>片道回数</span><span>往復回数</span><span>月額</span></div>'+state.routes.map(r=>{const x=u[r.id]||{oneWay:0,roundTrip:0},total=(Number(x.oneWay)||0)*r.oneWay+(Number(x.roundTrip)||0)*r.roundTrip;return `<div class="transport-usage-row"><strong>${esc(r.name)}</strong><input type="number" min="0" step="1" value="${x.oneWay||0}" onchange="transportExpenseTool.count('${m}','${r.id}','oneWay',this.value)"><input type="number" min="0" step="1" value="${x.roundTrip||0}" onchange="transportExpenseTool.count('${m}','${r.id}','roundTrip',this.value)"><span class="transport-line-total">${yen(total)}円</span></div>`}).join('')}
+function renderTotal(m){const u=usage(m);let total=0;const rows=state.routes.map(r=>{const x=u[r.id]||{oneWay:0,roundTrip:0},amount=(Number(x.oneWay)||0)*r.oneWay+(Number(x.roundTrip)||0)*r.roundTrip;total+=amount;return{name:r.name,amount,oneWay:x.oneWay||0,roundTrip:x.roundTrip||0}}).filter(x=>x.amount>0);document.getElementById('transport-total').textContent=`${yen(total)}円`;document.getElementById('transport-breakdown').innerHTML=rows.length?rows.map(x=>`<div class="transport-breakdown-row"><span>${esc(x.name)}（片道${x.oneWay}回・往復${x.roundTrip}回）</span><b>${yen(x.amount)}円</b></div>`).join(''):'<div class="transport-empty">利用回数を入力すると月間交通費が表示されます。</div>'}
+window.transportExpenseTool={open(){inject();document.getElementById('tool-withholding')?.classList.add('hidden');document.getElementById('panel-interest')?.classList.add('hidden');document.getElementById(PANEL_ID)?.classList.remove('hidden');document.querySelectorAll('#panel-tools .tool-card').forEach(x=>x.classList.remove('active'));const cards=document.querySelectorAll('#panel-tools .tool-card');cards[cards.length-1]?.classList.add('active');render()},close(){document.getElementById(PANEL_ID)?.classList.add('hidden');document.getElementById('tool-withholding')?.classList.remove('hidden');document.getElementById('panel-interest')?.classList.add('hidden');document.querySelector('#panel-tools .tool-card')?.classList.add('active')},remove:removeRoute,count:setCount};
+const timer=setInterval(()=>{inject();if(ready)clearInterval(timer)},300);
 })();
