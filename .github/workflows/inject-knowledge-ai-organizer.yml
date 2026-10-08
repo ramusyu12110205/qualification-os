@@ -1,6 +1,8 @@
 name: Inject knowledge AI organizer
 on:
-  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/inject-knowledge-ai-organizer.yml'
 permissions:
   contents: write
 jobs:
