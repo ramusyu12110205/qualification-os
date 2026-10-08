@@ -40,13 +40,16 @@
     const title=(el('miscTitle')?.value||'').trim(),content=(el('miscContent')?.value||'').trim();if(!title){alert('「何について？」を入力してください。');return}
     const groupRadio=document.querySelector('input[name="ka-group"]:checked');let groupId=null;
     try{
-      if(groupRadio?.value==='create'){const name=(el('ka-new-group')?.value||'').trim();if(!name){alert('新しい箱の名前を入力してください。');return}const {data,error}=await sb.from('knowledge_groups').insert({name,description:'AIが知識整理時に提案'}).select('id').single();if(error)throw error;groupId=data.id}
+      const {data:{user:currentUser},error:authError}=await sb.auth.getUser();
+      if(authError||!currentUser)throw new Error('ログイン情報を取得できませんでした。');
+      const uid=currentUser.id;
+      if(groupRadio?.value==='create'){const name=(el('ka-new-group')?.value||'').trim();if(!name){alert('新しい箱の名前を入力してください。');return}const {data,error}=await sb.from('knowledge_groups').insert({user_id:uid,name,description:'AIが知識整理時に提案'}).select('id').single();if(error)throw error;groupId=data.id}
       else if(groupRadio?.value?.startsWith('existing:'))groupId=groupRadio.value.slice(9);
       const cat=el('miscCategory')?.value||null;
       const payload={what_was_it:title,important_points:aiResult?.key_points||[],unknown_terms:[],in_my_words:aiResult?.summary||content,category_id:cat||null,card_type:'misc',ai_summary:aiResult?.summary||null,ai_detail:aiResult?.detail||null,ai_key_points:aiResult?.key_points||[],ai_related_topics:aiResult?.related_topics||[],updated_at:new Date().toISOString()};
-      const {data:card,error:ce}=await sb.from('knowledge_cards').insert(payload).select('id').single();if(ce)throw ce;
-      if(groupId){const {error:ge}=await sb.from('knowledge_group_cards').upsert({user_id:(await sb.auth.getUser()).data.user.id,group_id:groupId,card_id:card.id},{onConflict:'group_id,card_id'});if(ge)throw ge}
-      const checks=[...document.querySelectorAll('.ka-tag-check:checked')];const uid=(await sb.auth.getUser()).data.user.id;
+      const {data:card,error:ce}=await sb.from('knowledge_cards').insert({...payload,user_id:uid}).select('id').single();if(ce)throw ce;
+      if(groupId){const {error:ge}=await sb.from('knowledge_group_cards').upsert({user_id:uid,group_id:groupId,card_id:card.id},{onConflict:'group_id,card_id'});if(ge)throw ge}
+      const checks=[...document.querySelectorAll('.ka-tag-check:checked')];
       for(const c of checks){let tagId=c.dataset.id||'';if(c.dataset.mode==='create'||!tagId){const name=(c.dataset.name||'').trim();if(!name)continue;const {data:td,error:te}=await sb.from('knowledge_tags').upsert({user_id:uid,name,updated_at:new Date().toISOString()},{onConflict:'user_id,name'}).select('id').single();if(te)throw te;tagId=td.id}const {error:re}=await sb.from('knowledge_card_tags').upsert({user_id:uid,card_id:card.id,tag_id:tagId},{onConflict:'card_id,tag_id'});if(re)throw re}
       close();el('miscAiResult')?.classList.add('hidden');if(typeof loadAll==='function')await loadAll();else if(typeof renderCards==='function')renderCards();if(typeof toast==='function')toast('AI整理した知識を保存しました');else alert('AI整理した知識を保存しました');
     }catch(e){console.error(e);alert('保存に失敗しました。\n'+(e?.message||e))}
