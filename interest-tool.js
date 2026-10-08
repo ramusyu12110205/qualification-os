@@ -29,7 +29,7 @@
       <div class="tool-section"><div class="tool-section-title">② 受取人</div>
         <div class="tool-switch tool-direction" id="interest-taxpayer">
           <button class="tool-mode" data-taxpayer="individual">個人<br><span>所得税＋復興特別所得税＋地方税</span></button>
-          <button class="tool-mode" data-taxpayer="corporation" class="tool-mode active" data-taxpayer="corporation">法人<br><span>所得税＋復興特別所得税</span></button>
+          <button class="tool-mode active" data-taxpayer="corporation">法人<br><span>所得税＋復興特別所得税</span></button>
         </div>
       </div>
       <div class="tool-section"><label for="interest-amount" id="interest-input-label">③ 利息の入金額</label>
