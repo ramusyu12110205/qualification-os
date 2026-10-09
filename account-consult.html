@@ -80,7 +80,7 @@ function renderHistory(){
   topicArea.querySelectorAll('[data-topic-toggle]').forEach(b=>b.addEventListener('click',()=>toggleTopic(b.dataset.topicToggle,b)));
   topicArea.querySelectorAll('[data-topic-open]').forEach(b=>b.addEventListener('click',()=>openTopic(b.dataset.topicOpen)));
   if(!filtered.length){document.getElementById('history').innerHTML='<div class="empty">該当する相談はありません。</div>';return}
-  history.innerHTML='<div class="kicker" style="margin-top:18px">ALL CONSULTATIONS</div>'+filtered.map(renderConsultation).join('');
+  document.getElementById('history').innerHTML='<div class="kicker" style="margin-top:18px">ALL CONSULTATIONS</div>'+filtered.map(renderConsultation).join('');
 }
 function renderTopicConsultation(c){return '<div class="topic-q"><b>'+esc(c.question)+'</b><div class="muted small">'+fmt(c.created_at)+'</div><div class="consult-summary">'+esc(summary(c.ai_answer||'AI回答なし'))+'</div><button class="light" style="margin-top:8px" onclick="toggleDetails(\''+c.id+'\',this)">詳細を見る</button><div id="topic-detail-'+c.id+'" class="ai-panel consult-details hidden"><div class="ai-label">AI回答</div><div class="ai-answer">'+esc(c.ai_answer||'AI回答なし')+'</div>'+(c.ai_caution?'<div class="ai-caution"><b>注意事項：</b>'+esc(c.ai_caution)+'</div>':'')+'</div></div>'}
 function toggleTopic(id,b){const e=document.getElementById('topic-'+id);e.classList.toggle('hidden');b.textContent=e.classList.contains('hidden')?'全件を見る':'閉じる'}
