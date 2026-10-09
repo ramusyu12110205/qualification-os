@@ -1,0 +1,36 @@
+name: Fix accounting login
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch accounting login
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('account-consult.html')
+          s = p.read_text(encoding='utf-8')
+          marker = '<style>'
+          patch = '''<script>\nwindow.__accountingLogin = async function(){\n  try {\n    const client = window.supabase.createClient('https://txprypfzdsfaupguhybl.supabase.co','sb_publishable_qiCaP0cBNhms5-usSDzKlQ_nywzlU36',{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});\n    const {error} = await client.auth.signInWithOAuth({provider:'google',options:{redirectTo:location.origin+location.pathname}});\n    if(error) document.getElementById('authError').textContent = error.message;\n  } catch(e) {\n    document.getElementById('authError').textContent = e?.message || String(e);\n  }\n};\n</script>\n'''
+          if 'window.__accountingLogin' not in s and marker in s:
+              s = s.replace(marker, patch + marker, 1)
+          s = s.replace('onclick="loginWithGoogle()"', 'onclick="window.__accountingLogin()"', 1)
+          p.write_text(s, encoding='utf-8')
+          PY
+      - name: Remove temporary workflow
+        run: rm -f .github/workflows/fix-account-login.yml
+      - name: Commit patch
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add account-consult.html .github/workflows/fix-account-login.yml
+          git commit -m 'Fix accounting consultation login button'
+          git push
