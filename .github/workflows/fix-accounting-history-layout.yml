@@ -1,0 +1,43 @@
+name: Fix accounting history layout
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fix history element reference and text overflow
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('account-consult.html')
+          s = p.read_text(encoding='utf-8')
+
+          old = "history.innerHTML='<div class=\\\"kicker\\\" style=\\\"margin-top:18px\\\">ALL CONSULTATIONS</div>'+filtered.map(renderConsultation).join('');"
+          new = "document.getElementById('history').innerHTML='<div class=\\\"kicker\\\" style=\\\"margin-top:18px\\\">ALL CONSULTATIONS</div>'+filtered.map(renderConsultation).join('');"
+          if old not in s:
+              raise SystemExit('history render target not found')
+          s = s.replace(old, new, 1)
+
+          old_css = ".ai-panel{margin-top:16px;padding:16px;border:1px solid #4a3d78;border-radius:16px;background:linear-gradient(145deg,#15132a,#0c1220)}"
+          new_css = old_css + ".ai-panel,.consult-card,.inline-panel{min-width:0;max-width:100%;overflow-wrap:anywhere;word-break:break-word}.ai-answer{overflow-wrap:anywhere;word-break:break-word}.consult-details{overflow:hidden}"
+          if old_css not in s:
+              raise SystemExit('css target not found')
+          s = s.replace(old_css, new_css, 1)
+
+          p.write_text(s, encoding='utf-8')
+          PY
+      - name: Commit fix
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add account-consult.html
+          git diff --cached --quiet || git commit -m 'Fix accounting history list and detail overflow'
+          git push
