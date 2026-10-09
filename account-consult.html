@@ -8,7 +8,7 @@
 window.__accountingLogin = async function(){
   try {
     const client = window.supabase.createClient('https://txprypfzdsfaupguhybl.supabase.co','sb_publishable_qiCaP0cBNhms5-usSDzKlQ_nywzlU36',{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
-    const {error} = await client.auth.signInWithOAuth({provider:'google',options:{redirectTo:location.origin+location.pathname}});
+    const {error} = await client.auth.signInWithOAuth({provider:'google',options:{redirectTo:location.origin+'/qualification-os/'}});
     if(error) document.getElementById('authError').textContent = error.message;
   } catch(e) {
     document.getElementById('authError').textContent = e?.message || String(e);
