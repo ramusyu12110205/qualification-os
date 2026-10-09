@@ -36,6 +36,17 @@
       const g=await sb.from('knowledge_groups').select('id,name,description').order('name');if(g.error)throw g.error;const t=await sb.from('knowledge_tags').select('id,name').order('name');if(t.error)throw t.error;groups=g.data||[];tags=t.data||[];aiResult=data;renderResult();
     }catch(e){console.error(e);el('kaBody').innerHTML=`<div class="ka-section"><div class="ka-summary">AI整理に失敗しました。</div><div class="ka-muted" style="margin-top:8px">${esc(e?.message||e)}</div></div><div class="ka-actions"><button class="light" onclick="window.knowledgeAiOrganizer.close()">閉じる</button></div>`}
   }
+  async function refreshKnowledgeUI(){
+    const names=['loadAll','loadCards','loadKnowledgeCards','refreshCards','fetchCards','reloadCards','loadKnowledge'];
+    for(const name of names){
+      try{
+        const fn=typeof window[name]==='function'?window[name]:eval(`typeof ${name}==='function'?${name}:null`);
+        if(typeof fn==='function'){await fn();break}
+      }catch{}
+    }
+    try{if(typeof renderCards==='function')renderCards()}catch{}
+    try{document.getElementById('search')?.dispatchEvent(new Event('input',{bubbles:true}))}catch{}
+  }
   async function save(){
     const title=(el('miscTitle')?.value||'').trim(),content=(el('miscContent')?.value||'').trim();if(!title){alert('「何について？」を入力してください。');return}
     const groupRadio=document.querySelector('input[name="ka-group"]:checked');let groupId=null;
@@ -51,7 +62,9 @@
       if(groupId){const {error:ge}=await sb.from('knowledge_group_cards').upsert({user_id:uid,group_id:groupId,card_id:card.id},{onConflict:'group_id,card_id'});if(ge)throw ge}
       const checks=[...document.querySelectorAll('.ka-tag-check:checked')];
       for(const c of checks){let tagId=c.dataset.id||'';if(c.dataset.mode==='create'||!tagId){const name=(c.dataset.name||'').trim();if(!name)continue;const {data:td,error:te}=await sb.from('knowledge_tags').upsert({user_id:uid,name,updated_at:new Date().toISOString()},{onConflict:'user_id,name'}).select('id').single();if(te)throw te;tagId=td.id}const {error:re}=await sb.from('knowledge_card_tags').upsert({user_id:uid,card_id:card.id,tag_id:tagId},{onConflict:'card_id,tag_id'});if(re)throw re}
-      close();el('miscAiResult')?.classList.add('hidden');if(typeof loadAll==='function')await loadAll();else if(typeof renderCards==='function')renderCards();if(typeof toast==='function')toast('AI整理した知識を保存しました');else alert('AI整理した知識を保存しました');
+      await refreshKnowledgeUI();
+      close();el('miscAiResult')?.classList.add('hidden');
+      if(typeof toast==='function')toast('AI整理した知識を保存しました');else alert('AI整理した知識を保存しました');
     }catch(e){console.error(e);alert('保存に失敗しました。\n'+(e?.message||e))}
   }
   function patchButton(){const b=document.querySelector('#miscForm button[onclick="askKnowledgeAI()"]');if(b){b.textContent='🤖 AIに相談して整理';b.onclick=consult}}
