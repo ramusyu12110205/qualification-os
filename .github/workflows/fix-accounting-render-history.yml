@@ -1,0 +1,52 @@
+name: Fix accounting render history syntax
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Replace broken renderHistory function
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('account-consult.html')
+          s = p.read_text(encoding='utf-8')
+          start = s.index('function renderHistory(){')
+          end = s.index('function renderTopicConsultation', start)
+          new = r'''function renderHistory(){
+            const q=(searchInput?.value||'').trim().toLowerCase();
+            const filtered=consultations.filter(c=>{
+              const text=[c.question,c.ai_answer,c.consultation_type,topicFor(c)?.title,...linked(c.id).map(x=>x.account.name)].join(' ').toLowerCase();
+              return !q||text.includes(q);
+            });
+            historyCount.textContent=filtered.length+'件';
+            const visibleTopics=topics.filter(t=>!q||[t.title,t.summary,...consultations.filter(c=>c.topic_id===t.id).map(c=>c.question+' '+c.ai_answer)].join(' ').toLowerCase().includes(q));
+            topicArea.innerHTML=visibleTopics.length
+              ? '<div class="kicker" style="margin-top:18px">CONSULTATION THEMES</div><div class="topic-grid">'+visibleTopics.map(t=>{
+                  const qs=consultations.filter(c=>c.topic_id===t.id).filter(c=>!q||[c.question,c.ai_answer].join(' ').toLowerCase().includes(q));
+                  const key='topic-'+t.id;
+                  return `<div class="topic"><div class="topic-title">📚 ${esc(t.title)}</div><div class="muted small" style="margin-top:5px">${qs.length}件の相談を収録</div>${t.summary?`<div class="consult-summary">${esc(summary(t.summary))}</div>`:''}<div class="actions"><button class="light" data-topic-toggle="${esc(t.id)}">全件を見る</button><button class="light" data-topic-open="${esc(t.id)}">このテーマで相談</button></div><div id="${key}" class="hidden">${qs.map(c=>renderTopicConsultation(c)).join('')}</div></div>`;
+                }).join('')+'</div>'
+              : '';
+            topicArea.querySelectorAll('[data-topic-toggle]').forEach(b=>b.addEventListener('click',()=>toggleTopic(b.dataset.topicToggle,b)));
+            topicArea.querySelectorAll('[data-topic-open]').forEach(b=>b.addEventListener('click',()=>openTopic(b.dataset.topicOpen)));
+            if(!filtered.length){history.innerHTML='<div class="empty">該当する相談はありません。</div>';return}
+            history.innerHTML='<div class="kicker" style="margin-top:18px">ALL CONSULTATIONS</div>'+filtered.map(renderConsultation).join('');
+          }
+          '''
+          p.write_text(s[:start] + new + s[end:], encoding='utf-8')
+          PY
+      - name: Commit fix
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add account-consult.html
+          git diff --cached --quiet || git commit -m 'Fix accounting history render syntax'
+          git push
