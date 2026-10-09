@@ -70,16 +70,18 @@ jobs:
               if marker in s:
                   p.write_text(s.replace(marker, tag + '\n' + marker, 1), encoding='utf-8')
           PY
-      - name: Patch accounting login redirect
+      - name: Restore accounting consultation page
         run: |
+          git show 59083a8a2432df37f77d57448ec3d250aec5719a:account-consult.html > account-consult.html
           python - <<'PY'
           from pathlib import Path
           p = Path('account-consult.html')
           s = p.read_text(encoding='utf-8')
-          old = "redirectTo:location.origin+location.pathname"
-          new = "redirectTo:location.origin+'/qualification-os/'"
+          old = "redirectTo:location.origin+'/qualification-os/'"
+          new = "redirectTo:location.origin+'/qualification-os/account-consult.html'"
           if old in s:
-              p.write_text(s.replace(old, new, 1), encoding='utf-8')
+              s = s.replace(old, new, 1)
+          p.write_text(s, encoding='utf-8')
           PY
       - name: Commit fix if needed
         run: |
@@ -89,6 +91,6 @@ jobs:
           if git diff --cached --quiet; then
             echo 'No change needed'
           else
-            git commit -m 'Fix accounting login redirect'
+            git commit -m 'Restore accounting consultation page and login return'
             git push
           fi
