@@ -4,6 +4,17 @@
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>勘定科目相談 | 資格勉強OS</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+window.__accountingLogin = async function(){
+  try {
+    const client = window.supabase.createClient('https://txprypfzdsfaupguhybl.supabase.co','sb_publishable_qiCaP0cBNhms5-usSDzKlQ_nywzlU36',{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
+    const {error} = await client.auth.signInWithOAuth({provider:'google',options:{redirectTo:location.origin+location.pathname}});
+    if(error) document.getElementById('authError').textContent = error.message;
+  } catch(e) {
+    document.getElementById('authError').textContent = e?.message || String(e);
+  }
+};
+</script>
 <style>
 :root{--bg:#080c17;--card:#12182a;--text:#f5f7ff;--muted:#98a3bf;--accent:#8b5cf6;--good:#34d399;--danger:#fb7185;--line:#26314d}
 *{box-sizing:border-box}body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;max-width:1080px;margin:auto;padding:18px 18px 90px;background:radial-gradient(circle at top left,#1a1640 0,#090e1a 42%,#050812 100%);color:var(--text)}
@@ -20,7 +31,7 @@ input,textarea{width:100%;padding:13px;border:1px solid #394563;border-radius:12
 </style>
 </head>
 <body>
-<div id="authScreen" class="auth"><div class="card authbox"><div style="font-size:48px">🧾</div><div class="kicker">ACCOUNTING CONSULT</div><h1 style="margin-top:4px">勘定科目相談</h1><p class="muted">資格OSと同じアカウントでログインしてください。</p><button class="primary" style="width:100%;margin-top:12px" onclick="loginWithGoogle()">Googleでログイン</button><p id="authError" class="small" style="color:#ff9aad;margin-top:12px"></p></div></div>
+<div id="authScreen" class="auth"><div class="card authbox"><div style="font-size:48px">🧾</div><div class="kicker">ACCOUNTING CONSULT</div><h1 style="margin-top:4px">勘定科目相談</h1><p class="muted">資格OSと同じアカウントでログインしてください。</p><button class="primary" style="width:100%;margin-top:12px" onclick="window.__accountingLogin()">Googleでログイン</button><p id="authError" class="small" style="color:#ff9aad;margin-top:12px"></p></div></div>
 <div id="app" class="hidden">
 <header class="top"><div><div class="kicker">ACCOUNTING CONSULT</div><h1>🧾 勘定科目相談</h1><div class="muted small">仕訳入力で迷ったときの、自分専用の相談・知識カード <span id="userLabel"></span></div></div><div class="actions" style="margin-top:0"><button class="light" onclick="location.href='index.html'">← 資格OS</button><button class="light" onclick="logout()">ログアウト</button></div></header>
 <nav class="tabs"><button id="tab-consult" class="tab-button active" onclick="switchTab('consult')">相談する</button><button id="tab-history" class="tab-button" onclick="switchTab('history')">過去の相談</button><button id="tab-box" class="tab-button" onclick="switchTab('box')">勘定科目BOX</button><button id="tab-tools" class="tab-button" onclick="switchTab('tools')">業務ツール</button></nav>
