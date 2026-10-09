@@ -20,11 +20,9 @@ jobs:
           p = Path('account-consult.html')
           s = p.read_text(encoding='utf-8')
 
-          old = "history.innerHTML='<div class=\\\"kicker\\\" style=\\\"margin-top:18px\\\">ALL CONSULTATIONS</div>'+filtered.map(renderConsultation).join('');"
-          new = "document.getElementById('history').innerHTML='<div class=\\\"kicker\\\" style=\\\"margin-top:18px\\\">ALL CONSULTATIONS</div>'+filtered.map(renderConsultation).join('');"
-          if old not in s:
+          if 'history.innerHTML=' not in s:
               raise SystemExit('history render target not found')
-          s = s.replace(old, new, 1)
+          s = s.replace('history.innerHTML=', "document.getElementById('history').innerHTML=", 1)
 
           old_css = ".ai-panel{margin-top:16px;padding:16px;border:1px solid #4a3d78;border-radius:16px;background:linear-gradient(145deg,#15132a,#0c1220)}"
           new_css = old_css + ".ai-panel,.consult-card,.inline-panel{min-width:0;max-width:100%;overflow-wrap:anywhere;word-break:break-word}.ai-answer{overflow-wrap:anywhere;word-break:break-word}.consult-details{overflow:hidden}"
