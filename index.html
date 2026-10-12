@@ -873,14 +873,12 @@ async function archiveQualification(id){
 }
 
 async function deleteStudySession(id){
-  if(!confirm('この勉強記録を削除しますか？'))return;
-  const {error}=await sb.from('study_sessions')
-    .delete()
-    .eq('id',id).eq('user_id',currentUser.id);
+  if(!confirm('この勉強記録を削除しますか？\n\n復習記録の場合は、関連する復習履歴も取り消して復習状態を再計算します。'))return;
+  const {error}=await sb.rpc('delete_study_session_and_rebuild',{p_session_id:id});
   if(error){alert('勉強記録の削除に失敗しました: '+error.message);return}
   await loadAll();
   renderRecordManagerInline();
-  toast('削除しました');
+  toast('削除しました。復習状態も更新しました');
 }
 
 function renderRecordManagerInline(){
