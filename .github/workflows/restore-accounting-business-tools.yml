@@ -1,0 +1,40 @@
+name: Restore accounting business tools
+on:
+  push:
+    paths:
+      - '.github/workflows/restore-accounting-business-tools.yml'
+permissions:
+  contents: write
+jobs:
+  restore:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Restore historical business tool scripts
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re, urllib.request
+          p=Path('account-consult.html')
+          s=p.read_text(encoding='utf-8')
+          s=re.sub(r'<button id="tab-tools"[^>]*>業務ツール</button>', '', s, count=1)
+          s=re.sub(r'<section id="panel-tools"[^>]*>.*?</section>', '', s, count=1, flags=re.S)
+          for f in ['business-tools-v2.js','interest-tool.js','transport-expense-tool.js']:
+              u=f'https://raw.githubusercontent.com/ramusyu12110205/qualification-os/a097a3e91360c2ab768a6672487c459e5d9405a1/{f}'
+              Path(f).write_text(urllib.request.urlopen(u).read().decode('utf-8'), encoding='utf-8')
+              s=re.sub(rf'<script src="{re.escape(f)}(?:\?[^\"]*)?"></script>\s*', '', s)
+          marker='</body>'
+          tags='\n<script src="business-tools-v2.js"></script>\n<script src="interest-tool.js?v=20261008-3"></script>\n<script src="transport-expense-tool.js?v=20261008-1"></script>\n'
+          if marker not in s:
+              raise SystemExit('body marker not found')
+          s=s.replace(marker, tags+marker, 1)
+          p.write_text(s, encoding='utf-8')
+          PY
+      - name: Commit restored tools and remove workflow
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add account-consult.html business-tools-v2.js interest-tool.js transport-expense-tool.js
+          git rm .github/workflows/restore-accounting-business-tools.yml
+          git commit -m 'Restore accounting business tools'
+          git push
