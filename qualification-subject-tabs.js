@@ -37,8 +37,8 @@
           '<input class="q-sub-name" data-sub-id="'+s.id+'" value="'+esc(s.name)+'">'+
           '<label>合否</label>'+ 
           '<select class="q-sub-result" data-sub-id="'+s.id+'">'+
-            '<option value="">未設定</option>'+
-            '<option value="合格"'+(s.result==='合格'?' selected':'')+'>合格</option>'+
+            '<option value="">未設定</option>'+ 
+            '<option value="合格"'+(s.result==='合格'?' selected':'')+'>合格</option>'+ 
             '<option value="不合格"'+(s.result==='不合格'?' selected':'')+'>不合格</option>'+ 
           '</select>';
         panes.appendChild(pane);
@@ -116,4 +116,19 @@
   st.textContent='.q-sub-tabs{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}.q-sub-tab{border-radius:999px;padding:8px 13px}.q-sub-tab.active{background:#8b5cf6;color:#fff;border-color:#8b5cf6}.q-sub-panes{margin-top:8px}.q-sub-pane{padding:14px;border:1px solid #33405f;border-radius:14px;background:#10182a}.q-sub-pane select{margin-bottom:2px}.q-sub-pane .q-sub-name{margin-bottom:2px}.q-sub-pane.hidden{display:none}';
   document.head.appendChild(st);
   setTimeout(transform,0);
+
+  function injectWeaknessLink(){
+    if(document.getElementById('weaknessNavButton'))return;
+    var header=document.querySelector('#app > .sectiontitle');
+    if(!header)return;
+    var btn=document.createElement('button');
+    btn.id='weaknessNavButton';
+    btn.className='light';
+    btn.type='button';
+    btn.textContent='🎯 弱点分析';
+    btn.onclick=function(){location.href='weakness.html'};
+    header.insertBefore(btn,header.querySelector('button.light:last-child')||null);
+  }
+  setTimeout(injectWeaknessLink,0);
+  setTimeout(injectWeaknessLink,300);
 })();
