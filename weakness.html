@@ -22,9 +22,9 @@ h1{margin:0;font-size:30px}.muted{color:var(--muted)}.small{font-size:13px}.card
     <div class="row" style="align-items:end">
       <div style="flex:1;min-width:180px"><label>科目</label><select id="subjectFilter" onchange="render()"><option value="all">すべての科目</option></select></div>
       <div style="flex:1;min-width:180px"><label>誤答回数</label><select id="wrongFilter" onchange="render()"><option value="0">すべて</option><option value="1">1回以上</option><option value="2">2回以上</option><option value="3" selected>3回以上</option><option value="5">5回以上</option></select></div>
+      <div style="flex:1;min-width:180px"><label>最終結果</label><select id="lastResultFilter" onchange="render()"><option value="all">すべて</option><option value="wrong">最終結果が誤答</option><option value="correct">最終結果が正答</option></select></div>
       <div style="flex:1;min-width:180px"><label>並び順</label><select id="sortMode" onchange="render()"><option value="wrong">誤答回数が多い順</option><option value="accuracy">正答率が低い順</option><option value="recent">最終誤答が新しい順</option><option value="attempts">回答回数が多い順</option></select></div>
     </div>
-    <div class="row" style="margin-top:12px"><button id="wrongOnlyBtn" type="button" class="light" onclick="toggleWrongOnly()">× 誤答のみ</button><span class="muted small">誤答経験のある問題だけを表示</span></div>
   </section>
   <section class="card"><div class="row" style="justify-content:space-between"><h2>弱点候補</h2><span id="resultCount" class="badge"></span></div><p class="muted small">問題を押すと、誤答・正答の履歴を時系列で確認できます。</p><div id="list"></div></section>
 </div>
@@ -33,7 +33,7 @@ h1{margin:0;font-size:30px}.muted{color:var(--muted)}.small{font-size:13px}.card
 const SUPABASE_URL='https://txprypfzdsfaupguhybl.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY='sb_publishable_qiCaP0cBNhms5-usSDzKlQ_nywzlU36';
 const sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
-let user=null,problems=[],subjects=[],history=[],openId=null,wrongOnly=false;
+let user=null,problems=[],subjects=[],history=[],openId=null;
 const esc=s=>String(s??'').replace(/[&<>\"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#039;'}[m]));
 function fmtDateTime(s){if(!s)return '—';const d=new Date(s);return `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`}
 function fmtDate(s){if(!s)return '—';const d=new Date(s+'T00:00:00');return `${d.getMonth()+1}/${d.getDate()}`}
@@ -41,7 +41,6 @@ function weaknessLevel(wrong){if(wrong>=5)return 5;if(wrong>=4)return 4;if(wrong
 function weaknessLabel(level){return ['—','軽度','注意','弱点','強い弱点','最重要'][level]}
 function weaknessBadge(wrong){const level=weaknessLevel(wrong);if(!level)return '';return `<span class="weakness-level level${level}">${weaknessLabel(level)}・誤答${wrong}回</span>`}
 function weaknessMeter(wrong){const level=weaknessLevel(wrong);if(!level)return '';return `<div class="weakness-meter">${[1,2,3,4,5].map(i=>`<i class="${i<=level?'on':''}"></i>`).join('')}</div>`}
-function toggleWrongOnly(){wrongOnly=!wrongOnly;document.getElementById('wrongFilter').value=wrongOnly?'1':'0';render()}
 async function init(){const {data:{session}}=await sb.auth.getSession();if(!session){document.getElementById('auth').classList.remove('hidden');return}await boot(session.user);sb.auth.onAuthStateChange((e,s)=>{if(e==='SIGNED_OUT')location.href='index.html'});}
 async function boot(u){user=u;document.getElementById('app').classList.remove('hidden');
  const [p,s,h]=await Promise.all([
@@ -53,10 +52,8 @@ async function boot(u){user=u;document.getElementById('app').classList.remove('h
  problems=p.data||[];subjects=s.data||[];history=h.data||[];
  const sf=document.getElementById('subjectFilter');subjects.forEach(x=>{const o=document.createElement('option');o.value=x.id;o.textContent=x.name;sf.appendChild(o)});render();}
 function statsFor(p){const hs=history.filter(h=>h.problem_id===p.id);const wrong=hs.filter(h=>h.result==='wrong');const correct=hs.filter(h=>h.result==='correct');const total=hs.length;return {hs,wrong,correct,total,accuracy:total?correct.length/total*100:0,firstWrong:wrong[0]?.review_date||null,lastWrong:wrong.at(-1)?.review_date||null,last:hs.at(-1)||null}}
-function render(){const sid=document.getElementById('subjectFilter').value;const min=Number(document.getElementById('wrongFilter').value);const mode=document.getElementById('sortMode').value;
- wrongOnly=min>=1;
- const btn=document.getElementById('wrongOnlyBtn');if(btn){btn.className=wrongOnly?'primary':'light';btn.textContent=wrongOnly?'✓ 誤答のみ':'× 誤答のみ';}
- const rows=problems.map(p=>({p,...statsFor(p)})).filter(x=>(sid==='all'||x.p.subject_id===sid)&&x.wrong.length>=min);
+function render(){const sid=document.getElementById('subjectFilter').value;const min=Number(document.getElementById('wrongFilter').value);const lastResult=document.getElementById('lastResultFilter').value;const mode=document.getElementById('sortMode').value;
+ const rows=problems.map(p=>({p,...statsFor(p)})).filter(x=>(sid==='all'||x.p.subject_id===sid)&&x.wrong.length>=min&&(lastResult==='all'||x.last?.result===lastResult));
  rows.sort((a,b)=>mode==='wrong'?b.wrong.length-a.wrong.length||b.total-a.total:mode==='accuracy'?a.accuracy-b.accuracy||b.wrong.length-a.wrong.length:mode==='recent'?String(b.lastWrong||'').localeCompare(String(a.lastWrong||'')):b.total-a.total||b.wrong.length-a.wrong.length);
  document.getElementById('totalProblems').textContent=problems.length+'問';document.getElementById('wrongProblems').textContent=problems.filter(p=>statsFor(p).wrong.length>0).length+'問';document.getElementById('wrongTotal').textContent=history.filter(h=>h.result==='wrong').length+'回';document.getElementById('weakProblems').textContent=problems.filter(p=>statsFor(p).wrong.length>=3).length+'問';document.getElementById('resultCount').textContent=rows.length+'問';
  const list=document.getElementById('list');if(!rows.length){list.innerHTML='<div class="problem">条件に該当する問題はありません。</div>';return}
