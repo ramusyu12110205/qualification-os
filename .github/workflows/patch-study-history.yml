@@ -1,0 +1,86 @@
+name: Patch study history UI
+
+on:
+  push:
+    paths:
+      - '.github/workflows/patch-study-history.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Patch existing study history
+        shell: python
+        run: |
+          from pathlib import Path
+
+          path = Path('index.html')
+          text = path.read_text(encoding='utf-8')
+          start = text.index('function renderRecordManagerInline(){')
+          end = text.index('function showRecordManager()', start)
+
+          new_function = r'''async function renderRecordManagerInline(){
+  const box=document.getElementById('panel-record'); if(!box)return;
+  const labels={new_problems:'新規問題',review:'復習',textbook:'テキスト',lecture:'講義',mock:'模試',other:'その他'};
+  box.innerHTML=`<h3>勉強記録を管理</h3><p class="muted small">${sessions.length}件。削除するとクラウド上の記録も削除されます。</p><div class="item muted small">勉強内容を読み込んでいます…</div>`;
+
+  const sessionIds=sessions.map(s=>s.id).filter(Boolean);
+  let links=[];
+  if(sessionIds.length){
+    const {data,error}=await sb.from('study_session_problems').select('session_id,problem_id,role,result').in('session_id',sessionIds);
+    if(!error) links=data||[];
+  }
+  const problemMap=new Map(problems.map(p=>[p.id,p]));
+  const linksBySession=new Map();
+  for(const link of links){
+    if(!linksBySession.has(link.session_id))linksBySession.set(link.session_id,[]);
+    linksBySession.get(link.session_id).push(link);
+  }
+
+  const resultLabel=(result)=>result==='wrong'?'× 誤答':result==='correct'?'○ 正解':'';
+  const resultClass=(result)=>result==='wrong'?'color:var(--bad);':result==='correct'?'color:var(--good);':'';
+  const cards=sessions.length?sessions.map(s=>{
+    const q=qualifications.find(q=>q.id===s.qualification_id),sub=subjects.find(x=>x.id===s.subject_id);
+    const type=labels[s.activity_type]||s.activity_type;
+    const sessionLinks=linksBySession.get(s.id)||[];
+    const detailId='record-detail-'+String(s.id).replace(/[^a-zA-Z0-9_-]/g,'');
+    const problemsHtml=sessionLinks.length?`<div style="margin-top:10px;padding-top:10px;border-top:1px solid #293551"><div class="muted small" style="margin-bottom:6px">📚 ${sessionLinks.length}問</div>${sessionLinks.map((link,i)=>{
+      const p=problemMap.get(link.problem_id);
+      const name=p?.name||'問題';
+      const result=resultLabel(link.result);
+      return `<div style="display:flex;gap:8px;align-items:flex-start;padding:5px 0;font-size:13px"><span class="muted" style="min-width:24px">${i+1}.</span><span style="flex:1">${esc(name)}</span>${result?`<span class="small" style="${resultClass(link.result)}white-space:nowrap">${result}</span>`:''}</div>`;
+    }).join('')}</div>`:'';
+    return `<div class="item clickable" onclick="toggleRecordDetail('${detailId}')">
+      <div class="record-grid"><div><b>${esc(q?.name||'資格')}${sub?' / '+esc(sub.name):''}</b><div class="muted small">${fmt(s.study_date)} ・ ${type}</div></div><strong>${minutesText(s.minutes)}</strong></div>
+      <div class="record-meta"><span>📅 ${s.study_date}</span>${sessionLinks.length?`<span>📚 ${sessionLinks.length}問</span>`:''}${s.memo?`<span>💬 ${esc(s.memo)}</span>`:''}<span style="margin-left:auto">詳細 ▾</span></div>
+      <div id="${detailId}" style="display:none;margin-top:10px" onclick="event.stopPropagation()">
+        ${s.memo?`<div class="muted small" style="margin-bottom:8px">メモ：${esc(s.memo)}</div>`:''}
+        ${problemsHtml||'<div class="muted small" style="padding-top:4px">この記録には問題の紐付けはありません。</div>'}
+        <div class="row" style="justify-content:flex-end;margin-top:10px"><button class="danger" onclick="deleteStudySession('${s.id}')">削除</button></div>
+      </div>
+    </div>`;
+  }).join(''):'<div class="item">勉強記録はありません。</div>';
+  box.innerHTML=`<h3>勉強記録を管理</h3><p class="muted small">${sessions.length}件。クリックすると、その日にやった内容を確認できます。</p>${cards}`;
+}
+
+function toggleRecordDetail(id){
+  const el=document.getElementById(id); if(!el)return;
+  const open=el.style.display!=='none';
+  el.style.display=open?'none':'block';
+}
+
+'''
+          path.write_text(text[:start] + new_function + text[end:], encoding='utf-8')
+      - name: Commit patch
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html
+          git diff --cached --quiet || git commit -m 'feat: show studied problems in existing study history'
+          git push
