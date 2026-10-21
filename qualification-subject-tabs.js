@@ -132,3 +132,60 @@
   setTimeout(injectWeaknessLink,0);
   setTimeout(injectWeaknessLink,300);
 })();
+
+(function(){
+  var original=window.renderRecordManagerInline;
+  window.renderRecordManagerInline=async function(){
+    var box=document.getElementById('panel-record');
+    if(!box)return;
+    var labels={new_problems:'新規問題',review:'復習',textbook:'テキスト',lecture:'講義',mock:'模試',other:'その他'};
+    box.innerHTML='<h3>勉強記録を管理</h3><p class="muted small">'+sessions.length+'件。勉強内容を読み込んでいます…</p>';
+
+    var sessionIds=sessions.map(function(s){return s.id}).filter(Boolean);
+    var links=[];
+    if(sessionIds.length){
+      var res=await sb.from('study_session_problems').select('session_id,problem_id,role,result').in('session_id',sessionIds);
+      if(!res.error)links=res.data||[];
+    }
+    var problemMap=new Map((problems||[]).map(function(p){return [p.id,p]}));
+    var linksBySession=new Map();
+    links.forEach(function(link){
+      if(!linksBySession.has(link.session_id))linksBySession.set(link.session_id,[]);
+      linksBySession.get(link.session_id).push(link);
+    });
+
+    function resultLabel(result){return result==='wrong'?'× 誤答':result==='correct'?'○ 正解':''}
+    function resultStyle(result){return result==='wrong'?'color:var(--bad)':result==='correct'?'color:var(--good)':''}
+
+    var cards=sessions.length?sessions.map(function(s){
+      var q=qualifications.find(function(x){return x.id===s.qualification_id});
+      var sub=subjects.find(function(x){return x.id===s.subject_id});
+      var type=labels[s.activity_type]||s.activity_type;
+      var sessionLinks=linksBySession.get(s.id)||[];
+      var detailId='record-detail-'+String(s.id).replace(/[^a-zA-Z0-9_-]/g,'');
+      var problemsHtml=sessionLinks.length?'<div style="margin-top:10px;padding-top:10px;border-top:1px solid #293551"><div class="muted small" style="margin-bottom:6px">📚 '+sessionLinks.length+'問</div>'+sessionLinks.map(function(link,i){
+        var p=problemMap.get(link.problem_id);
+        var name=p?.name||'問題';
+        var result=resultLabel(link.result);
+        return '<div style="display:flex;gap:8px;align-items:flex-start;padding:5px 0;font-size:13px"><span class="muted" style="min-width:24px">'+(i+1)+'.</span><span style="flex:1">'+esc(name)+'</span>'+(result?'<span class="small" style="'+resultStyle(link.result)+';white-space:nowrap">'+result+'</span>':'')+'</div>';
+      }).join('')+'</div>':'';
+      return '<div class="item clickable" onclick="toggleRecordDetail(\''+detailId+'\')">'+
+        '<div class="record-grid"><div><b>'+esc(q?.name||'資格')+(sub?' / '+esc(sub.name):'')+'</b><div class="muted small">'+fmt(s.study_date)+' ・ '+type+'</div></div><strong>'+minutesText(s.minutes)+'</strong></div>'+
+        '<div class="record-meta"><span>📅 '+s.study_date+'</span>'+(sessionLinks.length?'<span>📚 '+sessionLinks.length+'問</span>':'')+(s.memo?'<span>💬 '+esc(s.memo)+'</span>':'')+'<span style="margin-left:auto">詳細 ▾</span></div>'+
+        '<div id="'+detailId+'" style="display:none;margin-top:10px" onclick="event.stopPropagation()">'+
+          (s.memo?'<div class="muted small" style="margin-bottom:8px">メモ：'+esc(s.memo)+'</div>':'')+
+          (problemsHtml||'<div class="muted small" style="padding-top:4px">この記録には問題の紐付けはありません。</div>')+
+          '<div class="row" style="justify-content:flex-end;margin-top:10px"><button class="danger" onclick="deleteStudySession(\''+s.id+'\')">削除</button></div>'+
+        '</div></div>';
+    }).join(''):'<div class="item">勉強記録はありません。</div>';
+
+    box.innerHTML='<h3>勉強記録を管理</h3><p class="muted small">'+sessions.length+'件。クリックすると、その日にやった内容を確認できます。</p>'+cards;
+  };
+
+  window.toggleRecordDetail=function(id){
+    var el=document.getElementById(id);
+    if(!el)return;
+    el.style.display=el.style.display==='none'?'block':'none';
+  };
+})();
+
