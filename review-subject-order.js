@@ -21,35 +21,87 @@
   let tries=0;const timer=setInterval(async()=>{tries++;if(await init()||tries>=30)clearInterval(timer)},500);window.addEventListener('load',()=>setTimeout(init,300));
 })();
 
-// Passed-subject handling: DB uses passed/failed, UI uses Japanese labels.
+// Passed-subject handling.
+// The master UI displays 合格/不合格, while subjects.result stores passed/failed.
 (function(){
   function syncResultLabels(){
     if(typeof subjects==='undefined')return;
     document.querySelectorAll('.q-sub-result[data-sub-id]').forEach(function(sel){
       const sub=subjects.find(function(x){return x.id===sel.dataset.subId});
-      if(sub?.result==='passed')sel.value='合格';
-      else if(sub?.result==='failed')sel.value='不合格';
-      else sel.value='';
+      sel.value=sub?.result==='passed'?'合格':sub?.result==='failed'?'不合格':'';
     });
   }
+
   function filterPassed(){
-    const s=document.getElementById('recordSubject');if(!s||typeof subjects==='undefined')return;
-    [...s.options].forEach(function(o){const sub=subjects.find(function(x){return x.id===o.value});if(sub&&sub.result==='passed')o.remove()});
-    if(!s.options.length){const o=document.createElement('option');o.value='';o.textContent='合格済みのため対象科目なし';s.appendChild(o)}
+    const s=document.getElementById('recordSubject');
+    if(!s||typeof subjects==='undefined')return;
+    [...s.options].forEach(function(o){
+      const sub=subjects.find(function(x){return x.id===o.value});
+      if(sub&&sub.result==='passed')o.remove();
+    });
+    if(!s.options.length){
+      const o=document.createElement('option');
+      o.value='';
+      o.textContent='合格済みのため対象科目なし';
+      s.appendChild(o);
+    }
   }
+
+  // IMPORTANT: save only the subject editor belonging to the qualification being saved.
+  // The qualification master contains multiple qualifications on the same page.
+  window.updateQualification=async function(id){
+    const ta=document.getElementById('qs-'+id);
+    const editor=ta?.previousElementSibling;
+    if(!editor?.classList.contains('q-subject-tabs-editor')){
+      alert('科目編集欄を読み込めませんでした。ページを更新してください。');
+      return;
+    }
+    const name=document.getElementById('qn-'+id)?.value.trim();
+    const exam_date=document.getElementById('qd-'+id)?.value||null;
+    if(!name){alert('資格名を入力してください');return;}
+    if(!currentUser?.id){alert('ログイン状態を確認してください。');return}
+
+    const rows=[...editor.querySelectorAll('.q-sub-name[data-sub-id]')].map(function(input,index){
+      const sid=input.dataset.subId;
+      const result=editor.querySelector('.q-sub-result[data-sub-id="'+sid+'"]')?.value||null;
+      return {id:sid,name:input.value.trim(),result:result,sort_order:index};
+    }).filter(function(x){return x.name});
+
+    const oldSubjects=subjects.filter(function(s){return s.qualification_id===id&&!s.archived});
+
+    const qUpdate=await sb.from('qualifications').update({name:name,exam_date:exam_date}).eq('id',id).eq('user_id',currentUser.id);
+    if(qUpdate.error){alert('資格の更新に失敗しました: '+qUpdate.error.message);return}
+
+    const keepIds=[];
+    for(let i=0;i<rows.length;i++){
+      const row=rows[i];
+      const dbResult=row.result==='合格'?'passed':row.result==='不合格'?'failed':null;
+      const exists=oldSubjects.some(function(s){return s.id===row.id});
+      const res=exists
+        ? await sb.from('subjects').update({name:row.name,result:dbResult,sort_order:i,archived:false}).eq('id',row.id).eq('user_id',currentUser.id)
+        : await sb.from('subjects').insert({user_id:currentUser.id,qualification_id:id,name:row.name,result:dbResult,sort_order:i,archived:false});
+      if(res.error){alert('科目の保存に失敗しました: '+res.error.message);return}
+      if(exists)keepIds.push(row.id);
+      else if(res.data?.[0]?.id)keepIds.push(res.data[0].id);
+    }
+
+    const remove=oldSubjects.filter(function(s){return !keepIds.includes(s.id)});
+    if(remove.length){
+      const ar=await sb.from('subjects').update({archived:true}).in('id',remove.map(function(s){return s.id})).eq('user_id',currentUser.id);
+      if(ar.error){alert('科目の更新に失敗しました: '+ar.error.message);return}
+    }
+
+    await loadAll();
+    renderQualificationMasterInline();
+    toast('資格を保存しました');
+  };
+
   const originalRefresh=window.refreshSubjectSelect;
   if(typeof originalRefresh==='function'){
     window.refreshSubjectSelect=function(){originalRefresh.apply(this,arguments);filterPassed()};
     setTimeout(filterPassed,0);
   }
-  const originalUpdate=window.updateQualification;
-  if(typeof originalUpdate==='function'){
-    window.updateQualification=async function(id){
-      const root=document.getElementById('panel-qualification');
-      if(root)root.querySelectorAll('.q-sub-result').forEach(function(sel){if(sel.value==='合格')sel.value='passed';else if(sel.value==='不合格')sel.value='failed'});
-      try{return await originalUpdate.apply(this,arguments)}finally{syncResultLabels()}
-    };
-  }
+
   const observer=new MutationObserver(syncResultLabels);
   observer.observe(document.body,{childList:true,subtree:true});
   setTimeout(syncResultLabels,0);
