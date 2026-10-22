@@ -195,3 +195,30 @@
     el.style.display=el.style.display==='none'?'block':'none';
   };
 })();
+
+(function(){
+  // 合格済み科目は「新規問題」の記録対象からだけ除外する。
+  // 復習・テキスト・講義などの記録では、合格済み科目も引き続き選択可能。
+  var baseRefresh=window.refreshSubjectSelect;
+  if(typeof baseRefresh!=='function')return;
+  window.refreshSubjectSelect=function(){
+    baseRefresh.apply(this,arguments);
+    var type=document.getElementById('activityType')?.value;
+    if(type!=='new_problems')return;
+    var qid=document.getElementById('recordQualification')?.value;
+    var select=document.getElementById('recordSubject');
+    if(!select)return;
+    var current=select.value;
+    var active=(typeof subjects!=='undefined'?subjects:[]).filter(function(s){
+      return s.qualification_id===qid && !s.archived && s.result!=='passed';
+    });
+    select.innerHTML=active.length
+      ? active.map(function(s){return '<option value="'+s.id+'">'+esc(s.name)+'</option>'}).join('')
+      : '<option value="">合格済みのため対象科目なし</option>';
+    if(active.some(function(s){return String(s.id)===String(current)}))select.value=current;
+  };
+  document.addEventListener('change',function(e){
+    if(e.target?.id==='activityType')window.refreshSubjectSelect();
+  });
+  setTimeout(function(){window.refreshSubjectSelect()},0);
+})();
