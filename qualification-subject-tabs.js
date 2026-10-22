@@ -188,3 +188,20 @@
   };
   setTimeout(function(){window.refreshSubjectSelect()},0);
 })();
+
+/* SUBJECT_UPSERT_REPAIR */
+(function(){
+  if(typeof sb==='undefined' || sb.__subjectUpsertRepair)return;
+  var originalFrom=sb.from.bind(sb);
+  sb.from=function(table){
+    var q=originalFrom(table);
+    if(table==='subjects'){
+      var originalInsert=q.insert.bind(q);
+      q.insert=function(values){
+        return q.upsert(values,{onConflict:'user_id,qualification_id,name'});
+      };
+    }
+    return q;
+  };
+  sb.__subjectUpsertRepair=true;
+})();
