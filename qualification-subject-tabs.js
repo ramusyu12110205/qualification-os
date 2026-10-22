@@ -15,6 +15,7 @@
 
       var wrap=document.createElement('div');
       wrap.className='q-subject-tabs-editor';
+      wrap.dataset.qualificationId=qid;
       var nav=document.createElement('div');
       nav.className='q-sub-tabs';
       var panes=document.createElement('div');
@@ -57,8 +58,10 @@
   function activate(qid,sid){
     var root=document.getElementById('panel-qualification');
     if(!root)return;
-    root.querySelectorAll('.q-sub-tab').forEach(function(b){b.classList.toggle('active',b.dataset.sid===sid)});
-    root.querySelectorAll('.q-sub-pane').forEach(function(p){p.classList.toggle('hidden',p.dataset.sid!==sid)});
+    var scope=root.querySelector('.q-subject-tabs-editor[data-qualification-id="'+qid+'"]');
+    if(!scope)return;
+    scope.querySelectorAll('.q-sub-tab').forEach(function(b){b.classList.toggle('active',b.dataset.sid===sid)});
+    scope.querySelectorAll('.q-sub-pane').forEach(function(p){p.classList.toggle('hidden',p.dataset.sid!==sid)});
   }
 
   window.renderQualificationMasterInline=(function(base){
@@ -76,9 +79,12 @@
     if(!name){alert('資格名を入力してください');return}
     if(!currentUser?.id){alert('ログイン状態を確認してください。');return}
 
-    var rows=[...root.querySelectorAll('.q-sub-name[data-sub-id]')].map(function(input,index){
+    var scope=root.querySelector('.q-subject-tabs-editor[data-qualification-id="'+id+'"]');
+    if(!scope){alert('科目情報を読み込めませんでした。画面を再読み込みしてください。');return}
+
+    var rows=[...scope.querySelectorAll('.q-sub-name[data-sub-id]')].map(function(input,index){
       var sid=input.dataset.subId;
-      var result=root.querySelector('.q-sub-result[data-sub-id="'+sid+'"]')?.value||null;
+      var result=scope.querySelector('.q-sub-result[data-sub-id="'+sid+'"]')?.value||null;
       return {id:sid,name:input.value.trim(),result:result,sort_order:index};
     }).filter(function(x){return x.name});
 
@@ -90,10 +96,11 @@
     var keepIds=[];
     for(var i=0;i<rows.length;i++){
       var row=rows[i];
-      if(oldSubjects.some(function(s){return s.id===row.id})){ 
-        var u=await sb.from('subjects').update({name:row.name,result:row.result||null,sort_order:i,archived:false}).eq('id',row.id).eq('user_id',currentUser.id);
+      var existing=oldSubjects.find(function(s){return String(s.id)===String(row.id)});
+      if(existing){
+        var u=await sb.from('subjects').update({name:row.name,result:row.result||null,sort_order:i,archived:false}).eq('id',existing.id).eq('user_id',currentUser.id);
         if(u.error){alert('科目の更新に失敗しました: '+u.error.message);return}
-        keepIds.push(row.id);
+        keepIds.push(existing.id);
       }else{
         var ins=await sb.from('subjects').insert({user_id:currentUser.id,qualification_id:id,name:row.name,result:row.result||null,sort_order:i,archived:false}).select().single();
         if(ins.error){alert('科目の追加に失敗しました: '+ins.error.message);return}
@@ -101,7 +108,7 @@
       }
     }
 
-    var remove=oldSubjects.filter(function(s){return !keepIds.includes(s.id)});
+    var remove=oldSubjects.filter(function(s){return !keepIds.some(function(k){return String(k)===String(s.id)})});
     if(remove.length){
       var ar=await sb.from('subjects').update({archived:true}).in('id',remove.map(function(s){return s.id})).eq('user_id',currentUser.id);
       if(ar.error){alert('科目の更新に失敗しました: '+ar.error.message);return}
