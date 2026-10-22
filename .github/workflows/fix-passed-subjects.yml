@@ -1,6 +1,8 @@
 name: fix-passed-subjects
 on:
-  workflow_dispatch:
+  push:
+    paths:
+      - .github/workflows/fix-passed-subjects.yml
 permissions:
   contents: write
 jobs:
@@ -20,29 +22,29 @@ jobs:
               s=s[:i]+'''// hide passed subjects in the new-problem subject selector
 (function(){
   var original=window.refreshSubjectSelect;
-  if(typeof original!==\"function\")return;
+  if(typeof original!=="function")return;
   window.refreshSubjectSelect=function(){
     original.apply(this,arguments);
-    var el=document.getElementById(\"recordSubject\");
-    if(!el||typeof subjects===\"undefined\")return;
+    var el=document.getElementById("recordSubject");
+    if(!el||typeof subjects==="undefined")return;
     Array.from(el.options).forEach(function(o){
       var sub=subjects.find(function(x){return x.id===o.value});
-      if(sub&&sub.result===\"passed\")o.remove();
+      if(sub&&sub.result==="passed")o.remove();
     });
-    if(!el.options.length){var o=document.createElement(\"option\");o.value=\"\";o.textContent=\"合格済みのため対象科目なし\";el.appendChild(o)}
+    if(!el.options.length){var o=document.createElement("option");o.value="";o.textContent="合格済みのため対象科目なし";el.appendChild(o)}
   };
   var baseUpdate=window.updateQualification;
-  if(typeof baseUpdate===\"function\"){
+  if(typeof baseUpdate==="function"){
     window.updateQualification=async function(id){
-      var root=document.getElementById(\"panel-qualification\");
-      if(root)root.querySelectorAll(\".q-sub-result\").forEach(function(sel){
-        if(sel.value===\"合格\")sel.value=\"passed\";
-        else if(sel.value===\"不合格\")sel.value=\"failed\";
+      var root=document.getElementById("panel-qualification");
+      if(root)root.querySelectorAll(".q-sub-result").forEach(function(sel){
+        if(sel.value==="合格")sel.value="passed";
+        else if(sel.value==="不合格")sel.value="failed";
       });
       try{return await baseUpdate.apply(this,arguments)}finally{
-        if(root)root.querySelectorAll(\".q-sub-result\").forEach(function(sel){
-          if(sel.value===\"passed\")sel.value=\"合格\";
-          else if(sel.value===\"failed\")sel.value=\"不合格\";
+        if(root)root.querySelectorAll(".q-sub-result").forEach(function(sel){
+          if(sel.value==="passed")sel.value="合格";
+          else if(sel.value==="failed")sel.value="不合格";
         });
       }
     };
