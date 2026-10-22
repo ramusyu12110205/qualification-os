@@ -170,12 +170,12 @@
         return '<div style="display:flex;gap:8px;align-items:flex-start;padding:5px 0;font-size:13px"><span class="muted" style="min-width:24px">'+(i+1)+'.</span><span style="flex:1">'+esc(name)+'</span>'+(result?'<span class="small" style="'+resultStyle(link.result)+';white-space:nowrap">'+result+'</span>':'')+'</div>';
       }).join('')+'</div>':'';
       return '<div class="item clickable" onclick="toggleRecordDetail(\''+detailId+'\')">'+
-        '<div class="record-grid"><div><b>'+esc(q?.name||'資格')+(sub?' / '+esc(sub.name):'')+'</b><div class="muted small">'+fmt(s.study_date)+' ・ '+type+'</div></div><strong>'+minutesText(s.minutes)+'</strong></div>'+
-        '<div class="record-meta"><span>📅 '+s.study_date+'</span>'+(sessionLinks.length?'<span>📚 '+sessionLinks.length+'問</span>':'')+(s.memo?'<span>💬 '+esc(s.memo)+'</span>':'')+'<span style="margin-left:auto">詳細 ▾</span></div>'+
+        '<div class="record-grid"><div><b>'+esc(q?.name||'資格')+(sub?' / '+esc(sub.name):'')+'</b><div class="muted small">'+fmt(s.study_date)+' ・ '+type+'</div></div><strong>'+minutesText(s.minutes)+'</strong></div>'+ 
+        '<div class="record-meta"><span>📅 '+s.study_date+'</span>'+(sessionLinks.length?'<span>📚 '+sessionLinks.length+'問</span>':'')+(s.memo?'<span>💬 '+esc(s.memo)+'</span>':'')+'<span style="margin-left:auto">詳細 ▾</span></div>'+ 
         '<div id="'+detailId+'" style="display:none;margin-top:10px" onclick="event.stopPropagation()">'+
           (s.memo?'<div class="muted small" style="margin-bottom:8px">メモ：'+esc(s.memo)+'</div>':'')+
           (problemsHtml||'<div class="muted small" style="padding-top:4px">この記録には問題の紐付けはありません。</div>')+
-          '<div class="row" style="justify-content:flex-end;margin-top:10px"><button class="danger" onclick="deleteStudySession(\''+s.id+'\')">削除</button></div>'+
+          '<div class="row" style="justify-content:flex-end;margin-top:10px"><button class="danger" onclick="deleteStudySession(\''+s.id+'\')">削除</button></div>'+ 
         '</div></div>';
     }).join(''):'<div class="item">勉強記録はありません。</div>';
 
@@ -189,3 +189,25 @@
   };
 })();
 
+(function(){
+  // hide passed subjects in the new-problem subject selector
+  var base=window.refreshSubjectSelect;
+  if(typeof base!=='function')return;
+  window.refreshSubjectSelect=function(){
+    base.apply(this,arguments);
+    var s=document.getElementById('recordSubject');
+    if(!s || typeof subjects==='undefined')return;
+    Array.from(s.options).forEach(function(o){
+      var sub=subjects.find(function(x){return x.id===o.value});
+      if(sub && sub.result==='合格')o.remove();
+    });
+    if(!s.options.length){
+      var o=document.createElement('option');
+      o.value='';
+      o.textContent='合格済みのため対象科目なし';
+      s.appendChild(o);
+    }
+    if(s.options.length && !s.value)s.selectedIndex=0;
+  };
+  setTimeout(function(){window.refreshSubjectSelect()},0);
+})();
