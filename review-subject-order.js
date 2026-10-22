@@ -10,69 +10,52 @@
       const {data:{session}}=await client.auth.getSession();
       if(!session?.user)return false;
       const uid=session.user.id;
-      const {data,error}=await client.from('subjects')
-        .select('id,name,created_at,sort_order')
-        .eq('user_id',uid).eq('archived',false)
-        .order('created_at',{ascending:true});
+      const {data,error}=await client.from('subjects').select('id,name,created_at,sort_order').eq('user_id',uid).eq('archived',false).order('created_at',{ascending:true});
       if(error)return false;
       subjectOrder=new Map((data||[]).map((s,i)=>[String(s.id),i]));
       subjectNameOrder=new Map((data||[]).map((s,i)=>[String(s.name||''),i]));
       return true;
     }catch(e){return false}
   }
-
   function sortReviewSubjectGroups(){
-    const list=document.getElementById('reviewList');
-    if(!list||!subjectOrder.size)return;
-    const groups=[...list.querySelectorAll(':scope > details')];
-    if(groups.length<2)return;
-
-    const getOrder=(el)=>{
-      const id=el.dataset.subjectId||el.getAttribute('data-subject-id');
-      if(id&&subjectOrder.has(String(id)))return subjectOrder.get(String(id));
-      const summary=el.querySelector('summary')?.textContent||'';
-      let best=999999;
-      for(const [name,idx] of subjectNameOrder){
-        if(name&&summary.includes(name)){best=Math.min(best,idx);}
-      }
-      return best;
-    };
-
+    const list=document.getElementById('reviewList');if(!list||!subjectOrder.size)return;
+    const groups=[...list.querySelectorAll(':scope > details')];if(groups.length<2)return;
+    const getOrder=(el)=>{const id=el.dataset.subjectId||el.getAttribute('data-subject-id');if(id&&subjectOrder.has(String(id)))return subjectOrder.get(String(id));const summary=el.querySelector('summary')?.textContent||'';let best=999999;for(const [name,idx] of subjectNameOrder){if(name&&summary.includes(name))best=Math.min(best,idx)}return best};
     const sorted=[...groups].sort((a,b)=>getOrder(a)-getOrder(b));
-    if(sorted.some((el,i)=>el!==groups[i])){
-      const frag=document.createDocumentFragment();
-      sorted.forEach(el=>frag.appendChild(el));
-      list.appendChild(frag);
-    }
+    if(sorted.some((el,i)=>el!==groups[i])){const frag=document.createDocumentFragment();sorted.forEach(el=>frag.appendChild(el));list.appendChild(frag)}
   }
+  let scheduled=false;function schedule(){if(scheduled)return;scheduled=true;requestAnimationFrame(()=>{scheduled=false;sortReviewSubjectGroups()})}
+  async function init(){const list=document.getElementById('reviewList');if(!list)return false;if(!subjectOrder.size){const ok=await loadOrder();if(!ok)return false}sortReviewSubjectGroups();if(!list.__subjectOrderObserver){const observer=new MutationObserver(schedule);observer.observe(list,{childList:true,subtree:true});list.__subjectOrderObserver=observer}return true}
+  let tries=0;const timer=setInterval(async()=>{tries++;if(await init()||tries>=30)clearInterval(timer)},500);window.addEventListener('load',()=>setTimeout(init,300));
+})();
 
-  let scheduled=false;
-  function schedule(){
-    if(scheduled)return;
-    scheduled=true;
-    requestAnimationFrame(()=>{scheduled=false;sortReviewSubjectGroups();});
+// Passed-subject handling: DB uses passed/failed, UI uses Japanese labels.
+(function(){
+  function filterPassed(){
+    const s=document.getElementById('recordSubject');
+    if(!s||typeof subjects==='undefined')return;
+    [...s.options].forEach(o=>{const sub=subjects.find(x=>x.id===o.value);if(sub&&sub.result==='passed')o.remove()});
+    if(!s.options.length){const o=document.createElement('option');o.value='';o.textContent='合格済みのため対象科目なし';s.appendChild(o)}
   }
-
-  async function init(){
-    const list=document.getElementById('reviewList');
-    if(!list)return false;
-    if(!subjectOrder.size){
-      const ok=await loadOrder();
-      if(!ok)return false;
-    }
-    sortReviewSubjectGroups();
-    if(!list.__subjectOrderObserver){
-      const observer=new MutationObserver(schedule);
-      observer.observe(list,{childList:true,subtree:true});
-      list.__subjectOrderObserver=observer;
-    }
-    return true;
+  const originalRefresh=window.refreshSubjectSelect;
+  if(typeof originalRefresh==='function'){
+    window.refreshSubjectSelect=function(){originalRefresh.apply(this,arguments);filterPassed()};
+    setTimeout(filterPassed,0);
   }
-
-  let tries=0;
-  const timer=setInterval(async()=>{
-    tries++;
-    if(await init()||tries>=30)clearInterval(timer);
-  },500);
-  window.addEventListener('load',()=>setTimeout(init,300));
+  const originalUpdate=window.updateQualification;
+  if(typeof originalUpdate==='function'){
+    window.updateQualification=async function(id){
+      const root=document.getElementById('panel-qualification');
+      if(root)root.querySelectorAll('.q-sub-result').forEach(sel=>{
+        if(sel.value==='合格')sel.value='passed';
+        else if(sel.value==='不合格')sel.value='failed';
+      });
+      try{return await originalUpdate.apply(this,arguments)}finally{
+        if(root)root.querySelectorAll('.q-sub-result').forEach(sel=>{
+          if(sel.value==='passed')sel.value='合格';
+          else if(sel.value==='failed')sel.value='不合格';
+        });
+      }
+    };
+  }
 })();
