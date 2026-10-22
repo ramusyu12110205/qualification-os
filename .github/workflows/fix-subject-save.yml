@@ -1,0 +1,37 @@
+name: Fix subject save
+on:
+  push:
+    paths:
+      - '.github/workflows/fix-subject-save.yml'
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch subject save logic
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('qualification-subject-tabs.js')
+          s=p.read_text()
+          s=s.replace('<option value="合格"'+(s.result===\'passed\'?\' selected\':\'\')+\'>合格</option>', '<option value="passed"'+(s.result===\'passed\'?\' selected\':\'\')+\'>合格</option>')
+          s=s.replace('<option value="不合格"'+(s.result===\'failed\'?\' selected\':\'\')+\'>不合格</option>', '<option value="failed"'+(s.result===\'failed\'?\' selected\':\'\')+\'>不合格</option>')
+          old="var dbResult=row.result==='合格'?'passed':row.result==='不合格'?'failed':null;"
+          s=s.replace(old, "var dbResult=row.result==='passed'?'passed':row.result==='failed'?'failed':null;")
+          oldblock="""      }else{\n        var ins=await sb.from('subjects').insert({user_id:currentUser.id,qualification_id:id,name:row.name,result:dbResult,sort_order:i,archived:false}).select().single();\n        if(ins.error){alert('科目の追加に失敗しました: '+ins.error.message);return}\n        keepIds.push(ins.data.id);\n      }"""
+          newblock="""      }else{\n        var existing=await sb.from('subjects').select('id').eq('user_id',currentUser.id).eq('qualification_id',id).eq('name',row.name).maybeSingle();\n        if(existing.error){alert('科目の確認に失敗しました: '+existing.error.message);return}\n        if(existing.data){\n          var eu=await sb.from('subjects').update({result:dbResult,sort_order:i,archived:false}).eq('id',existing.data.id).eq('user_id',currentUser.id);\n          if(eu.error){alert('科目の更新に失敗しました: '+eu.error.message);return}\n          keepIds.push(existing.data.id);\n        }else{\n          var ins=await sb.from('subjects').insert({user_id:currentUser.id,qualification_id:id,name:row.name,result:dbResult,sort_order:i,archived:false}).select().single();\n          if(ins.error){alert('科目の追加に失敗しました: '+ins.error.message);return}\n          keepIds.push(ins.data.id);\n        }\n      }"""
+          if oldblock not in s:
+              raise SystemExit('target block not found')
+          s=s.replace(oldblock,newblock)
+          p.write_text(s)
+          PY
+      - name: Commit fix
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add qualification-subject-tabs.js
+          git commit -m 'fix: persist subject result and reuse existing subjects' || exit 0
+          git push
