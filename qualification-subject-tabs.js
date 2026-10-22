@@ -38,8 +38,8 @@
           '<label>合否</label>'+ 
           '<select class="q-sub-result" data-sub-id="'+s.id+'">'+
             '<option value="">未設定</option>'+ 
-            '<option value="合格"'+(s.result==='合格'?' selected':'')+'>合格</option>'+ 
-            '<option value="不合格"'+(s.result==='不合格'?' selected':'')+'>不合格</option>'+ 
+            '<option value="passed"'+(s.result==='passed'?' selected':'')+'>合格</option>'+ 
+            '<option value="failed"'+(s.result==='failed'?' selected':'')+'>不合格</option>'+ 
           '</select>';
         panes.appendChild(pane);
       });
@@ -188,4 +188,3 @@
     el.style.display=el.style.display==='none'?'block':'none';
   };
 })();
-
