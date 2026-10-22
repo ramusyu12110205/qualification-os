@@ -90,12 +90,13 @@
     var keepIds=[];
     for(var i=0;i<rows.length;i++){
       var row=rows[i];
+      var dbResult=row.result==='合格'?'passed':row.result==='不合格'?'failed':null;
       if(oldSubjects.some(function(s){return s.id===row.id})){ 
-        var u=await sb.from('subjects').update({name:row.name,result:row.result||null,sort_order:i,archived:false}).eq('id',row.id).eq('user_id',currentUser.id);
+        var u=await sb.from('subjects').update({name:row.name,result:dbResult,sort_order:i,archived:false}).eq('id',row.id).eq('user_id',currentUser.id);
         if(u.error){alert('科目の更新に失敗しました: '+u.error.message);return}
         keepIds.push(row.id);
       }else{
-        var ins=await sb.from('subjects').insert({user_id:currentUser.id,qualification_id:id,name:row.name,result:row.result||null,sort_order:i,archived:false}).select().single();
+        var ins=await sb.from('subjects').insert({user_id:currentUser.id,qualification_id:id,name:row.name,result:dbResult,sort_order:i,archived:false}).select().single();
         if(ins.error){alert('科目の追加に失敗しました: '+ins.error.message);return}
         keepIds.push(ins.data.id);
       }
