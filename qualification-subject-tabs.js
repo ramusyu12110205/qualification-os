@@ -213,7 +213,7 @@
       return s.qualification_id===qid && !s.archived && s.result!=='passed';
     });
     select.innerHTML=active.length
-      ? active.map(function(s){return '<option value="'+s.id+'">'+esc(s.name)+'</option>'}).join('')
+      ? active.map(function(s){var label=String(s.name==null?'':s.name).replace(/[&<>\"']/g,function(c){return({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'})[c]});return '<option value="'+s.id+'">'+label+'</option>'}).join('')
       : '<option value="">合格済みのため対象科目なし</option>';
     if(active.some(function(s){return String(s.id)===String(current)}))select.value=current;
   };
@@ -221,4 +221,23 @@
     if(e.target?.id==='activityType')window.refreshSubjectSelect();
   });
   setTimeout(function(){window.refreshSubjectSelect()},0);
+})();
+
+(function(){
+  function injectComprehensiveReviewLink(){
+    if(document.getElementById('comprehensiveReviewNavButton'))return;
+    var header=document.querySelector('#app > .sectiontitle');
+    if(!header)return;
+    var btn=document.createElement('button');
+    btn.id='comprehensiveReviewNavButton';
+    btn.className='primary';
+    btn.type='button';
+    btn.textContent='📚 総復習';
+    btn.onclick=function(){location.href='comprehensive-review.html'};
+    var anchor=header.querySelector('button.light:last-child');
+    header.insertBefore(btn,anchor||null);
+  }
+  setTimeout(injectComprehensiveReviewLink,0);
+  setTimeout(injectComprehensiveReviewLink,300);
+  setTimeout(injectComprehensiveReviewLink,1000);
 })();
