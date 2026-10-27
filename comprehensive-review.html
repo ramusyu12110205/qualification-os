@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>総復習｜資格OS</title>
+<style>
+:root{--bg:#080c17;--card:#12182a;--text:#f5f7ff;--muted:#98a3bf;--accent:#8b5cf6;--good:#34d399;--bad:#fb7185;--line:#26314d}
+*{box-sizing:border-box}body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;max-width:1400px;margin:auto;padding:18px 24px 80px;background:radial-gradient(circle at top left,#1a1640 0,#090e1a 42%,#050812 100%);color:var(--text)}
+h1{margin:0;font-size:30px}.muted{color:var(--muted)}.small{font-size:13px}.card{background:linear-gradient(145deg,rgba(18,24,42,.96),rgba(10,15,28,.98));border:1px solid var(--line);border-radius:20px;padding:20px;margin:14px 0}.row{display:flex;gap:9px;flex-wrap:wrap;align-items:center}.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.stat{background:#0f1627;border:1px solid var(--line);border-radius:15px;padding:14px}.stat b{display:block;color:#aeb8d2;font-size:12px}.stat strong{font-size:26px}select{width:100%;padding:11px;border:1px solid #394563;border-radius:11px;background:#0c1322;color:#f4f6ff;font-size:16px;min-height:44px}button{border:0;border-radius:11px;padding:10px 15px;font-weight:850;cursor:pointer;min-height:42px}.light{background:#222b43;color:#e8ecff;border:1px solid #33405f}.primary{background:var(--accent);color:#fff}.danger{background:#3d1725;color:#ffc1cf;border:1px solid #6b2941}.session{border:1px solid var(--line);border-radius:15px;padding:14px;margin:9px 0;background:#0f1627}.session.active{border-color:#56439a}.problem{background:linear-gradient(145deg,#161e34,#0d1424);border:1px solid #394563;border-radius:20px;padding:28px;margin-top:14px}.problem-name{font-size:27px;font-weight:950;margin:10px 0 22px}.answer-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}.answer-row button{font-size:18px;padding:15px}.correct{background:#124132;color:#b7f7df;border:1px solid #27614f}.wrong{background:#431927;color:#ffc1cf;border:1px solid #6b2941}.progress{height:10px;background:#202b45;border-radius:99px;overflow:hidden}.progress i{display:block;height:100%;background:linear-gradient(90deg,var(--accent),#22d3ee);border-radius:99px}.subject-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}.subject-stat{background:#0f1627;border:1px solid var(--line);border-radius:15px;padding:14px}.subject-stat .top{display:flex;justify-content:space-between;gap:10px}.subject-stat strong{font-size:22px}.pill{display:inline-block;border-radius:999px;padding:4px 9px;font-size:12px;font-weight:850;background:#261b50;color:#d7ceff;border:1px solid #45337c}.good{color:var(--good)}.bad{color:var(--bad)}.empty{padding:18px;border:1px dashed #3a4665;border-radius:14px;text-align:center}.hidden{display:none}@media(max-width:800px){body{padding:12px}.grid,.subject-grid{grid-template-columns:1fr 1fr}}@media(max-width:500px){.grid,.subject-grid,.answer-row{grid-template-columns:1fr}.problem-name{font-size:23px}}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+<div id="auth" class="hidden" style="text-align:center;padding:80px 20px"><h2>ログインしてください</h2><p class="muted">資格OSにログインした状態で開いてください。</p><a href="index.html">資格OSへ戻る</a></div>
+<div id="app" class="hidden">
+  <div class="row" style="justify-content:space-between"><div><div class="muted small">資格OS / COMPREHENSIVE REVIEW</div><h1>総復習</h1><p class="muted" style="margin:5px 0 0">通常の復習サイクルとは完全に独立。正解するまで、この総復習の中に残します。</p></div><a href="index.html"><button class="light">← 資格OSへ戻る</button></a></div>
+
+  <section id="setup" class="card">
+    <h2>総復習を始める</h2>
+    <p class="muted small">「全範囲」は合格済み科目を除く、その資格の全問題。「科目」は選んだ科目の全問題を対象にします。</p>
+    <div class="row" style="align-items:end;margin-top:12px">
+      <div style="flex:1;min-width:220px"><label>資格</label><select id="qualificationSelect" onchange="refreshSubjects()"></select></div>
+      <div style="flex:1;min-width:220px"><label>範囲</label><select id="scopeSelect"><option value="all">全範囲</option></select></div>
+      <button class="primary" onclick="createSession()">＋ 総復習を作成</button>
+    </div>
+  </section>
+
+  <section id="activeSection" class="card"><div class="row" style="justify-content:space-between"><h2>進行中の総復習</h2><span class="pill">独立モード</span></div><div id="sessionsList" style="margin-top:8px"></div></section>
+
+  <section id="reviewSection" class="card hidden">
+    <div class="row" style="justify-content:space-between"><div><div class="muted small" id="sessionLabel"></div><h2 id="sessionTitle">総復習</h2></div><button class="light" onclick="closeReview()">一覧へ戻る</button></div>
+    <div class="grid" style="margin-top:14px"><div class="stat"><b>対象</b><strong id="targetCount">—</strong></div><div class="stat"><b>正解済み</b><strong id="doneCount">—</strong></div><div class="stat"><b>残り</b><strong id="pendingCount">—</strong></div><div class="stat"><b>全体正答率</b><strong id="overallAccuracy">—</strong></div></div>
+    <div style="margin-top:14px"><div class="progress"><i id="progressBar" style="width:0%"></i></div></div>
+    <div id="currentProblem"></div>
+    <section style="margin-top:22px"><div class="row" style="justify-content:space-between"><h3>科目別の現在値</h3><span class="muted small">正答率＝この総復習内の回答結果</span></div><div id="subjectStats" class="subject-grid" style="margin-top:8px"></div></section>
+  </section>
+</div>
+<script>
+const SUPABASE_URL='https://txprypfzdsfaupguhybl.supabase.co';
+const SUPABASE_PUBLISHABLE_KEY='sb_publishable_qiCaP0cBNhms5-usSDzKlQ_nywzlU36';
+const sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
+let user=null,qualifications=[],subjects=[],problems=[],sessions=[],currentSession=null,currentLinks=[],attempts=[];
+const esc=s=>String(s??'').replace(/[&<>\"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#039;'}[m]));
+const fmtDate=s=>{if(!s)return '—';const d=new Date(s);return `${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()}`};
+async function init(){const {data:{session}}=await sb.auth.getSession();if(!session){document.getElementById('auth').classList.remove('hidden');return}user=session.user;document.getElementById('app').classList.remove('hidden');await loadBase();}
+async function loadBase(){
+ const [q,s,p,ss]=await Promise.all([
+  sb.from('qualifications').select('id,name,exam_date').eq('user_id',user.id).eq('archived',false).order('sort_order').order('name'),
+  sb.from('subjects').select('id,name,qualification_id,result,sort_order').eq('user_id',user.id).eq('archived',false).order('sort_order').order('name'),
+  sb.from('problems').select('id,name,subject_id').eq('user_id',user.id).order('name'),
+  sb.from('comprehensive_review_sessions').select('id,qualification_id,subject_id,status,created_at,completed_at').eq('user_id',user.id).order('created_at',{ascending:false})
+ ]);
+ if(q.error||s.error||p.error||ss.error){alert('総復習データの取得に失敗しました');console.error(q.error||s.error||p.error||ss.error);return}
+ qualifications=q.data||[];subjects=s.data||[];problems=p.data||[];sessions=ss.data||[];
+ const qs=document.getElementById('qualificationSelect');qs.innerHTML=qualifications.length?qualifications.map(q=>`<option value="${q.id}">${esc(q.name)}</option>`).join(''):'<option value="">資格がありません</option>';
+ refreshSubjects();renderSessions();
+}
+function refreshSubjects(){const qid=document.getElementById('qualificationSelect').value;const sel=document.getElementById('scopeSelect');const active=subjects.filter(s=>s.qualification_id===qid&&s.result!=='passed');sel.innerHTML='<option value="all">全範囲</option>'+active.map(s=>`<option value="${s.id}">${esc(s.name)}</option>`).join('');}
+function qName(id){return qualifications.find(q=>q.id===id)?.name||'資格'}
+function sName(id){return subjects.find(s=>s.id===id)?.name||'全範囲'}
+function renderSessions(){const box=document.getElementById('sessionsList');const active=sessions.filter(s=>s.status==='active');if(!active.length){box.innerHTML='<div class="empty">進行中の総復習はありません。</div>';return}box.innerHTML=active.map(s=>{const title=s.subject_id?sName(s.subject_id):'全範囲';return `<div class="session active"><div class="row" style="justify-content:space-between"><div><b>${esc(qName(s.qualification_id))} / ${esc(title)}</b><div class="muted small">作成 ${fmtDate(s.created_at)}</div></div><button class="primary" onclick="openSession('${s.id}')">続きから再開</button></div></div>`}).join('')}
+async function createSession(){const qid=document.getElementById('qualificationSelect').value;const scope=document.getElementById('scopeSelect').value;if(!qid)return;const subjectId=scope==='all'?null:scope;const target=problems.filter(p=>p.subject_id&&subjects.some(s=>s.id===p.subject_id&&s.qualification_id===qid&&s.result!=='passed')&&(!subjectId||p.subject_id===subjectId));if(!target.length){alert('対象問題がありません。');return}
+ const ins=await sb.from('comprehensive_review_sessions').insert({user_id:user.id,qualification_id:qid,subject_id:subjectId,status:'active'}).select().single();if(ins.error){alert('総復習の作成に失敗しました: '+ins.error.message);return}
+ const rows=target.map(p=>({user_id:user.id,session_id:ins.data.id,problem_id:p.id,status:'pending',consecutive_wrong:0}));const add=await sb.from('comprehensive_review_problems').insert(rows);if(add.error){await sb.from('comprehensive_review_sessions').delete().eq('id',ins.data.id).eq('user_id',user.id);alert('総復習の問題登録に失敗しました: '+add.error.message);return}
+ await loadBase();await openSession(ins.data.id);
+}
+async function openSession(id){const s=sessions.find(x=>x.id===id);if(!s)return;currentSession=s;const [l,a]=await Promise.all([
+ sb.from('comprehensive_review_problems').select('id,problem_id,status,consecutive_wrong,created_at,completed_at').eq('user_id',user.id).eq('session_id',id),
+ sb.from('comprehensive_review_attempts').select('problem_id,result,created_at').eq('user_id',user.id).eq('session_id',id).order('created_at')
+ ]);if(l.error||a.error){alert('総復習の読み込みに失敗しました');return}currentLinks=l.data||[];attempts=a.data||[];document.getElementById('setup').classList.add('hidden');document.getElementById('activeSection').classList.add('hidden');document.getElementById('reviewSection').classList.remove('hidden');renderReview();}
+function renderReview(){const pending=currentLinks.filter(x=>x.status==='pending');const done=currentLinks.length-pending.length;const totalAttempts=attempts.length;const correct=attempts.filter(a=>a.result==='correct').length;const acc=totalAttempts?correct/totalAttempts*100:0;document.getElementById('sessionLabel').textContent=qName(currentSession.qualification_id);document.getElementById('sessionTitle').textContent=currentSession.subject_id?sName(currentSession.subject_id):'全範囲';document.getElementById('targetCount').textContent=currentLinks.length+'問';document.getElementById('doneCount').textContent=done+'問';document.getElementById('pendingCount').textContent=pending.length+'問';document.getElementById('overallAccuracy').textContent=acc.toFixed(0)+'%';document.getElementById('progressBar').style.width=(currentLinks.length?done/currentLinks.length*100:0)+'%';
+ const stats=subjects.filter(s=>s.qualification_id===currentSession.qualification_id&&s.result!=='passed').map(s=>{const ids=new Set(currentLinks.filter(l=>problems.find(p=>p.id===l.problem_id)?.subject_id===s.id).map(l=>l.problem_id));const aa=attempts.filter(a=>ids.has(a.problem_id));const cc=aa.filter(a=>a.result==='correct').length;const pendingCount=currentLinks.filter(l=>ids.has(l.problem_id)&&l.status==='pending').length;const cw=currentLinks.filter(l=>ids.has(l.problem_id)&&l.status==='pending').reduce((m,l)=>Math.max(m,l.consecutive_wrong||0),0);return {s,total:ids.size,attempts:aa.length,accuracy:aa.length?cc/aa.length*100:0,pending:pendingCount,maxCurrentWrong:cw}}).filter(x=>x.total);
+ document.getElementById('subjectStats').innerHTML=stats.length?stats.map(x=>`<div class="subject-stat"><div class="top"><b>${esc(x.s.name)}</b><span class="pill">残り ${x.pending}</span></div><div style="margin-top:7px"><strong>${x.accuracy.toFixed(0)}%</strong> <span class="muted small">正答率</span></div><div class="small" style="margin-top:5px"><span class="bad">連続誤答 ${x.maxCurrentWrong}</span><span class="muted"> ・ ${x.total}問</span></div></div>`).join(''):'<div class="empty">科目データがありません。</div>';
+ const box=document.getElementById('currentProblem');if(!pending.length){box.innerHTML='<div class="problem" style="text-align:center"><h2>🎉 総復習完了</h2><p class="muted">この総復習の全問題を正解しました。</p><button class="primary" onclick="finishAndClose()">一覧へ戻る</button></div>';return}
+ const link=pending[0];const p=problems.find(x=>x.id===link.problem_id);const sub=subjects.find(x=>x.id===p?.subject_id);const pa=attempts.filter(a=>a.problem_id===link.problem_id);const wrong=pa.filter(a=>a.result==='wrong').length;box.innerHTML=`<div class="problem"><div class="row"><span class="pill">${esc(sub?.name||'科目')}</span><span class="muted small">残り ${pending.length}問</span></div><div class="problem-name">${esc(p?.name||'問題')}</div><div class="muted small" style="margin-bottom:14px">この総復習での回答 ${pa.length}回 ・ 誤答 ${wrong}回 ・ 現在の連続誤答 ${link.consecutive_wrong||0}回</div><div class="answer-row"><button class="correct" onclick="answer('correct')">○ 正解</button><button class="wrong" onclick="answer('wrong')">× 誤答</button></div><p class="muted small" style="margin:12px 0 0">誤答しても通常の復習状態・復習予定日は一切変更しません。</p></div>`;
+}
+async function answer(result){if(!currentSession)return;const pending=currentLinks.find(x=>x.status==='pending');if(!pending)return;const r=await sb.rpc('record_comprehensive_review_result',{p_session_id:currentSession.id,p_problem_id:pending.problem_id,p_result:result});if(r.error){alert('記録に失敗しました: '+r.error.message);return}const [l,a,s]=await Promise.all([sb.from('comprehensive_review_problems').select('id,problem_id,status,consecutive_wrong,created_at,completed_at').eq('user_id',user.id).eq('session_id',currentSession.id),sb.from('comprehensive_review_attempts').select('problem_id,result,created_at').eq('user_id',user.id).eq('session_id',currentSession.id).order('created_at'),sb.from('comprehensive_review_sessions').select('id,qualification_id,subject_id,status,created_at,completed_at').eq('user_id',user.id).eq('id',currentSession.id).single()]);if(l.error||a.error||s.error){alert('最新状態の取得に失敗しました');return}currentLinks=l.data||[];attempts=a.data||[];currentSession=s.data;if(result==='wrong'){document.getElementById('currentProblem').scrollIntoView({behavior:'smooth',block:'center'})}renderReview();}
+function closeReview(){currentSession=null;currentLinks=[];attempts=[];document.getElementById('reviewSection').classList.add('hidden');document.getElementById('setup').classList.remove('hidden');document.getElementById('activeSection').classList.remove('hidden');loadBase();}
+function finishAndClose(){closeReview()}
+init();
+</script>
+</body>
+</html>
