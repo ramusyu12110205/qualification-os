@@ -45,8 +45,6 @@
     if(!window.__qResultEnhanceLoading){window.__qResultEnhanceLoading=true;var qscript=document.createElement('script');qscript.src='qualification-result-enhance-v2.js?v=20260908-1200';document.head.appendChild(qscript)}
     if(!document.getElementById('dashboardFinalFixStyle')){var s=document.createElement('style');s.id='dashboardFinalFixStyle';s.textContent='.sd-month-total{display:flex;justify-content:space-between;align-items:center;margin:10px 0;padding:14px 16px;background:#0e1422;border:1px solid #26314d;border-radius:14px}.sd-month-total span{color:#98a3bf;font-size:12px;font-weight:800}.sd-month-total strong{font-size:24px}.sd-year-chart{overflow-x:auto}.sd-year-chart .sd-day{min-width:70px}.sd-month-avg{font-size:10px;color:#98a3bf;margin-top:4px;white-space:nowrap}.sd-chart:not(.sd-month-chart) .sd-day{cursor:pointer;user-select:none}.sd-chart:not(.sd-month-chart) .sd-day:focus-visible{outline:2px solid #8b5cf6;outline-offset:3px;border-radius:8px}.sd-prev-value{height:16px;line-height:16px;font-size:10px;color:#98a3bf;opacity:0;white-space:nowrap;transition:opacity .15s}.sd-prev-open .sd-prev-value{opacity:1}@media(max-width:700px){.sd-year-chart{justify-content:flex-start}.sd-year-chart .sd-day{min-width:68px}}';document.head.appendChild(s)}
     var old=window.scrollTo;window.scrollTo=function(x,y){if(typeof x==='object'&&x&&Number(x.top)===0)return;return old.apply(window,arguments)};
-    // 「資格一覧」は常に資格一覧を開く。保存されている週・月モードに引っ張られないようにする。
-    // 週・月／資格別の切替は study-dashboard-enhance.js 側の data-dashboard-mode ボタンで処理する。
     window.showDashboard=function(){
       if(typeof window.renderDashboardMode==='function'){window.renderDashboardMode('qualification');return}
       var buttons=document.querySelectorAll('#tab-status .row > button');
@@ -124,4 +122,88 @@
   }
   window.parsePastRowsFixed=parsePastRowsFixed;window.previewPastStudyFixed=previewPastStudyFixed;
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){var b=document.getElementById('pastPreviewButton');if(b)b.onclick=previewPastStudyFixed});else{var b=document.getElementById('pastPreviewButton');if(b)b.onclick=previewPastStudyFixed}
+})();
+
+// 試験対策タブ：総復習を通常の復習状態から分離したまま、学習状況にだけ集約表示する。
+(function(){
+  var mode='exam-prep';
+  function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]})}
+  function minutesText(m){m=Math.max(0,Math.round(Number(m)||0));if(!m)return '0分';var h=Math.floor(m/60),min=m%60;return h?(min?h+'時間'+min+'分':h+'時間'):min+'分'}
+  function studyDay(){var d=new Date();if(d.getHours()<5)d.setDate(d.getDate()-1);return d.toISOString().slice(0,10)}
+  function fmtDate(s){if(!s)return '—';var d=new Date(s+'T00:00:00');return (d.getMonth()+1)+'/'+d.getDate()}
+  function score(a){if(a.result==='correct')return 1;if(a.answer_type==='selection'&&Number(a.partial_total)>0)return Math.max(0,Math.min(1,Number(a.partial_correct||0)/Number(a.partial_total)));return 0}
+  function pct(n,d){return d?Math.round(n/d*100):0}
+  function examDays(q){if(!q.exam_date)return null;return Math.ceil((new Date(q.exam_date+'T00:00:00')-new Date(studyDay()+'T00:00:00'))/86400000)}
+  function ensureTab(){
+    var row=document.querySelector('#tab-status .row');if(!row)return;
+    var b=row.querySelector('[data-dashboard-mode="exam-prep"]');
+    if(!b){b=document.createElement('button');b.type='button';b.dataset.dashboardMode=mode;b.textContent='試験対策';row.appendChild(b)}
+    var active=localStorage.getItem('qualification-os-dashboard-mode')==='exam-prep';
+    Array.from(row.querySelectorAll('button')).forEach(function(x){if(x===b){x.className=active?'primary':'light'}else if(x.className!=='primary')x.className='light'});
+  }
+  async function loadExamData(){
+    var uid=currentUser&&currentUser.id;if(!uid)throw new Error('ログイン情報がありません');
+    var [sr,pr,ar,tr]=await Promise.all([
+      sb.from('comprehensive_review_sessions').select('id,qualification_id,subject_id,status,created_at,completed_at').eq('user_id',uid),
+      sb.from('comprehensive_review_problems').select('id,session_id,problem_id,status,mode,completed_at').eq('user_id',uid),
+      sb.from('comprehensive_review_attempts').select('id,session_id,problem_id,result,created_at,answer_type,partial_correct,partial_total').eq('user_id',uid),
+      sb.from('study_sessions').select('id,qualification_id,subject_id,study_date,activity_type,minutes,created_at').eq('user_id',uid).eq('activity_type','comprehensive_review')
+    ]);
+    var err=sr.error||pr.error||ar.error||tr.error;if(err)throw err;
+    return {sessions:sr.data||[],problems:pr.data||[],attempts:ar.data||[],study:tr.data||[]}
+  }
+  function latestBySubject(list){
+    var map={};
+    list.forEach(function(s){var key=s.subject_id||'__none__';if(!map[key]||((s.status==='active'?1:0)>(map[key].status==='active'?1:0))||(s.status===map[key].status&&String(s.created_at)>String(map[key].created_at)))map[key]=s});
+    return Object.values(map)
+  }
+  function renderExamPrep(data){
+    var box=document.getElementById('dashboard');if(!box)return;
+    var qs=(typeof qualifications!=='undefined'&&Array.isArray(qualifications)?qualifications:[]).filter(function(q){return !q.archived});
+    var ss=(typeof subjects!=='undefined'&&Array.isArray(subjects)?subjects:[]);
+    var sessions=data.sessions,problems=data.problems,attempts=data.attempts,study=data.study;
+    var bySession={};problems.forEach(function(p){(bySession[p.session_id]||(bySession[p.session_id]=[])).push(p)});
+    var attemptsBySession={};attempts.forEach(function(a){(attemptsBySession[a.session_id]||(attemptsBySession[a.session_id]=[])).push(a)});
+    var latest=latestBySubject(sessions),latestIds={};latest.forEach(function(s){latestIds[s.id]=true});
+    var totalTime=study.reduce(function(n,s){return n+Number(s.minutes||0)},0),sessionCount=sessions.length,lastTime=study.reduce(function(v,s){return !v||s.study_date>v?s.study_date:v},null);
+    var cards=qs.filter(function(q){return q.exam_date||sessions.some(function(s){return s.qualification_id===q.id})}).sort(function(a,b){var ad=examDays(a),bd=examDays(b);if(ad==null)return 1;if(bd==null)return -1;return ad-bd});
+    var html='<div class="sd-wrap"><div class="sd-section-head"><div><div class="kicker">EXAM PREPARATION</div><h3>試験対策</h3><div class="muted small">総復習の進捗・正答率・勉強時間を、通常の復習状態とは分けて確認します。</div></div><button type="button" class="primary" onclick="location.href=\'comprehensive-review.html\'">📚 総復習を開く</button></div>';
+    if(!cards.length)html+='<div class="item">試験日または総復習の記録がある資格がありません。</div>';
+    cards.forEach(function(q){
+      var qSessions=latest.filter(function(s){return s.qualification_id===q.id}),qStarted=qSessions.length,qTotal=0,qDone=0,qScore=0,qAttempts=0,qTime=study.filter(function(s){return s.qualification_id===q.id}).reduce(function(n,s){return n+Number(s.minutes||0)},0),qLast=study.filter(function(s){return s.qualification_id===q.id}).reduce(function(v,s){return !v||s.study_date>v?s.study_date:v},null);
+      qSessions.forEach(function(sess){var ps=bySession[sess.id]||[],aa=attemptsBySession[sess.id]||[];qTotal+=ps.length;qDone+=ps.filter(function(p){return p.status==='completed'}).length;var sum=aa.reduce(function(n,a){return n+score(a)},0);qScore+=sum;qAttempts+=aa.length});
+      var progress=pct(qDone,qTotal),accuracy=pct(qScore,qAttempts),days=examDays(q),subjectsStarted=new Set(qSessions.map(function(s){return s.subject_id})).size,totalSubjects=ss.filter(function(s){return s.qualification_id===q.id&&!s.archived}).length;
+      var examLabel=days==null?'試験日未設定':days<0?'試験済み':days===0?'試験当日':'試験まで '+days+'日';
+      var examCls=days!=null&&days<=14&&days>=0?' badge-hot':'';
+      html+='<div class="sd-exam-card"><div class="sd-exam-head"><div><div class="kicker">'+esc(q.name)+'</div><div class="sd-exam-title">'+(q.exam_date?'試験 '+fmtDate(q.exam_date):'試験日未設定')+'</div></div><span class="badge'+examCls+'">'+examLabel+'</span></div>';
+      html+='<div class="sd-summary"><div><span>総復習進捗</span><strong>'+progress+'%</strong></div><div><span>総復習正答率</span><strong>'+accuracy+'%</strong></div><div><span>総復習時間</span><strong>'+minutesText(qTime)+'</strong></div></div>';
+      html+='<div class="bar"><div style="width:'+progress+'%"></div></div><div class="sd-exam-sub">実施科目 '+subjectsStarted+'/'+totalSubjects+' ・ セッション '+qSessions.length+'件'+(qLast?' ・ 最終 '+fmtDate(qLast):'')+'</div>';
+      var qSubs=ss.filter(function(s){return s.qualification_id===q.id&&!s.archived}).sort(function(a,b){return (a.sort_order||0)-(b.sort_order||0)});
+      html+='<div class="sd-exam-subjects">';
+      qSubs.forEach(function(sub){
+        var sess=qSessions.find(function(s){return s.subject_id===sub.id});
+        if(!sess){html+='<div class="sd-exam-subject"><div class="sd-exam-subject-head"><strong>'+esc(sub.name)+'</strong><span class="badge">未開始</span></div><div class="muted small">まだ総復習セッションがありません。</div></div>';return}
+        var ps=bySession[sess.id]||[],aa=attemptsBySession[sess.id]||[],done=ps.filter(function(p){return p.status==='completed'}).length,sc=pct(aa.reduce(function(n,a){return n+score(a)},0),aa.length),pp=pct(done,ps.length),state=sess.status==='completed'?'完了':'実施中';
+        html+='<div class="sd-exam-subject"><div class="sd-exam-subject-head"><strong>'+esc(sub.name)+'</strong><span class="badge">'+state+'</span></div><div class="bar"><div style="width:'+pp+'%"></div></div><div class="sd-exam-subject-meta"><span>'+done+' / '+ps.length+'問完了</span><span>正答率 '+sc+'%</span><span>'+aa.length+'回解答</span></div></div>';
+      });
+      html+='</div></div>';
+    });
+    html+='</div>';box.innerHTML=html;
+  }
+  async function openExamPrep(){
+    localStorage.setItem('qualification-os-dashboard-mode',mode);sessionStorage.setItem('qualification-os-dashboard-mode',mode);ensureTab();
+    var box=document.getElementById('dashboard');if(!box)return;box.innerHTML='<div class="item">試験対策の状況を読み込んでいます…</div>';
+    try{var data=await loadExamData();renderExamPrep(data)}catch(e){console.error(e);box.innerHTML='<div class="item" style="border-color:#6b2941"><b>試験対策データを取得できませんでした</b><div class="muted small" style="margin-top:6px">'+esc(e.message||e)+'</div></div>'}
+  }
+  function install(){
+    var style=document.createElement('style');style.textContent='.sd-exam-card{border:1px solid #26314d;border-radius:18px;padding:16px;margin:12px 0;background:#0f1627}.sd-exam-head,.sd-exam-subject-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}.sd-exam-title{font-size:25px;font-weight:950;margin-top:3px}.sd-exam-sub{color:#98a3bf;font-size:12px;margin-top:7px}.sd-exam-subjects{margin-top:14px;border-top:1px solid #202a42}.sd-exam-subject{padding:12px 0;border-bottom:1px solid #202a42}.sd-exam-subject:last-child{border-bottom:0}.sd-exam-subject-head strong{font-size:16px}.sd-exam-subject-meta{display:flex;gap:12px;flex-wrap:wrap;color:#98a3bf;font-size:12px;margin-top:7px}.badge-hot{border-color:#6b2941!important;color:#ffc1cf!important;background:#3d1725!important}@media(max-width:700px){.sd-exam-head{flex-direction:column}.sd-exam-title{font-size:22px}.sd-exam-subject-meta{gap:7px}}
+';document.head.appendChild(style);
+    var status=document.getElementById('tab-status');if(!status)return;
+    status.addEventListener('click',function(e){var b=e.target.closest&&e.target.closest('[data-dashboard-mode="exam-prep"]');if(!b)return;e.preventDefault();e.stopPropagation();openExamPrep()},true);
+    var rowObserver=new MutationObserver(function(){ensureTab();if(localStorage.getItem('qualification-os-dashboard-mode')===mode&&document.getElementById('dashboard')?.querySelector('h3')?.textContent!=='試験対策')setTimeout(openExamPrep,0)});
+    var row=document.querySelector('#tab-status .row');if(row)rowObserver.observe(row,{childList:true});
+    ensureTab();
+    if(localStorage.getItem('qualification-os-dashboard-mode')===mode)setTimeout(openExamPrep,0);
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install);else install();
 })();
