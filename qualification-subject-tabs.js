@@ -241,3 +241,48 @@
   setTimeout(injectComprehensiveReviewLink,300);
   setTimeout(injectComprehensiveReviewLink,1000);
 })();
+
+(function(){
+  // 試験対策では、合格済みの資格・科目を対象外にする。
+  // 資格全体が合格済みなら資格カードごと非表示。
+  function isPassedQualification(q){
+    if(!q)return false;
+    if(q.result==='passed')return true;
+    if(q.result_mode==='subject'){
+      var ss=(typeof subjects!=='undefined'?subjects:[]).filter(function(s){return s.qualification_id===q.id && !s.archived});
+      return ss.length>0 && ss.every(function(s){return s.result==='passed'});
+    }
+    return false;
+  }
+  function filterExamPrep(){
+    if(typeof window.openExamPrep!=='function' || typeof qualifications==='undefined' || typeof subjects==='undefined')return;
+    if(window.__passedExamPrepWrapped)return;
+    var base=window.openExamPrep;
+    window.openExamPrep=function(){
+      var originalQ=qualifications,originalS=subjects;
+      qualifications=originalQ.filter(function(q){return !isPassedQualification(q)});
+      subjects=originalS.filter(function(s){return s.result!=='passed' && !isPassedQualification(originalQ.find(function(q){return q.id===s.qualification_id}))});
+      var observer=new MutationObserver(function(){
+        var box=document.getElementById('dashboard');
+        if(box && box.querySelector('.sd-exam-wrap')){
+          observer.disconnect();
+          qualifications=originalQ;
+          subjects=originalS;
+        }
+      });
+      var box=document.getElementById('dashboard');
+      if(box)observer.observe(box,{childList:true,subtree:true});
+      try{base.apply(this,arguments)}catch(e){observer.disconnect();qualifications=originalQ;subjects=originalS;throw e}
+      setTimeout(function(){
+        if(document.querySelector('.sd-exam-wrap')){observer.disconnect();qualifications=originalQ;subjects=originalS}
+      },3000);
+    };
+    window.__passedExamPrepWrapped=true;
+  }
+  var tries=0;
+  var timer=setInterval(function(){
+    tries++;filterExamPrep();
+    if(window.__passedExamPrepWrapped||tries>30)clearInterval(timer);
+  },100);
+  filterExamPrep();
+})();
