@@ -68,5 +68,6 @@ async function answerProblem(problemId,result){if(!currentSession||!currentMode)
 async function reloadCurrentSession(){const [l,a,s]=await Promise.all([sb.from('comprehensive_review_problems').select('id,problem_id,mode,status,consecutive_wrong,created_at,completed_at').eq('user_id',user.id).eq('session_id',currentSession.id),sb.from('comprehensive_review_attempts').select('problem_id,result,answer_type,partial_correct,partial_total,created_at').eq('user_id',user.id).eq('session_id',currentSession.id).order('created_at'),sb.from('comprehensive_review_sessions').select('id,qualification_id,subject_id,status,created_at,completed_at').eq('user_id',user.id).eq('id',currentSession.id).single()]);if(l.error||a.error||s.error){alert('最新状態の取得に失敗しました');return}currentLinks=l.data||[];attempts=a.data||[];currentSession=s.data;pendingWrongProblem=null;renderReview();}
 init();
 </script>
+<script src="comprehensive-review-rounds.js"></script>
 </body>
 </html>
