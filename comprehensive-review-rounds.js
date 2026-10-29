@@ -117,7 +117,7 @@
     currentLinks=l.data||[];attempts=a.data||[];currentSession=s.data;pendingWrongProblem=null;
     if(currentMode){
       const r=await sb.rpc('advance_comprehensive_review_round',{p_session_id:currentSession.id,p_mode:currentMode});
-      if(r.error){alert('周回更新に失敗しました: '+r.error.message);return;}
+      if(r.error){alert('周回更新に失敗しました: '+r.error.message);return}
       if(r.data?.advanced){
         const [nl,ns]=await Promise.all([
           sb.from('comprehensive_review_problems').select('id,problem_id,mode,status,consecutive_wrong,round,created_at,completed_at').eq('user_id',user.id).eq('session_id',currentSession.id),
@@ -128,5 +128,22 @@
       }
     }
     renderReview();
+  };
+
+  window.renderProblemCard=function(link,p,box,selected=false){
+    const pa=attempts.filter(a=>a.problem_id===link.problem_id);
+    const wrong=pa.filter(a=>a.result==='wrong').length;
+    const x=stats(currentMode);
+    box.innerHTML=`<div class="problem"><div class="row"><span class="pill">${currentMode==='comprehensive'?'総合問題':'個別問題'}</span><span class="muted small">${selected?'選択中の問題':x.round+'周目まであと '+x.remaining+'問'}</span>${selected?'<button class="light" style="margin-left:auto" onclick="backToQueue()">通常の問題へ戻る</button>':''}</div><div class="problem-name">${esc(p?.name||'問題')}</div><div class="muted small" style="margin-bottom:14px">この総復習での回答 ${pa.length}回 ・ 誤答 ${wrong}回 ・ 現在の連続誤答 ${link.consecutive_wrong||0}回</div><div class="answer-row"><button class="correct" onclick="answerProblem('${link.problem_id}','correct')">○ 正解</button><button class="wrong" onclick="beginWrong('${link.problem_id}')">× 誤答</button></div><div id="scoringArea"></div><p class="muted small" style="margin:12px 0 0">誤答しても通常の復習状態・復習予定日は一切変更しません。</p></div>`;
+  };
+
+  window.addSelectedProblems=async function(){
+    if(!currentSession)return;
+    const ids=[...document.querySelectorAll('.add-check:checked')].map(x=>x.value);
+    if(!ids.length){alert('追加する問題を選択してください。');return}
+    const rows=ids.map(id=>({user_id:user.id,session_id:currentSession.id,problem_id:id,mode:document.getElementById('mode-'+id).value,status:'pending',consecutive_wrong:0,round:currentRound(document.getElementById('mode-'+id).value)}));
+    const r=await sb.from('comprehensive_review_problems').insert(rows);
+    if(r.error){alert('問題の追加に失敗しました: '+r.error.message);return}
+    await openSession(currentSession.id);
   };
 })();
