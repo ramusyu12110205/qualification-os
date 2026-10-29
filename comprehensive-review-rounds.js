@@ -146,4 +146,6 @@
     if(r.error){alert('問題の追加に失敗しました: '+r.error.message);return}
     await openSession(currentSession.id);
   };
+
+  // wire-trigger: 2026-10-29
 })();
