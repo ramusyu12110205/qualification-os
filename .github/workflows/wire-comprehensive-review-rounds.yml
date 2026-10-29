@@ -1,0 +1,39 @@
+name: Wire comprehensive review rounds
+
+on:
+  push:
+    paths:
+      - comprehensive-review-rounds.js
+
+permissions:
+  contents: write
+
+jobs:
+  wire:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Inject rounds script
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('comprehensive-review.html')
+          s = p.read_text(encoding='utf-8')
+          tag = '<script src="comprehensive-review-rounds.js"></script>'
+          if tag not in s:
+              marker = '</script>\n</body>\n</html>'
+              if marker not in s:
+                  raise SystemExit('target marker not found')
+              s = s.replace(marker, '</script>\n' + tag + '\n</body>\n</html>', 1)
+              p.write_text(s, encoding='utf-8')
+          PY
+
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add comprehensive-review.html
+          git diff --cached --quiet || git commit -m "総復習周回ロジックをHTMLへ接続"
+          git push
