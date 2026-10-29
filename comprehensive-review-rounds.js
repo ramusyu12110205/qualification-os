@@ -1,4 +1,6 @@
 (function(){
+  const skippedProblemIds=new Set();
+
   function currentRound(mode){
     const links=(currentLinks||[]).filter(x=>x.mode===mode);
     return links.length ? Math.max(...links.map(x=>Number(x.round)||1)) : 1;
@@ -35,7 +37,7 @@
       sb.from('comprehensive_review_attempts').select('problem_id,result,answer_type,partial_correct,partial_total,created_at').eq('user_id',user.id).eq('session_id',id).order('created_at')
     ]);
     if(l.error||a.error){alert('総復習の読み込みに失敗しました');return;}
-    currentLinks=l.data||[];attempts=a.data||[];currentMode=null;pendingWrongProblem=null;browserProblemId=null;
+    currentLinks=l.data||[];attempts=a.data||[];currentMode=null;pendingWrongProblem=null;browserProblemId=null;skippedProblemIds.clear();
     document.getElementById('setup').classList.add('hidden');
     document.getElementById('activeSection').classList.add('hidden');
     document.getElementById('selectionSection').classList.add('hidden');
@@ -83,7 +85,14 @@
       box.innerHTML='<div class="problem" style="text-align:center"><h2>🎉 この周回は完了</h2><p class="muted">この周回の問題をすべて正解しました。</p><button class="primary" onclick="backToModes()">問題種別へ戻る</button></div>';
       return;
     }
-    const link=links.find(l=>l.status==='pending' && (l.consecutive_wrong||0)===0) || links.find(l=>l.status==='pending');
+    const untouched=links.filter(l=>l.status==='pending' && (l.consecutive_wrong||0)===0);
+    const available=untouched.filter(l=>!skippedProblemIds.has(l.problem_id));
+    let link=available[0];
+    if(!link && untouched.length){
+      box.innerHTML=`<div class="problem" style="text-align:center"><h2>⏭ 未回答をスキップ中</h2><p class="muted">スキップした問題が${untouched.length}問あります。</p><button class="primary" onclick="resumeSkippedProblem()">スキップした問題を再開</button></div>`;
+      return;
+    }
+    link=link||links.find(l=>l.status==='pending');
     const p=problems.find(x=>x.id===link.problem_id);
     renderProblemCard(link,p,box);
   };
@@ -119,6 +128,7 @@
       const r=await sb.rpc('advance_comprehensive_review_round',{p_session_id:currentSession.id,p_mode:currentMode});
       if(r.error){alert('周回更新に失敗しました: '+r.error.message);return}
       if(r.data?.advanced){
+        skippedProblemIds.clear();
         const [nl,ns]=await Promise.all([
           sb.from('comprehensive_review_problems').select('id,problem_id,mode,status,consecutive_wrong,round,created_at,completed_at').eq('user_id',user.id).eq('session_id',currentSession.id),
           sb.from('comprehensive_review_sessions').select('id,qualification_id,subject_id,status,created_at,completed_at').eq('user_id',user.id).eq('id',currentSession.id).single()
@@ -134,7 +144,21 @@
     const pa=attempts.filter(a=>a.problem_id===link.problem_id);
     const wrong=pa.filter(a=>a.result==='wrong').length;
     const x=stats(currentMode);
-    box.innerHTML=`<div class="problem"><div class="row"><span class="pill">${currentMode==='comprehensive'?'総合問題':'個別問題'}</span><span class="muted small">${selected?'選択中の問題':x.round+'周目まであと '+x.remaining+'問'}</span>${selected?'<button class="light" style="margin-left:auto" onclick="backToQueue()">通常の問題へ戻る</button>':''}</div><div class="problem-name">${esc(p?.name||'問題')}</div><div class="muted small" style="margin-bottom:14px">この総復習での回答 ${pa.length}回 ・ 誤答 ${wrong}回 ・ 現在の連続誤答 ${link.consecutive_wrong||0}回</div><div class="answer-row"><button class="correct" onclick="answerProblem('${link.problem_id}','correct')">○ 正解</button><button class="wrong" onclick="beginWrong('${link.problem_id}')">× 誤答</button></div><div id="scoringArea"></div><p class="muted small" style="margin:12px 0 0">誤答しても通常の復習状態・復習予定日は一切変更しません。</p></div>`;
+    box.innerHTML=`<div class="problem"><div class="row"><span class="pill">${currentMode==='comprehensive'?'総合問題':'個別問題'}</span><span class="muted small">${selected?'選択中の問題':x.round+'周目まであと '+x.remaining+'問'}</span>${selected?'<button class="light" style="margin-left:auto" onclick="backToQueue()">通常の問題へ戻る</button>':''}</div><div class="problem-name">${esc(p?.name||'問題')}</div><div class="muted small" style="margin-bottom:14px">この総復習での回答 ${pa.length}回 ・ 誤答 ${wrong}回 ・ 現在の連続誤答 ${link.consecutive_wrong||0}回</div><div class="answer-row"><button class="correct" onclick="answerProblem('${link.problem_id}','correct')">○ 正解</button><button class="wrong" onclick="beginWrong('${link.problem_id}')">× 誤答</button></div><div style="display:flex;justify-content:flex-end;margin-top:12px"><button class="light" onclick="skipProblem('${link.problem_id}')">⏭ スキップ</button></div><div id="scoringArea"></div><p class="muted small" style="margin:12px 0 0">スキップしても回答記録・誤答数・周回進捗には影響しません。</p></div>`;
+  };
+
+  window.skipProblem=function(problemId){
+    if(!problemId)return;
+    skippedProblemIds.add(problemId);
+    browserProblemId=null;
+    pendingWrongProblem=null;
+    renderReview();
+  };
+
+  window.resumeSkippedProblem=function(){
+    const links=roundLinks(currentMode);
+    const target=links.find(l=>l.status==='pending' && (l.consecutive_wrong||0)===0 && skippedProblemIds.has(l.problem_id));
+    if(target){skippedProblemIds.delete(target.problem_id);renderReview();}
   };
 
   window.addSelectedProblems=async function(){
