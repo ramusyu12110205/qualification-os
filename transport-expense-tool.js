@@ -4,11 +4,12 @@
   let ready=false;
   let state={routes:[],visits:[],usage:{}};
 
-  const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
+  const esc=s=>String(s??'').replace(/[&<>\"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#039;'}[m]));
   const yen=n=>Math.round(Number(n)||0).toLocaleString('ja-JP');
   const today=()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`};
   const monthNow=()=>today().slice(0,7);
   const id=()=>crypto.randomUUID();
+  const visitAmount=v=>Math.round(Number(v?.amount??v?.roundTrip)||0);
 
   function load(){
     try{
@@ -40,14 +41,14 @@
     panel.className='card tool-panel hidden';
     panel.innerHTML=`
       <div class="kicker">TRANSPORTATION EXPENSE</div>
-      <div class="transport-head"><div><h2>交通費精算</h2><p class="muted small">固定ルートを登録し、実際の訪問日を記録します。月ごとの一覧をそのまま印刷できます。</p></div><button class="light" id="transport-back">← 業務ツール</button></div>
+      <div class="transport-head"><div><h2>交通費精算</h2><p class="muted small">固定ルートの通常金額を登録し、実際の訪問時は必要に応じて金額を変更できます。</p></div><button class="light" id="transport-back">← 業務ツール</button></div>
 
       <div class="tool-section">
         <div class="tool-section-title">① 固定ルート</div>
         <div class="transport-add-grid">
           <input id="transport-name" placeholder="訪問先・研修先">
-          <input id="transport-station" placeholder="駅名（例：大船駅）">
-          <input id="transport-roundtrip" type="number" min="0" step="1" inputmode="numeric" placeholder="往復運賃（円）">
+          <input id="transport-station" placeholder="駅・経路（例：大船→上大岡）">
+          <input id="transport-roundtrip" type="number" min="0" step="1" inputmode="numeric" placeholder="通常金額（円）">
           <button class="primary" id="transport-add">＋ ルート追加</button>
         </div>
         <div id="transport-routes" class="transport-routes"></div>
@@ -58,8 +59,10 @@
         <div class="transport-visit-add">
           <input id="transport-visit-date" type="date" value="${today()}">
           <select id="transport-visit-route"><option value="">訪問先を選択</option></select>
+          <input id="transport-visit-amount" type="number" min="0" step="1" inputmode="numeric" placeholder="今回の金額（円）">
           <button class="primary" id="transport-add-visit">＋ 訪問を記録</button>
         </div>
+        <div class="muted small transport-visit-note">通常金額が自動入力されます。遅延・振替・別ルートなどがあった日は、今回の金額だけ変更してください。</div>
       </div>
 
       <div class="tool-section">
@@ -83,12 +86,12 @@
       .transport-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}.transport-head h2{margin:0}.transport-head button{white-space:nowrap}
       .transport-add-grid{display:grid;grid-template-columns:1.4fr 1fr .8fr auto;gap:8px}.transport-routes{margin-top:10px}
       .transport-route{display:grid;grid-template-columns:1.35fr 1fr .7fr auto auto;gap:8px;align-items:center;padding:10px 0;border-bottom:1px solid #26314d}.transport-route:last-child{border-bottom:0}.transport-route strong{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.transport-price{color:#b9c4df;font-size:13px}.transport-remove,.transport-edit{min-height:38px;padding:7px 10px}
-      .transport-visit-add{display:grid;grid-template-columns:170px 1fr auto;gap:8px}.transport-month-row{display:flex;gap:8px;align-items:center}.transport-month-row input{max-width:190px}.transport-month-row button{margin-left:auto}
+      .transport-visit-add{display:grid;grid-template-columns:170px minmax(0,1fr) 150px auto;gap:8px}.transport-visit-note{margin-top:7px}.transport-month-row{display:flex;gap:8px;align-items:center}.transport-month-row input{max-width:190px}.transport-month-row button{margin-left:auto}
       .transport-list{margin-top:12px;border:1px solid #33405f;border-radius:14px;overflow:hidden}.transport-list-head,.transport-list-row{display:grid;grid-template-columns:80px minmax(0,1.5fr) minmax(0,1fr) 90px 44px;gap:8px;align-items:center;padding:9px 10px}.transport-list-head{background:#11182a;color:#98a3bf;font-size:12px;font-weight:900}.transport-list-row{border-top:1px solid #26314d;font-size:13px}.transport-list-row>span{min-width:0;overflow-wrap:anywhere}.transport-list-empty{padding:18px;text-align:center;color:#98a3bf;border:1px dashed #33405f;border-radius:12px;margin-top:12px}.transport-delete{background:transparent;color:#fb7185;padding:4px;font-size:16px;min-height:30px}
       .transport-total{display:flex;justify-content:space-between;align-items:center;padding:18px;border-radius:15px;background:linear-gradient(145deg,#191735,#101627);border:1px solid #4a3d78}.transport-total span{color:#c5cce0}.transport-total b{font-size:28px;color:#fff}
       .transport-print-area{display:none}
-      @media(max-width:700px){.transport-add-grid{grid-template-columns:1fr 1fr}.transport-add-grid input:first-child{grid-column:1/-1}.transport-add-grid button{grid-column:1/-1}.transport-route{grid-template-columns:1fr 1fr}.transport-route strong{grid-column:1/-1}.transport-visit-add{grid-template-columns:1fr}.transport-month-row{flex-wrap:wrap}.transport-month-row button{margin-left:0}.transport-list-head,.transport-list-row{grid-template-columns:62px minmax(0,1.4fr) minmax(0,1fr) 75px 36px;padding:8px 6px;gap:5px}}
-      @media(max-width:600px){.transport-head{flex-direction:column}.transport-head button{width:100%}}
+      @media(max-width:700px){.transport-add-grid{grid-template-columns:1fr 1fr}.transport-add-grid input:first-child{grid-column:1/-1}.transport-add-grid button{grid-column:1/-1}.transport-route{grid-template-columns:1fr 1fr}.transport-route strong{grid-column:1/-1}.transport-visit-add{grid-template-columns:1fr 1fr}.transport-visit-add button{grid-column:1/-1}.transport-month-row{flex-wrap:wrap}.transport-month-row button{margin-left:0}.transport-list-head,.transport-list-row{grid-template-columns:62px minmax(0,1.4fr) minmax(0,1fr) 75px 36px;padding:8px 6px;gap:5px}}
+      @media(max-width:600px){.transport-head{flex-direction:column}.transport-head button{width:100%}.transport-visit-add{grid-template-columns:1fr}.transport-visit-add button{grid-column:auto}}
 
       @media print{
         @page{size:A4 portrait;margin:0}
@@ -118,6 +121,7 @@
     document.getElementById('transport-add-visit').onclick=addVisit;
     document.getElementById('transport-print').onclick=printMonth;
     document.getElementById('transport-month').addEventListener('change',render);
+    document.getElementById('transport-visit-route').addEventListener('change',fillVisitAmount);
     render();
   }
 
@@ -126,8 +130,8 @@
     const station=document.getElementById('transport-station').value.trim();
     const round=Math.max(0,Number(document.getElementById('transport-roundtrip').value)||0);
     if(!name){alert('訪問先・研修先の名前を入力してください。');return}
-    if(!station){alert('駅名を入力してください。');return}
-    if(!round){alert('往復運賃を入力してください。');return}
+    if(!station){alert('駅・経路を入力してください。');return}
+    if(!round){alert('通常金額を入力してください。');return}
     state.routes.push({id:id(),name,station,oneWay:Math.floor(round/2),roundTrip:round});
     save();
     document.getElementById('transport-name').value='';document.getElementById('transport-station').value='';document.getElementById('transport-roundtrip').value='';
@@ -137,9 +141,9 @@
   function editRoute(routeId){
     const r=state.routes.find(x=>x.id===routeId);if(!r)return;
     const name=prompt('訪問先・研修先',r.name);if(name===null)return;
-    const station=prompt('駅名',r.station||'');if(station===null)return;
-    const round=prompt('往復運賃（円）',String(r.roundTrip||0));if(round===null)return;
-    const n=Math.max(0,Number(round)||0);if(!name.trim()||!station.trim()||!n){alert('訪問先・駅名・往復運賃を正しく入力してください。');return}
+    const station=prompt('駅・経路',r.station||'');if(station===null)return;
+    const round=prompt('通常金額（円）',String(r.roundTrip||0));if(round===null)return;
+    const n=Math.max(0,Number(round)||0);if(!name.trim()||!station.trim()||!n){alert('訪問先・駅・通常金額を正しく入力してください。');return}
     r.name=name.trim();r.station=station.trim();r.roundTrip=Math.floor(n);r.oneWay=Math.floor(n/2);save();render();
   }
 
@@ -148,14 +152,25 @@
     state.routes=state.routes.filter(r=>r.id!==routeId);save();render();
   }
 
+  function fillVisitAmount(){
+    const routeId=document.getElementById('transport-visit-route')?.value;
+    const r=state.routes.find(x=>x.id===routeId);
+    const input=document.getElementById('transport-visit-amount');
+    if(input)input.value=r?Math.round(Number(r.roundTrip)||0):'';
+  }
+
   function addVisit(){
     const date=document.getElementById('transport-visit-date').value;
     const routeId=document.getElementById('transport-visit-route').value;
+    const amount=Math.max(0,Number(document.getElementById('transport-visit-amount').value)||0);
     const r=state.routes.find(x=>x.id===routeId);
     if(!date||!r){alert('訪問日と訪問先を選択してください。');return}
-    state.visits.push({id:id(),visitDate:date,routeId:r.id,destination:r.name,station:r.station,roundTrip:Math.round(Number(r.roundTrip)||0)});
+    if(!amount){alert('今回の金額を入力してください。');return}
+    state.visits.push({id:id(),visitDate:date,routeId:r.id,destination:r.name,station:r.station,amount:Math.round(amount)});
     save();
     document.getElementById('transport-visit-date').value=today();
+    document.getElementById('transport-visit-route').value='';
+    document.getElementById('transport-visit-amount').value='';
     render();
   }
 
@@ -171,15 +186,15 @@
 
   function renderRoutes(){
     const el=document.getElementById('transport-routes');
-    if(!state.routes.length){el.innerHTML='<div class="transport-list-empty">固定ルートがまだありません。上から訪問先・駅・往復運賃を登録してください。</div>';return}
-    el.innerHTML=state.routes.map(r=>`<div class="transport-route"><strong>${esc(r.name)}</strong><span class="transport-price">${esc(r.station||'駅未設定')}</span><span class="transport-price">往復 ${yen(r.roundTrip)}円</span><button class="light transport-edit" onclick="transportExpenseTool.edit('${r.id}')">編集</button><button class="danger transport-remove" onclick="transportExpenseTool.remove('${r.id}')">削除</button></div>`).join('');
+    if(!state.routes.length){el.innerHTML='<div class="transport-list-empty">固定ルートがまだありません。上から訪問先・駅・通常金額を登録してください。</div>';return}
+    el.innerHTML=state.routes.map(r=>`<div class="transport-route"><strong>${esc(r.name)}</strong><span class="transport-price">${esc(r.station||'駅未設定')}</span><span class="transport-price">通常 ${yen(r.roundTrip)}円</span><button class="light transport-edit" onclick="transportExpenseTool.edit('${r.id}')">編集</button><button class="danger transport-remove" onclick="transportExpenseTool.remove('${r.id}')">削除</button></div>`).join('');
   }
 
   function renderRouteSelect(){
     const el=document.getElementById('transport-visit-route');if(!el)return;
     const current=el.value;
     el.innerHTML='<option value="">訪問先を選択</option>'+state.routes.map(r=>`<option value="${esc(r.id)}">${esc(r.name)}${r.station?`（${esc(r.station)}）`:''}</option>`).join('');
-    if(state.routes.some(r=>r.id===current))el.value=current;
+    if(state.routes.some(r=>r.id===current)){el.value=current}else{el.value=''}
   }
 
   function monthVisits(){
@@ -189,11 +204,11 @@
 
   function renderMonthList(){
     const el=document.getElementById('transport-list');const visits=monthVisits();
-    const total=visits.reduce((sum,v)=>sum+(Number(v.roundTrip)||0),0);
+    const total=visits.reduce((sum,v)=>sum+visitAmount(v),0);
     document.getElementById('transport-total').textContent=`${yen(total)}円`;
     if(!visits.length){el.innerHTML='<div class="transport-list-empty">この月の訪問実績はありません。</div>';return}
-    const rows=visits.map(v=>`<div class="transport-list-row"><span>${esc(String(v.visitDate).slice(5).replace('-','/'))}</span><span>${esc(v.destination)}</span><span>${esc(v.station)}</span><span style="text-align:right">${yen(v.roundTrip)}円</span><button class="transport-delete" title="削除" onclick="transportExpenseTool.deleteVisit('${v.id}')">×</button></div>`).join('');
-    el.innerHTML=`<div class="transport-list"><div class="transport-list-head"><span>日付</span><span>訪問先</span><span>駅</span><span>往復金額</span><span></span></div>${rows}</div>`;
+    const rows=visits.map(v=>`<div class="transport-list-row"><span>${esc(String(v.visitDate).slice(5).replace('-','/'))}</span><span>${esc(v.destination)}</span><span>${esc(v.station)}</span><span style="text-align:right">${yen(visitAmount(v))}円</span><button class="transport-delete" title="削除" onclick="transportExpenseTool.deleteVisit('${v.id}')">×</button></div>`).join('');
+    el.innerHTML=`<div class="transport-list"><div class="transport-list-head"><span>日付</span><span>訪問先</span><span>駅</span><span>金額</span><span></span></div>${rows}</div>`;
   }
 
   function printMonth(){
@@ -201,14 +216,14 @@
     if(!visits.length){alert('印刷する訪問実績がありません。');return}
     const month=document.getElementById('transport-month').value||monthNow();
     const [y,m]=month.split('-');
-    const total=visits.reduce((sum,v)=>sum+(Number(v.roundTrip)||0),0);
+    const total=visits.reduce((sum,v)=>sum+visitAmount(v),0);
     const chunks=[];
     for(let i=0;i<visits.length;i+=12)chunks.push(visits.slice(i,i+12));
     document.getElementById('transport-print-area').innerHTML=chunks.map((chunk,index)=>{
-      const rows=chunk.map(v=>`<tr><td class="date">${esc(String(v.visitDate).slice(5).replace('-','/'))}</td><td class="dest">${esc(v.destination)}</td><td class="station">${esc(v.station)}</td><td class="fare">${yen(v.roundTrip)}円</td></tr>`).join('');
+      const rows=chunk.map(v=>`<tr><td class="date">${esc(String(v.visitDate).slice(5).replace('-','/'))}</td><td class="dest">${esc(v.destination)}</td><td class="station">${esc(v.station)}</td><td class="fare">${yen(visitAmount(v))}円</td></tr>`).join('');
+      const sub=chunks.length>1?`<div class="transport-print-sub">${index+1} / ${chunks.length}</div>`:'';
       const totalLine=index===chunks.length-1?`<div class="transport-print-total">月間合計：${yen(total)}円</div>`:'';
-      const pageNo=chunks.length>1?`<div class="transport-print-sub">${index+1} / ${chunks.length}</div>`:'';
-      return `<section class="transport-print-sheet"><div class="transport-print-title">${y}年${Number(m)}月 交通費精算</div>${pageNo}<table class="transport-print-table"><thead><tr><th class="date">日付</th><th class="dest">訪問先</th><th class="station">駅</th><th class="fare">往復金額</th></tr></thead><tbody>${rows}</tbody></table>${totalLine}</section>`;
+      return `<section class="transport-print-sheet"><div class="transport-print-title">${y}年${Number(m)}月 交通費精算</div>${sub}<table class="transport-print-table"><thead><tr><th class="date">日付</th><th class="dest">訪問先</th><th class="station">駅</th><th class="fare">金額</th></tr></thead><tbody>${rows}</tbody></table>${totalLine}</section>`;
     }).join('');
     setTimeout(()=>window.print(),50);
   }
