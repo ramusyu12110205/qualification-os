@@ -101,14 +101,14 @@
         #panel-transport-expense{display:block!important;margin:0!important;padding:0!important;background:#fff!important;border:0!important;box-shadow:none!important}
         #panel-transport-expense>*:not(#transport-print-area){display:none!important}
         #transport-print-area{display:block!important}
-        .transport-print-sheet{width:90mm;height:125mm;box-sizing:border-box;padding:5mm;border:0;overflow:hidden;background:#fff;color:#000;page-break-after:always;break-after:page}
+        .transport-print-sheet{width:90mm;height:125mm;box-sizing:border-box;padding:4mm;border:0;overflow:hidden;background:#fff;color:#000;page-break-after:always;break-after:page}
         .transport-print-sheet:last-child{page-break-after:auto;break-after:auto}
-        .transport-print-title{font-size:13pt;font-weight:900;margin:0 0 2mm;text-align:center}
-        .transport-print-sub{font-size:7pt;margin-bottom:3mm;text-align:right}
-        .transport-print-table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:7.5pt;line-height:1.25}
-        .transport-print-table th,.transport-print-table td{border:0.25mm solid #000;padding:1.2mm 1mm;vertical-align:top;word-break:break-word}
+        .transport-print-title{font-size:13pt;font-weight:900;margin:0 0 1.5mm;text-align:center}
+        .transport-print-sub{font-size:7pt;margin-bottom:2mm;text-align:right}
+        .transport-print-table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:7.5pt;line-height:1.2}
+        .transport-print-table th,.transport-print-table td{border:0.25mm solid #000;padding:1mm 0.8mm;vertical-align:top;word-break:break-word}
         .transport-print-table th{font-weight:900;text-align:center;white-space:nowrap}.transport-print-table .date{width:13%}.transport-print-table .dest{width:31%}.transport-print-table .station{width:31%}.transport-print-table .fare{width:25%;text-align:right;white-space:nowrap}
-        .transport-print-total{margin-top:3mm;text-align:right;font-size:9pt;font-weight:900}
+        .transport-print-total{margin-top:2mm;text-align:right;font-size:9pt;font-weight:900}
       }
     `;
     document.head.appendChild(style);
@@ -178,7 +178,7 @@
   function renderRouteSelect(){
     const el=document.getElementById('transport-visit-route');if(!el)return;
     const current=el.value;
-    el.innerHTML='<option value="">訪問先を選択</option>'+state.routes.map(r=>`<option value="${esc(r.id)}">${esc(r.name)}（${esc(r.station)}）</option>`).join('');
+    el.innerHTML='<option value="">訪問先を選択</option>'+state.routes.map(r=>`<option value="${esc(r.id)}">${esc(r.name)}${r.station?`（${esc(r.station)}）`:''}</option>`).join('');
     if(state.routes.some(r=>r.id===current))el.value=current;
   }
 
@@ -203,11 +203,12 @@
     const [y,m]=month.split('-');
     const total=visits.reduce((sum,v)=>sum+(Number(v.roundTrip)||0),0);
     const chunks=[];
-    for(let i=0;i<visits.length;i+=8)chunks.push(visits.slice(i,i+8));
+    for(let i=0;i<visits.length;i+=12)chunks.push(visits.slice(i,i+12));
     document.getElementById('transport-print-area').innerHTML=chunks.map((chunk,index)=>{
       const rows=chunk.map(v=>`<tr><td class="date">${esc(String(v.visitDate).slice(5).replace('-','/'))}</td><td class="dest">${esc(v.destination)}</td><td class="station">${esc(v.station)}</td><td class="fare">${yen(v.roundTrip)}円</td></tr>`).join('');
       const totalLine=index===chunks.length-1?`<div class="transport-print-total">月間合計：${yen(total)}円</div>`:'';
-      return `<section class="transport-print-sheet"><div class="transport-print-title">${y}年${Number(m)}月 交通費精算</div><div class="transport-print-sub">${index+1} / ${chunks.length}</div><table class="transport-print-table"><thead><tr><th class="date">日付</th><th class="dest">訪問先</th><th class="station">駅</th><th class="fare">往復金額</th></tr></thead><tbody>${rows}</tbody></table>${totalLine}</section>`;
+      const pageNo=chunks.length>1?`<div class="transport-print-sub">${index+1} / ${chunks.length}</div>`:'';
+      return `<section class="transport-print-sheet"><div class="transport-print-title">${y}年${Number(m)}月 交通費精算</div>${pageNo}<table class="transport-print-table"><thead><tr><th class="date">日付</th><th class="dest">訪問先</th><th class="station">駅</th><th class="fare">往復金額</th></tr></thead><tbody>${rows}</tbody></table>${totalLine}</section>`;
     }).join('');
     setTimeout(()=>window.print(),50);
   }
