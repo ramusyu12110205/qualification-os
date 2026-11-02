@@ -7,9 +7,7 @@
   async function loadRanking(){
     if(!currentSession||!user)return;
     const qualificationId=currentSession.qualification_id;
-    const {data:sess,error:se}=await sb.from('comprehensive_review_sessions')
-      .select('id,qualification_id,subject_id,status,created_at,completed_at')
-      .eq('user_id',user.id).eq('qualification_id',qualificationId);
+    const {data:sess,error:se}=await sb.from('comprehensive_review_sessions').select('id,qualification_id,subject_id,status,created_at,completed_at').eq('user_id',user.id).eq('qualification_id',qualificationId);
     if(se){console.warn('総復習ランキング取得失敗',se);return;}
     const list=sess||[];
     if(!list.length){render([]);return;}
@@ -46,19 +44,12 @@
     }
     const rounds=[...new Set(rows.map(x=>x.round))].sort((a,b)=>a-b);
     if(!rounds.length){box.innerHTML='<div class="empty"><b>周回ランキング</b><div class="muted small" style="margin-top:6px">まだランキングに表示できる回答結果がありません。</div></div>';return;}
-    const latestBySubjectRound=new Map();
-    rows.forEach(x=>latestBySubjectRound.set(`${x.subjectId}|${x.round}`,x));
-    box.innerHTML=`<div class="card" style="margin:0"><div class="row" style="justify-content:space-between"><div><h3 style="margin:0">🏆 周回ランキング</h3><div class="muted small" style="margin-top:4px">${escRank(qualificationName(currentSession.qualification_id))}の総復習を、周回ごとに正答率の低い順で表示</div></div><button class="light" onclick="loadComprehensiveReviewRanking()">↻ 更新</button></div>${rounds.map(round=>{
-      const data=[...latestBySubjectRound.values()].filter(x=>x.round===round).sort((a,b)=>a.accuracy-b.accuracy||b.answers-a.answers);
-      return `<div style="margin-top:16px"><div class="row" style="justify-content:space-between"><b>${round}周目</b><span class="muted small">${data.length}科目</span></div><div style="margin-top:7px">${data.map((x,i)=>{
-        const prev=latestBySubjectRound.get(`${x.subjectId}|${round-1}`);
-        const diff=prev?x.accuracy-prev.accuracy:null;
-        const change=diff===null?'':`<span class="${diff>=0?'good':'bad'}" style="margin-left:8px">${diff>=0?'↑':'↓'} ${Math.abs(diff).toFixed(1)}pt</span>`;
-        return `<div style="display:grid;grid-template-columns:34px 1fr auto;gap:8px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)"><b>${i+1}</b><div><b>${escRank(x.subject)}</b><div class="muted small">${x.answers}回解答 ・ 誤答 ${x.wrong}回${change}</div></div><strong>${x.accuracy.toFixed(1)}%</strong></div>`;
-      }).join('')}</div></div>`;
-    }).join('')}</div>`;
+    const latestBySubjectRound=new Map();rows.forEach(x=>latestBySubjectRound.set(`${x.subjectId}|${x.round}`,x));
+    box.innerHTML=`<div class="card" style="margin:0"><div class="row" style="justify-content:space-between"><div><h3 style="margin:0">🏆 周回ランキング</h3><div class="muted small" style="margin-top:4px">${escRank(qualificationName(currentSession.qualification_id))}の総復習を、周回ごとに正答率の低い順で表示</div></div><button class="light" onclick="loadComprehensiveReviewRanking()">↻ 更新</button></div>${rounds.map(round=>{const data=[...latestBySubjectRound.values()].filter(x=>x.round===round).sort((a,b)=>a.accuracy-b.accuracy||b.answers-a.answers);return `<div style="margin-top:16px"><div class="row" style="justify-content:space-between"><b>${round}周目</b><span class="muted small">${data.length}科目</span></div><div style="margin-top:7px">${data.map((x,i)=>{const prev=latestBySubjectRound.get(`${x.subjectId}|${round-1}`),diff=prev?x.accuracy-prev.accuracy:null,change=diff===null?'':`<span class="${diff>=0?'good':'bad'}" style="margin-left:8px">${diff>=0?'↑':'↓'} ${Math.abs(diff).toFixed(1)}pt</span>`;return `<div style="display:grid;grid-template-columns:34px 1fr auto;gap:8px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)"><b>${i+1}</b><div><b>${escRank(x.subject)}</b><div class="muted small">${x.answers}回解答 ・ 誤答 ${x.wrong}回${change}</div></div><strong>${x.accuracy.toFixed(1)}%</strong></div>`;}).join('')}</div></div>`;}).join('')}</div>`;
   }
 
   window.loadComprehensiveReviewRanking=loadRanking;
   window.renderRoundRanking=render;
+  const originalRenderModes=window.renderModes;
+  window.renderModes=function(){if(originalRenderModes)originalRenderModes();loadRanking();};
 })();
