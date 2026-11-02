@@ -1,5 +1,6 @@
 /* 資格OS 総復習モジュールローダー */
 (function(){
-  document.write('<script src="comprehensive-review-rounds-core.js"><\\/script>');
-  document.write('<script src="comprehensive-review-ranking.js"><\\/script>');
+  const v='20261102-1205';
+  document.write('<script src="comprehensive-review-rounds-core.js?v='+v+'"><\/script>');
+  document.write('<script src="comprehensive-review-ranking.js?v='+v+'"><\/script>');
 })();
