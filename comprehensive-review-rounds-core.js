@@ -13,5 +13,22 @@
   window.skipProblem=function(id){if(!id)return;skippedProblemIds.add(id);browserProblemId=null;pendingWrongProblem=null;renderReview();};
   window.resumeSkippedProblem=function(){const target=roundLinks(currentMode).find(l=>l.status==='pending'&&(l.consecutive_wrong||0)===0&&skippedProblemIds.has(l.problem_id));if(target){skippedProblemIds.delete(target.problem_id);renderReview();}};
   window.addSelectedProblems=async function(){if(!currentSession)return;const ids=[...document.querySelectorAll('.add-check:checked')].map(x=>x.value);if(!ids.length){alert('追加する問題を選択してください。');return;}const rows=ids.map(id=>({user_id:user.id,session_id:currentSession.id,problem_id:id,mode:document.getElementById('mode-'+id).value,status:'pending',consecutive_wrong:0,round:currentRound(document.getElementById('mode-'+id).value)}));const r=await sb.from('comprehensive_review_problems').insert(rows);if(r.error){alert('問題の追加に失敗しました: '+r.error.message);return;}await openSession(currentSession.id);};
-  window.renderSessions=function(){const box=document.getElementById('sessionsList'),active=(sessions||[]).filter(s=>s.status==='active').slice().sort((a,b)=>new Date(b.created_at||0)-new Date(a.created_at||0));if(!active.length){box.innerHTML='<div class="empty">進行中の総復習はありません。</div>';return;}box.innerHTML=active.map(s=>`<div class="session active"><div class="row" style="justify-content:space-between"><div><b>${esc(qName(s.qualification_id))} / ${esc(sName(s.subject_id))}</b><div class="muted small">作成 ${fmtDate(s.created_at)}</div></div><button class="primary" onclick="openSession('${s.id}')">続きから再開</button></div></div>`).join('');};
+  window.renderSessions=function(){
+    const box=document.getElementById('sessionsList');
+    const qOrder=new Map((qualifications||[]).map((q,i)=>[q.id,{sort:Number.isFinite(Number(q.sort_order))?Number(q.sort_order):i,index:i}]));
+    const sOrder=new Map((subjects||[]).map((s,i)=>[s.id,{sort:Number.isFinite(Number(s.sort_order))?Number(s.sort_order):i,index:i}]));
+    const active=(sessions||[]).filter(s=>s.status==='active').slice().sort((a,b)=>{
+      const aq=qOrder.get(a.qualification_id)||{sort:999999,index:999999};
+      const bq=qOrder.get(b.qualification_id)||{sort:999999,index:999999};
+      if(aq.sort!==bq.sort)return aq.sort-bq.sort;
+      if(aq.index!==bq.index)return aq.index-bq.index;
+      const as=sOrder.get(a.subject_id)||{sort:999999,index:999999};
+      const bs=sOrder.get(b.subject_id)||{sort:999999,index:999999};
+      if(as.sort!==bs.sort)return as.sort-bs.sort;
+      if(as.index!==bs.index)return as.index-bs.index;
+      return new Date(b.created_at||0)-new Date(a.created_at||0);
+    });
+    if(!active.length){box.innerHTML='<div class="empty">進行中の総復習はありません。</div>';}else{box.innerHTML=active.map(s=>`<div class="session active"><div class="row" style="justify-content:space-between"><div><b>${esc(qName(s.qualification_id))} / ${esc(sName(s.subject_id))}</b><div class="muted small">作成 ${fmtDate(s.created_at)}</div></div><button class="primary" onclick="openSession('${s.id}')">続きから再開</button></div></div>`).join('');}
+    if(typeof window.loadComprehensiveReviewRanking==='function')window.loadComprehensiveReviewRanking();
+  };
 })();
