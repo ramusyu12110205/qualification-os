@@ -40,7 +40,14 @@
       months.push({key:key,label:monthLabel(d),minutes:map[key]||0,days:daysInMonth(d)});
     }
     var currentKey=monthKey(currentMonth),previousDate=new Date(year,currentMonth.getMonth()-1,1),previousKey=monthKey(previousDate);
-    var current=map[currentKey]||0,previous=map[previousKey]||0;
+    var dayLimit=base.getDate(),previousDayLimit=Math.min(dayLimit,daysInMonth(previousDate));
+    var current=0,previous=0;
+    st.forEach(function(row){
+      if(!row.study_date)return;
+      var d=parseDate(row.study_date),day=d.getDate(),mins=Number(row.minutes||0);
+      if(d.getFullYear()===year&&d.getMonth()===currentMonth.getMonth()&&day<=dayLimit)current+=mins;
+      if(d.getFullYear()===previousDate.getFullYear()&&d.getMonth()===previousDate.getMonth()&&day<=previousDayLimit)previous+=mins;
+    });
     var change=currentMonth.getMonth()>0?pctChange(current,previous):null;
     var trend=change==null?'—':(change>0?'＋':'')+change+'%';
     var total=months.reduce(function(a,m){return a+m.minutes},0);
@@ -50,7 +57,7 @@
       var height=Math.max(m.minutes?2:0,Math.min(100,Math.round(m.minutes/max*100)));
       return '<div class="sd-day"><div class="sd-month-value">'+minutesText(m.minutes)+'</div><div class="sd-bars"><div class="sd-current" style="height:'+height+'%"></div></div><div class="sd-label">'+m.label+'</div><div class="sd-month-avg">平均 '+minutesText(Math.round(m.minutes/m.days))+'/日</div></div>';
     }).join('');
-    return '<div class="sd-wrap"><div class="sd-section-head"><div><div class="kicker">MONTHLY STUDY</div><h3>月別の学習時間</h3><div class="muted small">'+year+'年1月から12月まで。</div></div><span class="badge">'+year+'年1月 〜 '+year+'年12月</span></div><div class="sd-month-total"><span>年間合計</span><strong>'+minutesText(total)+'</strong></div><div class="sd-chart sd-month-chart">'+bars+'</div><div class="sd-compare"><div class="sd-compare-card"><span>今月</span><b>'+minutesText(current)+'</b><small>月の日数 '+daysInMonth(currentMonth)+'日</small></div><div class="sd-compare-card"><span>先月比</span><b>'+trend+'</b><small>'+(currentMonth.getMonth()>0?minutesText(previous):'比較対象なし')+'</small></div></div><div class="sd-compare"><div class="sd-compare-card"><span>月平均</span><b>'+minutesText(Math.round(total/12))+'</b><small>12か月換算</small></div><div class="sd-compare-card"><span>学習した月</span><b>'+active+'か月</b><small>12か月中</small></div></div></div>';
+    return '<div class="sd-wrap"><div class="sd-section-head"><div><div class="kicker">MONTHLY STUDY</div><h3>月別の学習時間</h3><div class="muted small">'+year+'年1月から12月まで。</div></div><span class="badge">'+year+'年1月 〜 '+year+'年12月</span></div><div class="sd-month-total"><span>年間合計</span><strong>'+minutesText(total)+'</strong></div><div class="sd-chart sd-month-chart">'+bars+'</div><div class="sd-compare"><div class="sd-compare-card"><span>今月</span><b>'+minutesText(current)+'</b><small>月の日数 '+daysInMonth(currentMonth)+'日</small></div><div class="sd-compare-card"><span>先月同日までとの比較</span><b>'+trend+'</b><small>'+(currentMonth.getMonth()>0?minutesText(previous)+'（先月1〜'+previousDayLimit+'日）':'比較対象なし')+'</small></div></div><div class="sd-compare"><div class="sd-compare-card"><span>月平均</span><b>'+minutesText(Math.round(total/12))+'</b><small>12か月換算</small></div><div class="sd-compare-card"><span>学習した月</span><b>'+active+'か月</b><small>12か月中</small></div></div></div>';
   }
   function renderQualificationOverview(st,q){
     function statusOf(qq){
