@@ -82,7 +82,11 @@
     return '<div class="sd-wrap">'+cards+'</div>';
   }
   function renderQualification(st,q){
-    var base=parseDate(studyDay()),year=base.getFullYear(),map=dayMap(st),monthTotals=[],total=0,activeDays=0,recentStart=iso(new Date(base.getFullYear(),base.getMonth(),base.getDate()-29)),recentTotal=sumRange(st,recentStart,iso(base));
+    var base=parseDate(studyDay()),year=base.getFullYear(),map=dayMap(st),monthTotals=[],total=0,activeDays=0;
+    var todayKey=iso(base),recentStart=iso(new Date(base.getFullYear(),base.getMonth(),base.getDate()-29));
+    var previousStart=iso(new Date(base.getFullYear(),base.getMonth(),base.getDate()-59));
+    var previousEnd=iso(new Date(base.getFullYear(),base.getMonth(),base.getDate()-30));
+    var recentTotal=sumRange(st,recentStart,todayKey);
     st.forEach(function(x){total+=Number(x.minutes||0)});
     Object.keys(map).forEach(function(k){if(map[k]>0)activeDays++});
     for(var mi=0;mi<12;mi++){
@@ -106,10 +110,23 @@
       }
       heatMonths+='<div style="min-width:0;border:1px solid var(--line);border-radius:10px;padding:9px"><div style="font-weight:800;font-size:12px;margin-bottom:7px">'+(hm+1)+'月</div><div style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:3px">'+cells+'</div></div>';
     }
-    var rows=q.map(function(qq){var ps=projectStats(qq,st);return {q:qq,total:ps.total,days:ps.days,start:ps.start}}).filter(function(x){return x.total>0||x.q.exam_date}).sort(function(a,b){return b.total-a.total});
-    var active=rows.filter(function(x){return x.total>0}).length,max=rows.reduce(function(a,x){return Math.max(a,x.total)},0)||1;
-    var bars=rows.length?rows.map(function(x){var width=Math.max(x.total?3:0,Math.round(x.total/max*100));return '<div class="sd-qual-row"><div class="sd-qual-head"><strong>'+escapeHtml(x.q.name)+'</strong><span>'+minutesText(x.total)+'</span></div><div class="sd-qual-track"><div class="sd-qual-fill" style="width:'+width+'%"></div></div><div class="sd-qual-sub">学習日 '+x.days+'日'+(x.start?' ・ 開始 '+fmtDate(x.start):'')+(x.q.exam_date?' ・ 試験 '+fmtDate(x.q.exam_date):'')+'</div></div>'}).join(''):'<div class="item">まだ学習記録がありません。</div>';
-    return '<div class="sd-wrap"><div class="sd-section-head"><div><div class="kicker">QUALIFICATION STUDY</div><h3>資格別の学習分析</h3><div class="muted small">'+year+'年の学習状況と資格ごとの累計を確認。</div></div><span class="badge">'+active+'資格 学習記録あり</span></div><div class="sd-summary"><div><span>累計学習時間</span><strong>'+minutesText(total)+'</strong></div><div><span>直近30日</span><strong>'+minutesText(recentTotal)+'</strong></div><div><span>学習日数</span><strong>'+activeDays+'日</strong></div></div><div class="item" style="margin-top:14px"><div class="sectiontitle"><div><b>学習カレンダー</b><div class="muted small">'+year+'年・色が濃いほど学習時間が長い</div></div><div class="muted small">0分 → 2時間以上</div></div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(125px,1fr));gap:8px;margin-top:12px">'+heatMonths+'</div></div><div class="item"><div class="sectiontitle"><div><b>月別の学習時間</b><div class="muted small">'+year+'年1月〜12月の推移</div></div><span class="badge">年間 '+minutesText(monthTotals.reduce(function(a,x){return a+x.minutes},0))+'</span></div><div style="display:flex;align-items:flex-end;gap:6px;overflow-x:auto;padding-top:14px">'+trendBars+'</div></div><div class="item"><b>資格ごとの累計学習時間</b><div class="muted small" style="margin-top:4px">資格ごとの学習量を比較。</div><div class="sd-qual-list" style="margin-top:10px">'+bars+'</div></div></div>';
+    var rows=q.map(function(qq){
+      var ps=projectStats(qq,st),own=st.filter(function(x){return x.qualification_id===qq.id});
+      var recent=sumRange(own,recentStart,todayKey),previous=sumRange(own,previousStart,previousEnd);
+      var change=previous>0?pctChange(recent,previous):null;
+      var pace=change===null?(recent>0?'比較データなし':'学習記録なし'):(change>0?'＋':'')+change+'%';
+      var paceNote=change===null?(previous===0&&recent===0?'直近30日も学習記録なし':'前の30日間に学習記録なし'):'前の30日間比';
+      var exam=qq.exam_date?Math.ceil((parseDate(qq.exam_date)-base)/86400000):null;
+      var examText=exam===null?'未設定':exam>0?'あと'+exam+'日':exam===0?'本日':'試験済み';
+      var lastText=ps.last===todayKey?'今日':ps.last===iso(new Date(base.getFullYear(),base.getMonth(),base.getDate()-1))?'昨日':ps.last?fmtDate(ps.last):'記録なし';
+      return {q:qq,total:ps.total,days:ps.days,start:ps.start,last:ps.last,lastText:lastText,recent:recent,previous:previous,change:change,pace:pace,paceNote:paceNote,examText:examText,exam:exam};
+    }).filter(function(x){return x.total>0||x.q.exam_date}).sort(function(a,b){return b.total-a.total});
+    var active=rows.filter(function(x){return x.total>0}).length;
+    var cards=rows.length?rows.map(function(x){
+      var paceColor=x.change===null?'var(--muted)':x.change>=0?'var(--good)':'var(--danger)';
+      return '<div class="item" style="margin:10px 0;padding:15px"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap"><strong style="font-size:17px">'+escapeHtml(x.q.name)+'</strong><span class="badge">'+minutesText(x.total)+' 累計</span></div><div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:14px"><div><div class="muted small">直近30日の学習時間</div><strong style="font-size:19px">'+minutesText(x.recent)+'</strong></div><div><div class="muted small">最終学習日</div><strong style="font-size:19px">'+x.lastText+'</strong></div><div><div class="muted small">学習ペース</div><strong style="font-size:19px;color:'+paceColor+'">'+x.pace+'</strong><div class="muted small">'+x.paceNote+'</div></div><div><div class="muted small">試験日</div><strong style="font-size:19px">'+x.examText+'</strong>'+(x.q.exam_date?'<div class="muted small">'+fmtDate(x.q.exam_date)+'</div>':'')+'</div></div><div class="muted small" style="margin-top:12px">学習日 '+x.days+'日'+(x.start?' ・ 学習開始 '+fmtDate(x.start):'')+'</div></div>';
+    }).join(''):'<div class="item">まだ学習記録がありません。</div>';
+    return '<div class="sd-wrap"><div class="sd-section-head"><div><div class="kicker">QUALIFICATION STUDY</div><h3>資格別の学習分析</h3><div class="muted small">'+year+'年の学習状況と資格ごとの累計を確認。</div></div><span class="badge">'+active+'資格 学習記録あり</span></div><div class="sd-summary"><div><span>累計学習時間</span><strong>'+minutesText(total)+'</strong></div><div><span>直近30日</span><strong>'+minutesText(recentTotal)+'</strong></div><div><span>学習日数</span><strong>'+activeDays+'日</strong></div></div><div class="item" style="margin-top:14px"><div class="sectiontitle"><div><b>学習カレンダー</b><div class="muted small">'+year+'年・色が濃いほど学習時間が長い</div></div><div class="muted small">0分 → 2時間以上</div></div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(125px,1fr));gap:8px;margin-top:12px">'+heatMonths+'</div></div><div class="item"><div class="sectiontitle"><div><b>月別の学習時間</b><div class="muted small">'+year+'年1月〜12月の推移</div></div><span class="badge">年間 '+minutesText(monthTotals.reduce(function(a,x){return a+x.minutes},0))+'</span></div><div style="display:flex;align-items:flex-end;gap:6px;overflow-x:auto;padding-top:14px">'+trendBars+'</div></div><div class="item"><div class="sectiontitle"><div><b>資格ごとの学習状況</b><div class="muted small">直近の取り組みと学習ペースを比較。</div></div></div><div style="margin-top:10px">'+cards+'</div></div></div>';
   }
   function getSavedMode(){return localStorage.getItem('qualification-os-dashboard-mode')||sessionStorage.getItem('qualification-os-dashboard-mode')||'qualification'}
   function saveMode(mode){localStorage.setItem('qualification-os-dashboard-mode',mode);sessionStorage.setItem('qualification-os-dashboard-mode',mode)}
