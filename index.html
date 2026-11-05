@@ -662,7 +662,7 @@ function setStatusTab(type){
 }
 function showDashboard(){
   setStatusTab('qualification');
-  const box=document.getElementById('dashboard'),map={};sessions.forEach(s=>{map[s.qualification_id]=(map[s.qualification_id]||0)+Number(s.minutes||0)});
+  const box=document.getElementById('dashboard'),map={},activeIds=new Set(qualifications.map(q=>q.id));sessions.filter(s=>activeIds.has(s.qualification_id)).forEach(s=>{map[s.qualification_id]=(map[s.qualification_id]||0)+Number(s.minutes||0)});
   const rows=Object.entries(map).map(([id,m])=>[qualifications.find(q=>q.id===id)?.name||'資格',m,id]).sort((a,b)=>b[1]-a[1]);
   box.innerHTML=rows.length?rows.map(([name,m,id])=>`<div class="item clickable" onclick="showQualification('${id}')"><div class="row" style="justify-content:space-between"><b>${esc(name)}</b><strong>${minutesText(m)}</strong></div><div class="bar" style="margin:8px 0"><div style="width:${rows[0]?.[1]?m/rows[0][1]*100:0}%"></div></div><span class="muted small">資格の攻略状況を見る</span></div>`).join(''):'<div class="item">まだ勉強記録がありません。</div>';
 }
@@ -680,9 +680,9 @@ function showUnit(id){
 }
 function showStats(type){
   setStatusTab(type);
-  const box=document.getElementById('dashboard');
-  if(type==='all'){box.innerHTML=`<h3>⏱ 全体の累積</h3><div class="stat">${minutesText(sessions.reduce((a,s)=>a+Number(s.minutes||0),0))}</div><p class="muted">${sessions.length}件の勉強記録</p>`;return}
-  const map={};sessions.forEach(s=>{map[s.study_date]=(map[s.study_date]||0)+Number(s.minutes||0)});
+  const box=document.getElementById('dashboard'),activeIds=new Set(qualifications.map(q=>q.id)),visibleSessions=sessions.filter(s=>activeIds.has(s.qualification_id));
+  if(type==='all'){box.innerHTML=`<h3>⏱ 全体の累積</h3><div class="stat">${minutesText(visibleSessions.reduce((a,s)=>a+Number(s.minutes||0),0))}</div><p class="muted">${visibleSessions.length}件の勉強記録</p>`;return}
+  const map={};visibleSessions.forEach(s=>{map[s.study_date]=(map[s.study_date]||0)+Number(s.minutes||0)});
   const months={};Object.entries(map).forEach(([d,m])=>{const mo=d.slice(0,7);if(!months[mo])months[mo]={total:0,days:{}};months[mo].total+=m;months[mo].days[d]=m;});
   box.innerHTML='<h3>📅 月別勉強時間</h3><p class="muted small">月をクリックすると日付別に開きます。</p>'+Object.entries(months).sort((a,b)=>b[0].localeCompare(a[0])).map(([mo,v])=>`<details class="item"><summary style="cursor:pointer"><div class="row" style="justify-content:space-between"><b>${esc(mo.replace('-','年')+'月')}</b><strong>${minutesText(v.total)}</strong></div></summary><div style="padding-top:8px">${Object.entries(v.days).sort((a,b)=>b[0].localeCompare(a[0])).map(([d,m])=>`<div class="item" style="margin:6px 0"><div class="row" style="justify-content:space-between"><span>${fmt(d)} <span class="muted small">${d}</span></span><strong>${minutesText(m)}</strong></div></div>`).join('')}</div></details>`).join('');
 }
