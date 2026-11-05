@@ -146,10 +146,9 @@
     var box=document.getElementById('panel-record');
     if(!box)return;
     var labels={new_problems:'新規問題',review:'復習',textbook:'テキスト',lecture:'講義',mock:'模試',other:'その他'};
-    box.innerHTML='<h3>勉強記録を管理</h3><p class="muted small">'+visibleSessions.length+'件。勉強内容を読み込んでいます…</p>';
-
     var activeQualificationIds=new Set((qualifications||[]).map(function(q){return q.id}));
     var visibleSessions=sessions.filter(function(s){return activeQualificationIds.has(s.qualification_id)});
+    box.innerHTML='<h3>勉強記録を管理</h3><p class="muted small">'+visibleSessions.length+'件。勉強内容を読み込んでいます…</p>';
     var sessionIds=visibleSessions.map(function(s){return s.id}).filter(Boolean);
     var links=[];
     if(sessionIds.length){
