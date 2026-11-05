@@ -146,9 +146,11 @@
     var box=document.getElementById('panel-record');
     if(!box)return;
     var labels={new_problems:'新規問題',review:'復習',textbook:'テキスト',lecture:'講義',mock:'模試',other:'その他'};
-    box.innerHTML='<h3>勉強記録を管理</h3><p class="muted small">'+sessions.length+'件。勉強内容を読み込んでいます…</p>';
+    box.innerHTML='<h3>勉強記録を管理</h3><p class="muted small">'+visibleSessions.length+'件。勉強内容を読み込んでいます…</p>';
 
-    var sessionIds=sessions.map(function(s){return s.id}).filter(Boolean);
+    var activeQualificationIds=new Set((qualifications||[]).map(function(q){return q.id}));
+    var visibleSessions=sessions.filter(function(s){return activeQualificationIds.has(s.qualification_id)});
+    var sessionIds=visibleSessions.map(function(s){return s.id}).filter(Boolean);
     var links=[];
     if(sessionIds.length){
       var res=await sb.from('study_session_problems').select('session_id,problem_id,role,result').in('session_id',sessionIds);
@@ -164,7 +166,7 @@
     function resultLabel(result){return result==='wrong'?'× 誤答':result==='correct'?'○ 正解':''}
     function resultStyle(result){return result==='wrong'?'color:var(--bad)':result==='correct'?'color:var(--good)':''}
 
-    var cards=sessions.length?sessions.map(function(s){
+    var cards=visibleSessions.length?visibleSessions.map(function(s){
       var q=qualifications.find(function(x){return x.id===s.qualification_id});
       var sub=subjects.find(function(x){return x.id===s.subject_id});
       var type=labels[s.activity_type]||s.activity_type;
@@ -186,7 +188,7 @@
         '</div></div>';
     }).join(''):'<div class="item">勉強記録はありません。</div>';
 
-    box.innerHTML='<h3>勉強記録を管理</h3><p class="muted small">'+sessions.length+'件。クリックすると、その日にやった内容を確認できます。</p>'+cards;
+    box.innerHTML='<h3>勉強記録を管理</h3><p class="muted small">'+visibleSessions.length+'件。クリックすると、その日にやった内容を確認できます。</p>'+cards;
   };
 
   window.toggleRecordDetail=function(id){
