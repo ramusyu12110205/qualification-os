@@ -74,13 +74,60 @@ textarea{min-height:120px} label{display:block;font-weight:800;margin:11px 0 6px
 </div>
 
 <div id="app" style="display:none">
-  <div class="sectiontitle">
+  <div class="sectiontitle" id="mainHeader">
     <div><h1>📚 資格勉強OS</h1><div class="muted small" id="userLabel"></div></div>
-    <button class="primary" onclick="location.href='flashcards.html'">🧠 暗記カード</button>
-    <button class="primary" onclick="location.href='knowledge.html'">💡 知識カード</button>
-    <button class="primary" onclick="location.href='account-consult.html'">🧾 勘定科目相談</button>
-    <button class="light" onclick="logout()">ログアウト</button>
+    <button class="primary desktop-header-action" onclick="location.href='flashcards.html'">🧠 暗記カード</button>
+    <button class="primary desktop-header-action" onclick="location.href='knowledge.html'">💡 知識カード</button>
+    <button class="primary desktop-header-action" onclick="location.href='account-consult.html'">🧾 勘定科目相談</button>
+    <button class="light desktop-header-action" onclick="logout()">ログアウト</button>
+    <button id="topMenuButton" class="light" type="button" aria-expanded="false" onclick="toggleTopMenu()">☰ メニュー</button>
+    <div id="topMenuPanel" aria-label="サイトメニュー"></div>
   </div>
+  <style>
+    #topMenuButton,#topMenuPanel{display:none}
+    @media(max-width:700px){
+      #mainHeader{position:relative;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:nowrap}
+      #mainHeader>div:first-child{flex:1;min-width:0}
+      #mainHeader h1{font-size:23px;white-space:nowrap}
+      #mainHeader .desktop-header-action{display:none!important}
+      #topMenuButton{display:block;flex:none;background:#6d43d9;color:white;border:1px solid #8b5cf6;white-space:nowrap}
+      #topMenuPanel{position:absolute;top:calc(100% + 8px);right:0;width:min(280px,86vw);padding:10px;background:rgba(15,21,40,.99);border:1px solid #39466b;border-radius:16px;box-shadow:0 16px 38px rgba(0,0,0,.5);z-index:160;flex-direction:column;gap:7px}
+      #topMenuPanel.open{display:flex}
+      #topMenuPanel button{width:100%;text-align:left}
+    }
+  </style>
+  <script>
+    window.toggleTopMenu=function(){
+      var panel=document.getElementById('topMenuPanel');
+      var button=document.getElementById('topMenuButton');
+      var header=document.getElementById('mainHeader');
+      if(!panel||!button||!header)return;
+      var opening=!panel.classList.contains('open');
+      if(opening){
+        panel.innerHTML='';
+        Array.from(header.querySelectorAll(':scope > button.desktop-header-action, :scope > button:not(#topMenuButton)')).forEach(function(source){
+          var item=source.cloneNode(true);
+          item.classList.remove('desktop-header-action');
+          item.style.display='block';
+          item.addEventListener('click',function(){panel.classList.remove('open');button.setAttribute('aria-expanded','false');button.textContent='☰ メニュー'});
+          panel.appendChild(item);
+        });
+        panel.classList.add('open');
+        button.textContent='✕ 閉じる';
+        button.setAttribute('aria-expanded','true');
+      }else{
+        panel.classList.remove('open');
+        button.textContent='☰ メニュー';
+        button.setAttribute('aria-expanded','false');
+      }
+    };
+    document.addEventListener('click',function(e){
+      var panel=document.getElementById('topMenuPanel'),button=document.getElementById('topMenuButton');
+      if(panel&&button&&!panel.contains(e.target)&&!button.contains(e.target)){
+        panel.classList.remove('open');button.textContent='☰ メニュー';button.setAttribute('aria-expanded','false');
+      }
+    });
+  </script>
 
   <div class="card hero hero-v2">
     <div class="hero-v2-bg" aria-hidden="true"><span></span><i></i><b></b></div>
