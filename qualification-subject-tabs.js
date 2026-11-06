@@ -293,17 +293,18 @@
 (function(){
   function setupMobileHeaderMenu(){
     var header=document.querySelector('#app > .sectiontitle');
-    if(!header || document.getElementById('mobileMenuToggle'))return;
+    if(!header)return;
     var title=header.querySelector(':scope > div');
     if(!title)return;
-    var toggle=document.createElement('button');
+    var toggle=document.getElementById('mobileMenuToggle')||document.createElement('button');
     toggle.id='mobileMenuToggle';
     toggle.type='button';
     toggle.className='light';
     toggle.setAttribute('aria-expanded','false');
     toggle.setAttribute('aria-label','メニューを開く');
     toggle.textContent='☰ メニュー';
-    var menu=document.createElement('div');
+    var menu=document.getElementById('mobileHeaderMenu')||document.createElement('div');
+    menu.innerHTML='';
     menu.id='mobileHeaderMenu';
     menu.setAttribute('aria-label','サイトメニュー');
     Array.from(header.querySelectorAll(':scope > button')).forEach(function(original){
@@ -327,8 +328,8 @@
     document.addEventListener('click',function(e){
       if(!header.contains(e.target))closeMenu();
     });
-    header.appendChild(toggle);
-    header.appendChild(menu);
+    if(!toggle.parentNode)header.appendChild(toggle);
+    if(!menu.parentNode)header.appendChild(menu);
     var style=document.createElement('style');
     style.textContent=
       '#mobileMenuToggle,#mobileHeaderMenu{display:none}'+
@@ -348,4 +349,5 @@
   else setupMobileHeaderMenu();
   setTimeout(setupMobileHeaderMenu,250);
   setTimeout(setupMobileHeaderMenu,900);
+  setTimeout(setupMobileHeaderMenu,1600);
 })();
