@@ -765,7 +765,7 @@ function renderQualificationMasterInline(){
   <p class="muted small">Googleログイン中：資格・科目はクラウドに保存されます。</p>
   <div class="item">
     <label>資格名</label><input id="newQName" placeholder="簿記1級">
-    <label>試験日</label><input id="newQDate" type="date">
+    <label>資格全体の目標日（任意）</label><input id="newQDate" type="date">
     <label>科目（1行1科目）</label><textarea id="newQSubjects" placeholder="商業簿記\\n工業簿記\\n原価計算"></textarea>
     <button class="primary" onclick="addQualification()">資格を追加</button>
   </div>`+
@@ -773,7 +773,7 @@ function renderQualificationMasterInline(){
     ? qualifications.map(q=>`<details class="item"><summary style="cursor:pointer"><b>${esc(q.name)}</b> <span class="badge">${q.exam_date?fmt(q.exam_date):'試験日未設定'}</span></summary>
       <div style="padding-top:10px">
         <label>資格名</label><input id="qn-${q.id}" value="${esc(q.name)}">
-        <label>試験日</label><input id="qd-${q.id}" type="date" value="${q.exam_date||''}">
+        <label>資格全体の目標日（任意）</label><input id="qd-${q.id}" type="date" value="${q.exam_date||''}">
         <label>科目</label><textarea id="qs-${q.id}">${subjects.filter(s=>s.qualification_id===q.id).map(s=>s.name).join('\\n')}</textarea>
         <div class="row">
           <button class="primary" onclick="updateQualification('${q.id}')">保存</button>
