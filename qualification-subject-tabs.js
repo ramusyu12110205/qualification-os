@@ -36,6 +36,8 @@
         pane.innerHTML=
           '<label>科目名</label>'+ 
           '<input class="q-sub-name" data-sub-id="'+s.id+'" value="'+esc(s.name)+'">'+
+          '<label>科目ごとの試験日</label>'+
+          '<input type="date" class="q-sub-exam-date" data-sub-id="'+s.id+'" value="'+esc(s.exam_date||'')+'">'+
           '<label>合否</label>'+ 
           '<select class="q-sub-result" data-sub-id="'+s.id+'">'+
             '<option value="">未設定</option>'+ 
@@ -85,7 +87,8 @@
     var rows=[...scope.querySelectorAll('.q-sub-name[data-sub-id]')].map(function(input,index){
       var sid=input.dataset.subId;
       var result=scope.querySelector('.q-sub-result[data-sub-id="'+sid+'"]')?.value||null;
-      return {id:sid,name:input.value.trim(),result:result,sort_order:index};
+      var exam_date=scope.querySelector('.q-sub-exam-date[data-sub-id="'+sid+'"]')?.value||null;
+      return {id:sid,name:input.value.trim(),result:result,exam_date:exam_date,sort_order:index};
     }).filter(function(x){return x.name});
 
     var oldSubjects=subjects.filter(function(s){return s.qualification_id===id && !s.archived});
@@ -98,11 +101,11 @@
       var row=rows[i];
       var existing=oldSubjects.find(function(s){return String(s.id)===String(row.id)});
       if(existing){
-        var u=await sb.from('subjects').update({name:row.name,result:row.result||null,sort_order:i,archived:false}).eq('id',existing.id).eq('user_id',currentUser.id);
+        var u=await sb.from('subjects').update({name:row.name,result:row.result||null,exam_date:row.exam_date||null,sort_order:i,archived:false}).eq('id',existing.id).eq('user_id',currentUser.id);
         if(u.error){alert('科目の更新に失敗しました: '+u.error.message);return}
         keepIds.push(existing.id);
       }else{
-        var ins=await sb.from('subjects').insert({user_id:currentUser.id,qualification_id:id,name:row.name,result:row.result||null,sort_order:i,archived:false}).select().single();
+        var ins=await sb.from('subjects').insert({user_id:currentUser.id,qualification_id:id,name:row.name,result:row.result||null,exam_date:row.exam_date||null,sort_order:i,archived:false}).select().single();
         if(ins.error){alert('科目の追加に失敗しました: '+ins.error.message);return}
         keepIds.push(ins.data.id);
       }
