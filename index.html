@@ -652,9 +652,26 @@ async function saveStudyRecord(){
   if(type==='new_problems'&&!raw){alert('新規問題の場合は問題を入力してください');return}
   if(type==='new_problems'&&retroReviewRows.some(r=>!r.date||r.date>today()||r.date<=date||!r.minutes||Number(r.minutes)<=0)){alert('過去の復習の日付と勉強時間を確認してください');return}
 
-  const {data:session,error:se}=await sb.from('study_sessions').insert({
-    user_id:currentUser.id,qualification_id:qid,subject_id:sid||null,study_date:date,activity_type:type,minutes,memo:memo||null
-  }).select().single();
+  // iOS Safariで認証トークンが更新されていない場合に備え、保存直前にセッションを確認する。
+  let {data:authData,error:authError}=await sb.auth.getSession();
+  if(authError){alert('ログイン状態を確認できません: '+authError.message);return}
+  if(!authData?.session){
+    const refreshed=await sb.auth.refreshSession();
+    authData=refreshed.data;
+    authError=refreshed.error;
+  }
+  if(authError||!authData?.session||authData.session.user.id!==currentUser.id){
+    alert('ログインの有効期限が切れている可能性があります。画面を再読み込みし、再ログインしてから保存してください。入力内容は消さずに残してください。');
+    return;
+  }
+  const {data:session,error:se}=await sb.rpc('create_study_session',{
+    p_qualification_id:qid,
+    p_subject_id:sid||null,
+    p_study_date:date,
+    p_activity_type:type,
+    p_minutes:minutes,
+    p_memo:memo||null
+  });
   if(se){alert('勉強記録の保存に失敗しました: '+se.message);return}
 
   if(type==='new_problems'){
